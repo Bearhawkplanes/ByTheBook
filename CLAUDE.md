@@ -14,6 +14,7 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - `preload.js`: exposes those handlers to the page as `window.fsapi` (also the close-time `flush` handshake and `open-file`).
 - `storage.js`: plain Node `.bcl` file I/O in the save folder: queued atomic writes, one `.bak` per file in `Saves/Backups/` (refreshed at most every 5 min), import, restore as a new file.
 - `index.html`: the entire UI and app logic in one inline `<script>`.
+- `print.html`: the printable-checklist layout (see Export window).
 - `tests/main-test.js`, `tests/page-test.js`: see above. `tests/electron-test.js` drives the real built app (needs `npx electron-builder --linux dir --publish never`, then `xvfb-run -a node tests/electron-test.js`): MP4 playback, ffmpeg clips and thumbnails. Run it after video changes.
 
 ## Data model (`.bcl` = JSON)
@@ -37,8 +38,8 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - Wrong-PIN limits live in main.js (`pinTry`), stored in the signed profile (`fails`, `until`) so a restart or the page cannot reset them; any correct PIN resets them, and so does the right recovery code (`recCheck`). 5 in a row: "Forgot PIN?" hint; every 15th: 20-minute wait; 100: E-4419. Every PIN a person types must go through `pinTry` (`whoIs`, Profile unlock); `matchPin` is only for checking whether a new PIN is taken. "Forgot PIN?" on the Profile page takes the recovery code without an error: it unlocks the page and clears waits; a new main PIN is optional when the profile file is intact (`canKeepPin`). Employee PINs are reset with "Set PIN". Developer tools are off in packaged builds (`devTools: !app.isPackaged`).
 - Owner's rules (decided, do not undo):
   - Lock the whole app **only** when the profile settings themselves were tampered with. A copied checklist locks only itself.
-  - The shop must never lose its files to a bad employee: even under E-4417/E-4418, checklists must still open and **Menu > Export for sharing…** must still work.
-  - Export for sharing (`exportDlg` > `exportShare` > `blankCopy`) keeps all content, images and PDFs, and clears progress, stamp and `ids`. "Include the activity log" keeps the old log read-only under an "Exported as a fresh copy" segment, so the checks can be re-entered by hand in a new install.
+  - The shop must never lose its files to a bad employee: even under E-4417/E-4418, checklists must still open and **Menu > Export… > Fresh copy** must still work.
+  - Fresh copy export (`exportDlg` (the Export window, `#xp`) > `xpExport` > `blankCopy`) keeps all content, images and PDFs, and clears progress, stamp and `ids`. "Include the activity log" keeps the old log read-only under an "Exported as a fresh copy" segment, so the checks can be re-entered by hand in a new install.
 - Security is deliberately "deters casual tampering". The README says what it does not stop; keep that honest when changing things.
 
 ## Updates (main.js `checkUpdate/downloadUpdate/installUpdate`, page `updRefresh/updBar`)
@@ -46,6 +47,10 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - Build kinds (`kind()`): portable exe (`PORTABLE_EXECUTABLE_FILE`, asset `BuildChecklist.exe`), Windows installer (asset `BuildChecklist-Setup.exe`, just run it), AppImage (`APPIMAGE`, asset `BuildChecklist.AppImage`). Download goes next to the program as `.update-<name>`, size + `digest` (sha256) checked; install keeps `<name> (previous)` and a helper (PowerShell / sh) waits for this process to exit, swaps and relaunches with the same `--flags`.
 - Version stamps: `.bcl` gets `app` (version that saved it) in `pack()`; a newer file opens with `RO` set (E-4421 in `errNow`, view-only, `save`/`flushNow` never write). The profile gets `app` in `cleanProfile`; `profileSave` refuses to overwrite a newer one.
 - Tests: `tests/main-test.js` (fake GitHub server), `tests/page-test.js` (bar, Settings, read-only), `tests/update-test.js` (real self-update of two builds; Linux AppImage here, Windows via `.github/workflows/update-test.yml`, run from the Actions tab). Test hooks in main.js: `BCL_VERSION_MARK`, `BCL_UPDATE_AUTO`.
+
+## Export window (`exportDlg`, `#xp`)
+- Left: `XKINDS` (fresh, pdf); add new export kinds there and in `xpShow`/`xpExport`. Export always goes through `FS.saveFile` (main: Save dialog + write).
+- Printable checklist: `print.html` (own file, packaged) does the layout in `render(data, opts)`; main `pdfMake` loads it in a hidden window and `printToPDF`s it (queued; the hidden window is destroyed when the main window closes). The page sends only `pdfData()` (text, page, qty, size, spec per item; no progress), options `PO()` remembered in `AS.pdf`. Preview = the real PDF drawn with pdf.js, lazily per page. Owner's decisions: blank copies only; each section starts a new page; header shows section, Page x of N and the page within the section; items are not split unless longer than a page.
 
 ## Releases
 - Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a release is published, and attached to it. Never commit built `.exe` files or `dist/` to the repo.

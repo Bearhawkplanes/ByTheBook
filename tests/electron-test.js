@@ -44,6 +44,15 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
   await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(1500);
   assert(await pg.evaluate(() => S.videos.length === 2 && S.videos[1].link && Math.round(vpDur()) === 30), 'linked from the Images tab and playing');
   await pg.evaluate(() => vpClose());
+  // Export > Printable checklist: the real PDF from Electron, shown in the preview and saved where the Save dialog says
+  const pdfOut = path.join(work, 'printed checklist.pdf');
+  await ea.evaluate(({ dialog }, f) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: f }); }, pdfOut);
+  await pg.evaluate(() => { document.querySelector('[data-m="export"]').click(); document.querySelector('#xp [data-xk=pdf]').click(); });
+  await pg.waitForFunction(() => /^Page 1 of \d+/.test($('#xpinfo').textContent) && document.querySelector('#xppages canvas'), null, { timeout: 30000 });
+  const pdfInfo = await pg.evaluate(() => ({ pages: XP.pages, shown: document.querySelectorAll('#xppages .xppg').length }));
+  await pg.evaluate(() => document.querySelector('#xpgo').click()); await pg.waitForTimeout(800);
+  const pdfFile = fs.readFileSync(pdfOut);
+  assert(pdfFile.slice(0, 5).toString() === '%PDF-' && pdfInfo.pages >= 4 && pdfInfo.shown === pdfInfo.pages && (pdfFile.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length === pdfInfo.pages, 'printable PDF made and saved: ' + JSON.stringify(pdfInfo));
   // saved to disk with the clip inside
   await pg.evaluate(async () => { DIRTY = true; await flush(); });
   const saved = JSON.parse(fs.readFileSync(path.join(app, 'Saves', (await pg.evaluate(() => CUR)) + '.bcl'), 'utf8'));
@@ -51,5 +60,5 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
   await ea.close();
   fs.rmSync(work, { recursive: true, force: true });
   assert.deepStrictEqual(errors, [], 'no page errors');
-  console.log('All app tests passed. Clip sizes (with sound): native ' + sizes[0] + ', medium ' + sizes[1] + ', low ' + sizes[2]);
+  console.log('All app tests passed. Clip sizes (with sound): native ' + sizes[0] + ', medium ' + sizes[1] + ', low ' + sizes[2] + '; printable PDF ' + pdfInfo.pages + ' pages');
 })().catch(e => { console.error('FAILED:', e.message); process.exit(1); });

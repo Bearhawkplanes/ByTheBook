@@ -84,6 +84,15 @@ function installUpdate() {
   }
   setTimeout(() => app.quit(), 300); return true;
 }
+// ---- printable checklist ------------------------------------------------------------------------------
+// print.html lays the blank checklist out in a hidden window; Chromium's own printing turns it into the PDF
+let pdfWin = null, pdfQ = Promise.resolve();
+const makePdf = (data, opts) => pdfQ = pdfQ.catch(() => {}).then(async () => {
+  if (!pdfWin || pdfWin.isDestroyed()) { pdfWin = new BrowserWindow({ show: false, width: 1000, height: 1300, webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged } }); await pdfWin.loadFile(path.join(__dirname, 'print.html')); }
+  const pages = await pdfWin.webContents.executeJavaScript('render(' + JSON.stringify(data) + ',' + JSON.stringify(opts) + ')');
+  const pdf = await pdfWin.webContents.printToPDF({ printBackground: true, preferCSSPageSize: true, margins: { marginType: 'none' } });
+  return { pages, pdf };
+});
 let clip = null;   // the clip being made: {id, dir, proc, cancelled}
 const ff = (args, dur, onProgress) => new Promise((res, rej) => {   // runs ffmpeg at low priority so the app stays responsive on slow computers
   if (!FFMPEG) return rej(new Error('The video tool (ffmpeg) is missing from this copy of the app'));
@@ -220,6 +229,11 @@ const handlers = {
     return f >= PIN_MAX ? { locked: 'E-4419', fails: f } : { fails: f, wait: until };
   },
   pinState: () => pinLimits(),
+  // export: the PDF of a blank checklist, and a Save dialog for any exported file
+  pdfMake: (data, opts) => makePdf(data, opts || {}),
+  saveFile: async (o, data) => { o = o || {};
+    const r = await dialog.showSaveDialog(win, { title: String(o.title || 'Export'), defaultPath: path.join(app.getPath('documents'), String(o.name || 'export').replace(/[\\/:*?"<>|]+/g, '_')), filters: Array.isArray(o.filters) ? o.filters : undefined });
+    if (r.canceled || !r.filePath) return null; await fsp.writeFile(r.filePath, typeof data === 'string' ? data : Buffer.from(data)); return r.filePath; },
   // updates
   appVersion: () => app.getVersion(),
   updGet: () => { const c = updCfg(), K = kind(), f = c.found && newer(c.found.version, app.getVersion()) ? c.found : null;
@@ -280,7 +294,7 @@ function createWindow() {
     win.webContents.send('flush');
     timer = setTimeout(() => finish(false), 60000);
   });
-  win.on('closed', () => { win = null; });
+  win.on('closed', () => { win = null; if (pdfWin && !pdfWin.isDestroyed()) pdfWin.destroy(); });   // the hidden print window must not keep the app open
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {

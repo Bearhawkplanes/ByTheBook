@@ -22,6 +22,8 @@ const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I =
    return ok(L.fails >= 100 ? { locked: 'E-4419', fails: L.fails } : { fails: L.fails, wait: L.until }); },
   pinState: () => ok({ fails: L.fails, until: L.until }),
   appVersion: () => ok(window.__appv || '0.5.0'),
+  saveFile: (o, d) => { window.__saved = { o, d: typeof d === 'string' ? d : Array.from(d) }; return ok('/exports/' + o.name); },
+  pdfMake: (d, o) => { (window.__pdfCalls = window.__pdfCalls || []).push({ d, o }); return ok({ pages: window.__pdfPages || 0, pdf: new Uint8Array(window.__pdfBytes || []) }); },
   onFlush: () => {}, onOpen: () => {} }; })()`;
 const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps]));
 
@@ -30,9 +32,10 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const page = async (files, integ, extra) => { const ctx = await b.newContext({ acceptDownloads: true }), pg = await ctx.newPage();
     pg.on('pageerror', e => errors.push(e.message)); await pg.addInitScript(stub(files, integ)); if (extra) await extra(pg); await pg.goto(url); await pg.waitForTimeout(800); return pg; };
   const open = (pg, n) => pg.evaluate(async n => { await openProject(n); await new Promise(r => setTimeout(r, 300)); return { tamper: TAMPER, clt: CLT }; }, n);
-  const exportFile = async (pg, keepLog) => { const [dl] = await Promise.all([pg.waitForEvent('download'), pg.evaluate(k => {
-    document.querySelector('[data-m="export"]').click(); document.querySelector('#exlog').checked = k; document.querySelector('[data-d="ok"]').click(); }, keepLog)]);
-    return { name: dl.suggestedFilename(), text: fs.readFileSync(await dl.path(), 'utf8') }; };
+  // Menu > Export… > Fresh copy > Export…: the Save dialog is stubbed (window.__saved)
+  const exportFile = async (pg, keepLog) => { await pg.evaluate(async k => { window.__saved = null; document.querySelector('[data-m="export"]').click(); document.querySelector('#xp [data-xk=fresh]').click();
+    document.querySelector('#exlog').checked = k; document.querySelector('#xpgo').click(); for (let i = 0; i < 100 && !window.__saved; i++) await new Promise(r => setTimeout(r, 30)); }, keepLog);
+    return pg.evaluate(() => ({ name: window.__saved.o.name, text: window.__saved.d })); };
 
   // computer A: demo checklist with an attached image, everything checked and signed, some log entries
   let pg = await page({}, prof('a'.repeat(32)));
@@ -466,6 +469,74 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.strictEqual(await pg.evaluate(async () => await window.fsapi.read('new.bcl')), newerFile, 'the file is never written');
   await open(pg, 'old');
   assert(await pg.evaluate(async () => { DIRTY = true; await flush(); return JSON.parse(await window.fsapi.read('old.bcl')).app === '0.5.0' && !errNow(); }), 'normal files are saved with this version');
+
+  // ---- printable checklist: the layout rules (print.html) ----
+  const pp = await (await b.newContext()).newPage(); pp.on('pageerror', e => errors.push('print.html: ' + e.message));
+  await pp.goto('file://' + path.join(__dirname, '..', 'print.html'));
+  const st = (n, extra) => Object.assign({ text: 'Step ' + n, page: '4-' + n }, extra || {});
+  const PD = { name: 'Wing kit', manual: 'Manual rev C', printed: '28 Oct 2026', version: '0.5.0', sections: [
+    { title: 'Prep', sign: false, cards: [{ text: 'Tools', page: '1', steps: [st(1), st(2), st(3)] }] },
+    { title: 'Left wing', sign: true, cards: Array.from({ length: 6 }, (_, i) => ({ text: 'Item ' + (i + 1), page: '5-' + i, steps: Array.from({ length: 5 }, (_, j) => st(j + 1, { qty: '12', size: 'AN3-5A', spec: '25 in-lb' })) })) },
+    { title: 'Left wing', sign: false, cards: [{ text: 'Very long item', steps: Array.from({ length: 70 }, (_, j) => st(j + 1)) }] },
+    { title: 'Empty', sign: true, cards: [] }] };
+  const all = { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true };
+  const lay = o => pp.evaluate(async ([D, o]) => { const n = await render(D, o); return { n, pages: [...document.querySelectorAll('.page')].map(p => ({ sec: p.querySelector('h1').textContent, si: p.dataset.si, tp: p.querySelector('.tp').textContent, sp: (p.querySelector('.sp') || {}).textContent || '',
+    items: [...p.querySelectorAll('tr.item')].map(r => r.children[2].textContent), steps: p.querySelectorAll('tbody tr:not(.item):not(.so)').length, so: p.querySelectorAll('tr.so').length, end: !!p.querySelector('.secend'), cols: [...p.querySelectorAll('thead th')].map(t => t.textContent),
+    fits: p.querySelector('.body').scrollHeight <= p.querySelector('.body').clientHeight + 1, w: Math.round(p.getBoundingClientRect().width), h: Math.round(p.getBoundingClientRect().height) })), toc: [...document.querySelectorAll('.toc tr')].map(r => r.textContent) }; }, [PD, o]);
+  let L1 = await lay(all);
+  assert.strictEqual(L1.pages[0].sec, 'Contents', 'contents page first');
+  assert(L1.pages.every((p, i) => p.tp === `Page ${i + 1} of ${L1.n}`), 'every page says Page x of N');
+  assert(L1.pages.every(p => p.fits), 'nothing runs off a page');
+  const secs = L1.pages.slice(1);
+  assert(secs.every(p => p.si != null && /: page \d+ of \d+$/.test(p.sp)), 'every page names its section and its page in that section');
+  const lw = secs.filter(p => p.si === '1');
+  assert(lw.length >= 2 && lw.every((p, i) => p.sp === `Left wing: page ${i + 1} of ${lw.length}`), 'multi-page section counted on its own: ' + lw.map(p => p.sp));
+  assert(secs.filter(p => p.si === '2').every(p => p.sp.startsWith('Left wing: page')) && secs.filter(p => p.si === '2')[0].sp.endsWith('page 1 of ' + secs.filter(p => p.si === '2').length), 'a second section with the same name has its own count');
+  const itemPages = {}; secs.forEach((p, i) => p.items.forEach(t => (itemPages[p.si + t] = itemPages[p.si + t] || []).push(i)));
+  assert(Object.entries(itemPages).filter(([k]) => k.startsWith('1')).every(([, v]) => v.length === 1), 'items that fit are never split across pages');
+  const longP = secs.filter(p => p.si === '2');
+  assert(longP.length >= 2 && longP.slice(1).every(p => p.items[0] === 'Very long item (continued)'), 'an item longer than a page continues, marked (continued)');
+  assert.strictEqual(longP.reduce((a, p) => a + p.steps, 0), 70, 'all 70 steps printed once');
+  assert.strictEqual(lw.reduce((a, p) => a + p.so, 0), 6, 'item sign-off line under each item in a sign-off section');
+  assert.strictEqual(secs.filter(p => p.si === '0').reduce((a, p) => a + p.so, 0), 0, 'none in a section without sign-off');
+  assert.deepStrictEqual([0, 1, 2, 3].map(si => secs.filter(p => p.si === String(si)).filter(p => p.end).length), [1, 1, 1, 1], 'one section-complete box per section, at its end');
+  assert(secs.filter(p => p.si === '3').length === 1, 'empty section still gets its page');
+  assert.deepStrictEqual(L1.pages[1].cols, ['Done', 'No.', 'Step', 'Qty / size', 'Spec', 'Book pg', 'Init.', 'Date']);
+  assert(/Left wing\(inspector sign-off\)page 3/.test(L1.toc[1].replace(/\s+/g, '')) || /page 3/.test(L1.toc[1]), 'contents lists where sections start: ' + L1.toc[1]);
+  assert.deepStrictEqual([L1.pages[1].w, L1.pages[1].h], [816, 1056], 'Letter is 8.5 x 11 in');
+  const L2 = await lay({ paper: 'A4', contents: false, qty: false, spec: false, itemSign: false, secEnd: false });
+  assert(L2.pages[0].sec === 'Prep' && L2.pages.every(p => !p.end && !p.so) && L2.pages.every(p => p.fits), 'options switch the extras off');
+  assert.deepStrictEqual(L2.pages[0].cols, ['Done', 'No.', 'Step', 'Book pg', 'Init.', 'Date'], 'columns switch off');
+  assert.deepStrictEqual([L2.pages[0].w, L2.pages[0].h], [794, 1123], 'A4 is 210 x 297 mm');
+  // a real PDF of it, for the Export window test below
+  await pp.evaluate(D => render(D, { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true }), PD);
+  const PDF = await pp.pdf({ printBackground: true, preferCSSPageSize: true }); assert(PDF.slice(0, 4).toString() === '%PDF');
+
+  // ---- the Export window ----
+  pg = await page({ 'shop.bcl': used }, prof('a'.repeat(32)), async pg => pg.addInitScript(([b, n]) => { window.__pdfBytes = b; window.__pdfPages = n; }, [Array.from(PDF), L1.n]));
+  await open(pg, 'shop');
+  await pg.evaluate(() => document.querySelector('[data-m="export"]').click());
+  assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#xp .xpl button b')].map(b => b.textContent)), ['Fresh copy', 'Printable checklist'], 'export kinds listed on the left');
+  await pg.evaluate(() => document.querySelector('#xp [data-xk=pdf]').click()); await pg.waitForTimeout(1500);
+  const call1 = await pg.evaluate(() => window.__pdfCalls.at(-1));
+  assert.deepStrictEqual(call1.o, { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true }, 'default options');
+  const dItems = call1.d.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps]));
+  assert(dItems.length > 10 && dItems.every(x => Object.keys(x).every(k => ['text', 'page', 'qty', 'size', 'spec', 'steps'].includes(k))), 'only the checklist goes to the PDF (no images, descriptions or progress)');
+  assert(await pg.evaluate(n => document.querySelectorAll('#xppages .xppg').length === n && document.querySelectorAll('#xppages canvas').length >= 1, L1.n), 'preview shows the real PDF pages');
+  assert(/^Page 1 of \d+ · Letter$/.test(await pg.evaluate(() => $('#xpinfo').textContent)), 'page indicator');
+  await pg.evaluate(() => { $('#xppages').scrollTop = $('#xppages').scrollHeight; $('#xppages').dispatchEvent(new Event('scroll')); }); await pg.waitForTimeout(300);
+  assert.strictEqual(await pg.evaluate(() => $('#xpinfo').textContent), `Page ${L1.n} of ${L1.n} · Letter`, 'scrolls through the pages');
+  await pg.evaluate(() => { $('#xpp').value = 'A4'; $('#xpp').dispatchEvent(new Event('change', { bubbles: true })); const c = document.querySelector('[data-po=spec]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); const s0 = document.querySelector('[data-ps="0"]'); s0.checked = false; s0.dispatchEvent(new Event('change', { bubbles: true })); });
+  await pg.waitForTimeout(800);
+  const call2 = await pg.evaluate(() => window.__pdfCalls.at(-1));
+  assert(call2.o.paper === 'A4' && call2.o.spec === false && call2.d.sections.length === call1.d.sections.length - 1, 'paper, columns and sections change the PDF');
+  assert.strictEqual(await pg.evaluate(() => AS.pdf.paper), 'A4', 'settings remembered');
+  await pg.evaluate(() => document.querySelector('#xpgo').click()); await pg.waitForTimeout(200);
+  const sv = await pg.evaluate(() => window.__saved);
+  assert(/ - checklist\.pdf$/.test(sv.o.name) && sv.o.filters[0].extensions[0] === 'pdf' && Buffer.from(sv.d).slice(0, 4).toString() === '%PDF', 'Export opens the Save dialog with the PDF');
+  assert(await pg.evaluate(() => $('#xp').hidden), 'window closes after saving');
+  await pg.evaluate(() => { document.querySelector('[data-m="export"]').click(); }); await pg.keyboard.press('Escape');
+  assert(await pg.evaluate(() => $('#xp').hidden), 'Esc closes it');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

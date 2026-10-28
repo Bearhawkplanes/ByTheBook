@@ -1,0 +1,70 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Printable checklist</title>
+<!-- Lays out a blank printable checklist; main.js loads this in a hidden window, calls render(data, opts) and prints it to PDF.
+     Each section starts on a new page; a main item and its steps are kept on one page unless the item alone is longer than a page. -->
+<style id="paper">@page{size:Letter;margin:0}</style>
+<style>
+@font-face{font-family:'Inter';src:url(lib/fonts/Inter.woff2) format('woff2');font-weight:100 900}
+:root{--w:8.5in;--h:11in}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,sans-serif;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff}
+.page{width:var(--w);height:var(--h);padding:.5in .5in .45in;display:flex;flex-direction:column;page-break-after:always;break-after:page;overflow:hidden}
+.page:last-child{page-break-after:auto;break-after:auto}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2.5px solid #111;padding-bottom:6px;margin-bottom:8px}
+.hd .nm{font-size:9pt;color:#555;letter-spacing:.02em}.hd h1{margin:2px 0 0;font-size:20pt;font-weight:700;letter-spacing:-.01em;overflow-wrap:anywhere}
+.hd .pg{text-align:right;font-size:9pt;color:#555;line-height:1.5;white-space:nowrap}.hd .pg b{display:block;font-size:13pt;color:#111}
+.body{flex:1;min-height:0}
+table.cl{width:100%;border-collapse:collapse;font-size:9.5pt;table-layout:fixed}
+.cl thead th{font-size:7.5pt;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#555;text-align:left;padding:4px;border-bottom:1px solid #111}
+.cl td{padding:2px 4px;height:.32in;border-bottom:.6px solid #bbb;vertical-align:middle;overflow-wrap:anywhere}
+.c-box{width:.42in}.c-no{width:.44in;color:#555;font-variant-numeric:tabular-nums}.c-q{width:1.5in;font-size:8.5pt}.c-s{width:1in;font-size:8.5pt}.c-p{width:.6in;text-align:center}
+.c-i{width:.6in}.c-d{width:.75in}.cl td.c-i,.cl td.c-d{border-left:.6px solid #bbb}
+.box{display:block;width:.17in;height:.17in;border:1.3px solid #111;border-radius:2px;margin:auto}
+tr.item td{background:#ececec;font-weight:700;border-bottom:1px solid #111;height:.34in}tr.item .c-no{color:#111}
+tr.item.cont td{background:#f6f6f6;color:#555;font-weight:600}
+tr.so td{height:.38in;border-bottom:1px solid #111;font-size:8.5pt;color:#333}
+.line{display:inline-block;border-bottom:1px solid #111;width:1.9in;height:.16in;vertical-align:bottom;margin:0 10px 0 4px}.line.s{width:1in}
+.secend{margin-top:.18in;border:1.5px solid #111;padding:8px 10px;font-size:9pt}
+.secend .t{font-weight:700;font-size:10pt;margin-bottom:8px}
+.notes{margin-top:.12in;font-size:8.5pt;color:#555}.notes div{border-bottom:.6px solid #999;height:.3in}
+.empty{color:#666;font-size:10pt;padding:.2in 0}
+.ft{display:flex;justify-content:space-between;gap:16px;font-size:7.5pt;color:#666;border-top:.6px solid #999;padding-top:5px;margin-top:6px}
+.cover h1.ttl{font-size:26pt;margin:.3in 0 .05in;overflow-wrap:anywhere}.cover .sub{color:#555;font-size:10pt}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:16px 28px;margin:.35in 0;font-size:9.5pt}.fields div{border-bottom:1px solid #111;padding-bottom:3px;height:.42in;display:flex;align-items:flex-end;color:#555}
+.toc{width:100%;border-collapse:collapse;font-size:10.5pt}.toc td{height:.34in;border-bottom:.6px solid #bbb}.toc .n{width:.4in;color:#555}.toc .pp{text-align:right;width:1.2in;font-variant-numeric:tabular-nums}.toc .tag{color:#666;font-size:8.5pt}
+.legend{margin-top:.3in;font-size:8.5pt;color:#444;line-height:1.6}.legend .box{display:inline-block;margin:0 4px -3px 0}
+</style></head><body><div id="out"></div>
+<script>
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+// data: {name, manual, printed, version, sections:[{title, sign, cards:[{text,page,qty,size,spec,steps:[...]}]}]}
+// opts: {paper:'Letter'|'A4', contents, qty, spec, itemSign, secEnd}; returns the number of pages
+async function render(D,o){
+ const A4=o.paper==='A4';document.getElementById('paper').textContent='@page{size:'+(A4?'A4':'Letter')+';margin:0}';
+ document.documentElement.style.setProperty('--w',A4?'210mm':'8.5in');document.documentElement.style.setProperty('--h',A4?'297mm':'11in');
+ await document.fonts.load('400 10pt Inter');await document.fonts.load('700 10pt Inter');
+ const out=document.getElementById('out');out.innerHTML='';
+ const foot='<div class="ft"><span>'+esc(D.manual||'')+'</span><span>Printed '+esc(D.printed)+' · Build Checklist '+esc(D.version)+' · blank copy</span></div>';
+ const cols='<th class="c-box">Done</th><th class="c-no">No.</th><th>Step</th>'+(o.qty?'<th class="c-q">Qty / size</th>':'')+(o.spec?'<th class="c-s">Spec</th>':'')+'<th class="c-p">Book pg</th><th class="c-i">Init.</th><th class="c-d">Date</th>',ncol=6+(o.qty?1:0)+(o.spec?1:0);
+ const head=t=>'<div class="hd"><div><div class="nm">'+esc(D.name)+'</div><h1>'+esc(t)+'</h1></div><div class="pg"><b class="tp"></b><span class="sp"></span></div></div>';
+ const newPage=(title,table,si)=>{const p=document.createElement('div');p.className='page';p.dataset.sec=title;p.dataset.si=si;p.innerHTML=head(title)+'<div class="body">'+(table?'<table class="cl"><thead><tr>'+cols+'</tr></thead><tbody></tbody></table>':'')+'</div>'+foot;out.appendChild(p);return p};
+ const fits=p=>{const b=p.querySelector('.body');return b.scrollHeight<=b.clientHeight+1};
+ const qs=x=>[x.qty&&'×'+x.qty,x.size].filter(Boolean).join(' ');
+ const row=(x,no,cls,txt)=>'<tr class="'+(cls||'')+'"><td class="c-box"><span class="box"></span></td><td class="c-no">'+no+'</td><td>'+esc(txt||x.text||'(untitled)')+'</td>'+(o.qty?'<td class="c-q">'+esc(qs(x))+'</td>':'')+(o.spec?'<td class="c-s">'+esc(x.spec||'')+'</td>':'')+'<td class="c-p">'+esc(x.page||'')+'</td><td class="c-i"></td><td class="c-d"></td></tr>';
+ const toRows=h=>{const t=document.createElement('tbody');t.innerHTML=h;return [...t.children]};
+ let cover=null;
+ if(o.contents){cover=document.createElement('div');cover.className='page cover';cover.innerHTML='<div class="hd"><div><div class="nm">Build Checklist</div><h1>Contents</h1></div><div class="pg"><b class="tp"></b><span></span></div></div><div class="body"><h1 class="ttl">'+esc(D.name)+'</h1><div class="sub">'+esc(D.manual||'')+'</div><div class="fields"><div>Aircraft / project</div><div>Serial no.</div><div>Builder</div><div>Inspector</div><div>Started</div><div>Completed</div></div><table class="toc"><tbody></tbody></table><div class="legend"><b>How to fill in:</b> tick <span class="box"></span> each step when done and add your initials and the date. Grey rows are main items'+(o.itemSign?'; in sections marked for sign-off, each main item has a sign-off line for the inspector':'')+'. Book pg = page in the manual.</div></div>'+foot;out.appendChild(cover)}
+ D.sections.forEach((s,si)=>{let p=newPage(s.title,true,si);s.first=out.children.length;
+  const put=rows=>{const tb=p.querySelector('tbody');rows.forEach(r=>tb.appendChild(r));if(fits(p))return true;rows.forEach(r=>r.remove());return false};
+  s.cards.forEach((c,ci)=>{const no=ci+1,so=s.sign&&o.itemSign?'<tr class="so"><td></td><td colspan="'+(ncol-1)+'">Item '+no+' signed off by <span class="line"></span> Date <span class="line s"></span></td></tr>':'';
+   const all=row(c,no,'item')+c.steps.map((x,j)=>row(x,no+'.'+(j+1))).join('')+so;
+   if(put(toRows(all)))return;
+   if(p.querySelector('tbody').children.length){p=newPage(s.title,true,si);if(put(toRows(all)))return}
+   // longer than a whole page: row by row, repeating the item as "(continued)" on each new page
+   for(const r of toRows(all))if(!put([r])){p=newPage(s.title,true,si);put(toRows(row(c,no,'item cont',(c.text||'(untitled)')+' (continued)')));put([r])}});
+  if(!s.cards.length)p.querySelector('.body').insertAdjacentHTML('beforeend','<div class="empty">No items in this section.</div>');
+  if(o.secEnd){const end='<div class="secend"><div class="t">'+esc(s.title)+': section complete</div><div>Signed <span class="line"></span> Date <span class="line s"></span></div></div><div class="notes">Notes / discrepancies<div></div><div></div><div></div></div>';
+   const b=p.querySelector('.body');b.insertAdjacentHTML('beforeend',end);if(!fits(p)){b.querySelector('.secend').remove();b.querySelector('.notes').remove();p=newPage(s.title,false,si);p.querySelector('.body').insertAdjacentHTML('beforeend',end)}}});
+ const pages=[...out.children],N=pages.length;
+ pages.forEach((p,i)=>{p.querySelector('.tp').textContent='Page '+(i+1)+' of '+N;if(p.dataset.si==null)return;const same=pages.filter(q=>q.dataset.si===p.dataset.si);p.querySelector('.sp').textContent=p.dataset.sec+': page '+(same.indexOf(p)+1)+' of '+same.length});
+ if(cover)cover.querySelector('.toc tbody').innerHTML=D.sections.map((s,i)=>'<tr><td class="n">'+(i+1)+'</td><td>'+esc(s.title)+(s.sign&&o.itemSign?' <span class="tag">(inspector sign-off)</span>':'')+'</td><td class="pp">page '+s.first+'</td></tr>').join('');
+ return N}
+</script></body></html>

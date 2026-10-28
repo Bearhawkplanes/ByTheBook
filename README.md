@@ -44,14 +44,14 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 ## Opening files
 - Menu > Import, or drag a `.bcl` onto the app / use "Open with": the file is copied into Saves and opened.
 - Double-clicking a `.bcl` in Explorer works only with the installer build (portable apps cannot register file types).
-- Sharing with someone else: Menu > Export for sharing… saves a clean copy ("name (shared).bcl") with every section, step, image and PDF, but nothing checked off, no sign-offs and no profile stamp. The activity log is left out unless you tick "Include the activity log". It opens on any computer without an error; their app stamps it with their own profile on the first save. A plain copy (Save a copy elsewhere, or copying the file) keeps the stamp and shows E-4420 for that checklist only (on a computer with a different profile or with no profile yet) until it is adopted.
+- Sharing with someone else: Menu > Export… > Fresh copy saves a clean copy ("name (shared).bcl") with every section, step, image and PDF, but nothing checked off, no sign-offs and no profile stamp. The activity log is left out unless you tick "Include the activity log". It opens on any computer without an error; their app stamps it with their own profile on the first save. A plain copy (Save a copy elsewhere, or copying the file) keeps the stamp and shows E-4420 for that checklist only (on a computer with a different profile or with no profile yet) until it is adopted.
 
 ## Profile and PINs (Main menu > Profile)
 - The main profile (username + main PIN of 5 to 8 digits) is created first. Its PIN always counts as Boss. Everyone else's PIN is exactly 4 digits. PIN boxes accept up to 8 digits and never show how many are needed, so the main PIN's length is not given away. A main PIN from an older version (4 digits) still works, but the Profile page asks for a new 5-8 digit one the next time it is opened.
 - PINs are stored only as salted hashes in `Data/` (not in checklist files). A short PIN cannot stop someone who can edit the app files, so this is shop procedure, not high security. Wrong PINs are counted (any correct PIN resets the count, and restarting the app does not):
   - 5 in a row: a red message suggests "Forgot PIN?" on the Profile page.
   - Every 15th in a row: a 20-minute wait before any PIN is accepted (the main PIN too). The recovery code clears it straight away.
-  - 100 in a row: error E-4419 locks the whole app the same way as a tampered profile (view and Export for sharing only) until the recovery code is entered.
+  - 100 in a row: error E-4419 locks the whole app the same way as a tampered profile (view and Menu > Export… only) until the recovery code is entered.
 - Forgot PIN or locked out: Profile > Forgot PIN? > enter the recovery code. It opens the Profile page and clears any wait or E-4419. Type a new main PIN, or leave it empty to keep the current one. The profile, names and settings stay the same.
 - An employee forgot their PIN: the main profile opens the Profile page (with the recovery code if a wait is running), types a new PIN next to the person's name and clicks "Set PIN". They keep the same ID, so the activity log is not marked.
 - Assign PINs to names: a roster of people, each with a unique PIN; mark people as Boss. Boss PINs only count while this is on.
@@ -68,9 +68,18 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - The Profile page lists the codes at the bottom (visible without a PIN), explains them, and offers recovery. A new profile cannot be created while an error is active.
 - E-4420 (adopting): checklists saved under a different profile are highlighted in red in the Saved checklists list, with "adopt?" under the name. Clicking it explains the situation and asks for the main profile or a Boss PIN; the checklist is then re-stamped and the log records who adopted it. The open checklist can also be adopted from the Profile page ("Adopt this checklist").
 - In the built app the developer tools (Ctrl+Shift+I) are switched off, so the PIN limits cannot be skipped from inside the app.
-- Getting the checklists out without the recovery code (for example after a bad edit to the profile files): checklists still open for viewing, and Menu > Export for sharing… still works. Tick "Include the activity log" to keep the old log, read-only, under an "Exported as a fresh copy" marker, then re-enter the checks from it in a new install.
+- Getting the checklists out without the recovery code (for example after a bad edit to the profile files): checklists still open for viewing, and Menu > Export… > Fresh copy still works. Tick "Include the activity log" to keep the old log, read-only, under an "Exported as a fresh copy" marker, then re-enter the checks from it in a new install.
 - To move to a new computer, copy `Data/` and `Saves/` (including the hidden-style `.profile-marker.json`) together. Copying only the checklists triggers E-4417 until the recovery code is entered.
 - This deters casual tampering. Someone who can edit the app's code, or who deletes the profile, marker and every stamped checklist, is not stopped. Windows folder permissions are the only real lock.
+
+## Export (Menu > Export…)
+One window: the kinds of export on the left, their settings on the right, and Export… at the bottom, which opens the usual Save window so you choose where the file goes.
+- Fresh copy (.bcl): every section, step, image, PDF and installed clip, with nothing checked off and no profile link, for sharing or a new install. Optionally with the activity log.
+- Printable checklist (PDF): a blank checklist to print and fill in by hand. The right side shows the real PDF; scroll through the pages ("Page 3 of 9").
+  - Each section starts on a new page. Every page shows the checklist name, the section, "Page x of N" and the page within that section ("Left wing: page 2 of 3").
+  - Main items are grey rows with their steps numbered under them (1.1, 1.2…). Columns: Done tick box, No., Step, Qty / size, Spec, Book pg, Init., Date. A main item and its steps stay on one page; only an item longer than a page continues on the next, marked "(continued)".
+  - Options (remembered): paper size Letter or A4; Contents page (with build details to fill in and where each section starts); Qty / size column; Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
+  - No images, videos, PDFs, descriptions or progress: it is always a blank copy.
 
 ## Video Player
 Top bar > Video Player (next to PDF Viewer). The player shows the videos of the open checklist.
@@ -86,20 +95,20 @@ Top bar > Video Player (next to PDF Viewer). The player shows the videos of the 
 - On an item's Images tab a video shows only a thumbnail until it is clicked. A clip plays just its part, on a loop. A loaded video stays loaded while you are on that item and for one minute after you click away, then it is unloaded.
 - A checklist can hold any number of videos, imported and linked mixed; click one in the player's list to switch to it. Clips from any of them can go on any step.
 - Choosing a video with "+ Add image / video files" on a step's Images tab opens the Video Player with the same import / link choice, and the step picker then starts on that step.
-- Export for sharing keeps copied videos and installed clips. Linked videos are not copied, and the export window says so.
+- Export… > Fresh copy keeps copied videos and installed clips. Linked videos are not copied, and the export window says so.
 
 ## Drawing and text on images
 For torque patterns, bolt numbering and the like.
 - Every image on the Images tab has a pencil in its top-left corner (hidden while editing is locked). Click it to draw.
 - Top left: Apply (green) and Cancel (red). Then pen Size (with a preview dot), Color (presets, or the rainbow slider for any colour), Undo / Redo (Ctrl+Z / Ctrl+Y), and the trash can, which deletes all drawing on that image (Undo brings it back). Esc cancels.
-- Applied drawings are saved in the checklist as pen strokes, a few KB, not as a second copy of the image. They are included in Export for sharing.
+- Applied drawings are saved in the checklist as pen strokes, a few KB, not as a second copy of the image. They are included in a Fresh copy export.
 - Open the pencil again any time to add to the drawing, or trash + Apply to remove it.
 - Text: the T button next to the pencil turns on text mode for that image, right on the Images tab. Drawings and text are separate: the pencil only changes drawings, the T only changes text.
   - A bar above the image: font (Inter, Roboto, Open Sans, Lato, Source Sans 3, Barlow: built into the app, so text looks the same on every computer), size, Bold, colour, and Done. They apply to the selected text and become the default for new text.
   - Three buttons on the left side of the image: Select text (click a text, then select and type in it as usual), Move text (cross-arrows cursor: drag any text), New text (text cursor: click anywhere on the image to start typing there).
   - Delete text (top right of the image) removes the selected text box.
   - Only the image changes while text mode is on: off the image the app works as normal. Text is saved as you type; Done, the T button, or clicking another step ends text mode, and empty text boxes are removed then.
-  - Text is stored as words and positions (bytes, not a picture) and is included in Export for sharing.
+  - Text is stored as words and positions (bytes, not a picture) and is included in a Fresh copy export.
 - Images with a drawing or text get an eye button ("Toggle visibility") to hide or show them; the closed eye means hidden. Hiding lasts until the checklist is closed and does not change the file.
 
 ## Activity log
