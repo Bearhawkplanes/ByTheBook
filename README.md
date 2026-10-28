@@ -78,13 +78,19 @@ Top bar > Video Player (next to PDF Viewer). The player shows the videos of the 
 - Choosing a video with "+ Add image / video files" on a step's Images tab opens the Video Player with the same import / link choice, and the step picker then starts on that step.
 - Export for sharing keeps copied videos and installed clips. Linked videos are not copied, and the export window says so.
 
-## Drawing on images
+## Drawing and text on images
 For torque patterns, bolt numbering and the like.
 - Every image on the Images tab has a pencil in its top-left corner (hidden while editing is locked). Click it to draw.
 - Top left: Apply (green) and Cancel (red). Then pen Size (with a preview dot), Color (presets, or the rainbow slider for any colour), Undo / Redo (Ctrl+Z / Ctrl+Y), and the trash can, which deletes all drawing on that image (Undo brings it back). Esc cancels.
 - Applied drawings are saved in the checklist as pen strokes, a few KB, not as a second copy of the image. They are included in Export for sharing.
 - Open the pencil again any time to add to the drawing, or trash + Apply to remove it.
-- Images with a drawing also get an eye button ("Toggle visibility") to hide or show the drawing; the closed eye means it is hidden. Hiding lasts until the checklist is closed and does not change the file.
+- Text: the T button next to the pencil turns on text mode for that image, right on the Images tab. Drawings and text are separate: the pencil only changes drawings, the T only changes text.
+  - A bar above the image: font (Arial, Segoe UI, Verdana, Tahoma, Trebuchet MS, Calibri), size, Bold, colour, and Done. They apply to the selected text and become the default for new text.
+  - Three buttons on the left side of the image: Select text (click a text, then select and type in it as usual), Move text (cross-arrows cursor: drag any text), New text (text cursor: click anywhere on the image to start typing there).
+  - Delete text (top right of the image) removes the selected text box.
+  - Only the image changes while text mode is on: off the image the app works as normal. Text is saved as you type; Done, the T button, or clicking another step ends text mode, and empty text boxes are removed then.
+  - Text is stored as words and positions (bytes, not a picture) and is included in Export for sharing.
+- Images with a drawing or text get an eye button ("Toggle visibility") to hide or show them; the closed eye means hidden. Hiding lasts until the checklist is closed and does not change the file.
 
 ## Activity log
 - Every checklist keeps its own log: Menu > Activity log…, Settings > Open the full activity log, or the LOG button on a selected file in the main menu (no need to open it). Filter by name, event or item; Download CSV.

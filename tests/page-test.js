@@ -356,8 +356,56 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.notStrictEqual(await pix(), '136,136,136', 'saved drawing shown in the editor');
   await btn('clr'); await btn('ok'); await pg.waitForTimeout(300);
   assert(await pg.evaluate(() => !S.sections[1].cards[0].steps[1].media.at(-1).draw && !document.querySelector('#p-img [data-a=dvis]')), 'drawing deleted, eye gone');
+  // ---- text on images: typed on the image itself; tools on the side; leaving the step applies it ----
+  const tx = () => pg.evaluate(() => { const r = $('#txl').getBoundingClientRect(); return { x: r.left, y: r.top, k: r.width / 800, w: r.width, h: r.height }; });
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=text]').click()); await pg.waitForTimeout(300);
+  let L0 = await tx();
+  assert(await pg.evaluate(() => TX && TX.tool === 'new' && [...document.querySelectorAll('.txside button')].map(b => b.dataset.tt).join() === 'sel,move,new' && !!$('#txdel') && !document.querySelector('#p-img .fit [data-a=mdel]')), 'side tools, Delete text top right, no image delete button');
+  assert.strictEqual(await pg.evaluate(() => getComputedStyle($('#txl')).cursor), 'text', 'text cursor over the image when adding text');
+  const mi = () => S.sections[1].cards[0].steps[1].media.at(-1);
+  await pg.mouse.click(L0.x + 100 * L0.k, L0.y + 100 * L0.k); await pg.keyboard.type('Bolt 1');
+  await pg.keyboard.press('ArrowRight'); await pg.keyboard.press('ArrowLeft');
+  assert.deepStrictEqual(await pg.evaluate(() => [TX.mid === S.sections[1].cards[0].steps[1].media.at(-1).id, document.activeElement.classList.contains('txb')]), [true, true], 'arrow keys move the caret, not to another image');
+  await pg.evaluate(() => { $('#txf').value = 'Verdana'; $('#txf').dispatchEvent(new Event('change', { bubbles: true })); $('#txs').value = '50'; $('#txs').dispatchEvent(new Event('change', { bubbles: true })); $('#txb').click(); document.querySelector('[data-tc="#1e88ff"]').click(); });
+  let t0 = await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text[0]);
+  assert(t0.t === 'Bolt 1' && t0.f === 'Verdana' && t0.s === 40 && t0.b === true && t0.c === '#1e88ff', 'font, size, bold and colour apply to the selected text: ' + JSON.stringify(t0));
+  await pg.mouse.click(L0.x + 400 * L0.k, L0.y + 400 * L0.k); await pg.keyboard.type('Bolt 2');
+  await pg.mouse.click(L0.x + 600 * L0.k, L0.y + 100 * L0.k);   // a third box left empty
+  assert.strictEqual(await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text.length), 3);
+  // Select: click a text and type in it
+  await pg.evaluate(() => document.querySelector('[data-tt=sel]').click());
+  const b1 = await pg.evaluate(() => { const r = document.querySelector('#txl .txb[data-i="0"]').getBoundingClientRect(); return [r.right - 2, r.top + r.height / 2]; });
+  await pg.mouse.click(...b1); await pg.keyboard.press('End'); await pg.keyboard.type('A');
+  assert.strictEqual(await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text[0].t), 'Bolt 1A', 'edit text in place');
+  await pg.mouse.click(L0.x + 700 * L0.k, L0.y + 550 * L0.k);
+  assert.strictEqual(await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text.length), 3, 'Select tool: clicking the image does not add text');
+  // Move: drag a text; cross-arrow cursor
+  await pg.evaluate(() => document.querySelector('[data-tt=move]').click());
+  assert.strictEqual(await pg.evaluate(() => getComputedStyle(document.querySelector('#txl .txb')).cursor), 'move', 'move cursor on texts');
+  const b2 = await pg.evaluate(() => { const r = document.querySelector('#txl .txb[data-i="1"]').getBoundingClientRect(); return [r.left + 5, r.top + 5]; });
+  const p0 = await pg.evaluate(() => { const t = S.sections[1].cards[0].steps[1].media.at(-1).text[1]; return [t.x, t.y]; });
+  await pg.mouse.move(...b2); await pg.mouse.down(); await pg.mouse.move(b2[0] + 100 * L0.k, b2[1] + 50 * L0.k, { steps: 5 }); await pg.mouse.up();
+  const p1 = await pg.evaluate(() => { const t = S.sections[1].cards[0].steps[1].media.at(-1).text[1]; return [t.x, t.y]; });
+  assert(Math.abs(p1[0] - p0[0] - 100) < 3 && Math.abs(p1[1] - p0[1] - 50) < 3 && await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text[1].t) === 'Bolt 2', 'dragged 100,50 image pixels: ' + p0 + ' -> ' + p1);
+  // Delete text removes the selected box
+  await pg.evaluate(() => document.querySelector('[data-tt=sel]').click());
+  await pg.mouse.click(...await pg.evaluate(() => { const r = document.querySelector('#txl .txb[data-i="1"]').getBoundingClientRect(); return [r.left + 5, r.top + r.height / 2]; }));
+  await pg.evaluate(() => $('#txdel').click());
+  assert.deepStrictEqual(await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text.map(t => t.t)), ['Bolt 1A', ''], 'Delete text removed Bolt 2');
+  // clicking outside the image is normal app use; leaving the step applies the text and drops empty boxes
+  await pg.evaluate(() => $('#sel').click());
+  assert(await pg.evaluate(() => !!TX), 'clicking elsewhere on the page keeps text mode');
+  await pg.evaluate(() => { select(S.sections[1].cards[0].steps[0]); select(S.sections[1].cards[0].steps[1]); }); await pg.waitForTimeout(400);
+  assert.deepStrictEqual(await pg.evaluate(() => [TX, S.sections[1].cards[0].steps[1].media.at(-1).text.map(t => t.t)]), [null, ['Bolt 1A']], 'leaving the step applied it; the empty box was dropped');
+  const withText = await pg.evaluate(() => document.querySelector('#p-img img[data-mid]').src);
+  const plain2 = await pg.evaluate(() => urls[S.sections[1].cards[0].steps[1].media.at(-1).id]);
+  assert.notStrictEqual(withText, plain2, 'text drawn into the shown picture');
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').click()); await pg.waitForTimeout(300);
+  assert.strictEqual(await pg.evaluate(() => document.querySelector('#p-img img[data-mid]').src), plain2, 'eye hides text too');
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').click());
+  assert.deepStrictEqual(JSON.parse(await pg.evaluate(() => pack())).sections[1].cards[0].steps[1].media.at(-1).text.map(t => t.t), ['Bolt 1A'], 'text saved in the file');
   await pg.evaluate(() => { S.locked = true; refreshAll(); renderR(); });
-  assert(await pg.evaluate(() => getComputedStyle(document.querySelector('#p-img [data-a=draw]')).display === 'none'), 'pencil hidden while editing is locked');
+  assert(await pg.evaluate(() => getComputedStyle(document.querySelector('#p-img [data-a=draw]')).display === 'none' && getComputedStyle(document.querySelector('#p-img [data-a=text]')).display === 'none'), 'pencil and text buttons hidden while editing is locked');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

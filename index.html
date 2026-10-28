@@ -174,7 +174,16 @@ body.dragging{user-select:none;cursor:col-resize}
 #dwhue{width:100%;height:12px;appearance:none;border-radius:6px;background:linear-gradient(90deg,red,#ff0,lime,cyan,blue,#f0f,red)}
 .dwpre{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}.dwpre button{height:22px;padding:0;border:1px solid var(--line);border-radius:4px}
 .dwbox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}#dwcv{touch-action:none;cursor:crosshair;box-shadow:0 0 0 1px var(--line)}
-#pk{z-index:61}.pkd{width:min(780px,94vw);height:86vh;display:flex;flex-direction:column;gap:8px}
+#pk{z-index:61}
+.mtools button.on{background:var(--acc)}
+#txl{position:absolute;z-index:1}#txl.t-new{cursor:text}#txl.t-move .txb{cursor:move}#txl.t-sel .txb,#txl.t-new .txb{cursor:text}
+.txb{position:absolute;white-space:pre;line-height:1.2;min-width:6px;min-height:1em;outline:none;user-select:text}
+#txl .txb:hover,#txl .txb.on{outline:1px dashed rgba(255,255,255,.85);outline-offset:3px;box-shadow:0 0 0 4px rgba(0,0,0,.25)}
+.txside{position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:2;display:flex;flex-direction:column;gap:6px}
+.txside button,.tile .txside button{position:static;display:flex;padding:7px;background:rgba(0,0,0,.6);color:#fff;border-color:transparent}.txside button.on{background:var(--acc)}
+#txdel{position:absolute;top:8px;right:8px;z-index:2;display:flex;gap:6px;align-items:center;background:var(--warn);border-color:var(--warn);color:#fff}#txdel:disabled{opacity:.45}
+.txbar select{width:auto}.txbar label.txl2{display:flex;gap:6px;align-items:center;margin:0;font-size:13px}.txcols{display:flex;gap:3px}.txcols button{width:20px;height:20px;padding:0;border-radius:4px}.txcols button.on{outline:2px solid var(--fg);outline-offset:1px}
+#txb.on{background:var(--acc);border-color:var(--acc);color:#fff}.pkd{width:min(780px,94vw);height:86vh;display:flex;flex-direction:column;gap:8px}
 .pktabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);flex:none;scrollbar-width:thin}.pktabs .stab.on{box-shadow:inset 0 -3px 0 var(--acc);color:var(--fg)}
 #pklist{flex:1;min-height:0;overflow:auto;position:relative;padding-right:4px}
 .pksec{position:sticky;top:0;z-index:1;background:var(--panel);font-weight:700;font-size:13px;padding:10px 6px 6px;border-bottom:1px solid var(--line)}
@@ -334,7 +343,7 @@ function renderL(){
 function loc(row){const si=+row.dataset.s,ci=+row.dataset.c,j=row.dataset.j!=null?+row.dataset.j:null,sec=S.sections[si],card=sec.cards[ci];
  const arr=j!=null?card.steps:sec.cards,idx=j!=null?j:ci;return{arr,idx,item:arr[idx],card,sec,isCard:j==null}}
 function autoTab(it){const m=AS.auto;setTab(m==='stay'?tab:m==='auto'?(it.media.length?'img':it.page?'pdf':'desc'):m)}
-function select(it){SEL=it;document.querySelectorAll('#L .row.sel').forEach(x=>x.classList.remove('sel'));renderR();autoTab(it)}
+function select(it){if(TX&&it!==SEL)txEnd();SEL=it;document.querySelectorAll('#L .row.sel').forEach(x=>x.classList.remove('sel'));renderR();autoTab(it)}
 const L=$('#L');
 let MT=-1;
 function scrollToSec(i){const el=document.querySelector(`#L .secband[data-si="${i}"]`);if(!el)return;const tb=$('#L .stabs');L.scrollTop=el.getBoundingClientRect().top-L.getBoundingClientRect().top+L.scrollTop-(tb?tb.offsetHeight:0)-8}
@@ -397,7 +406,7 @@ function setTab(t){tab=t;document.querySelectorAll('.tabs button').forEach(b=>b.
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 const urls={};
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
- if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id]):urls[id]}}}
+ if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id],!!(TX&&TX.mid===id)):urls[id]}}if(TX)txMount()}
 async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.startsWith('video');if(vid&&blob.size>MAXCOPY)return toast('Videos over 300 MB are too big to copy into a checklist: use Video Player to link it');
  const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
@@ -423,15 +432,19 @@ const mediaEl=m=>{if(isVid(m))return `<div class="vth" data-vk="${esc(vkey(m))}"
 function imgPane(it){const n=it.media.length;IM.i=Math.max(0,Math.min(n-1,IM.i));
  const bar=`<div class="tb"><span class="seg">${[['fit','Fit'],['stack','Stack'],['grid','Grid']].map(([k,t])=>`<button data-a="vm" data-k="${k}" class="${IM.mode===k?'on':''}">${t}</button>`).join('')}</span>${n?`<span class="mut">${IM.mode==='fit'?(IM.i+1)+' / ':''}${n} item${n>1?'s':''}</span>`:''}</div>`;
  let body='<div class="mut">No images or videos on this item yet. Add files, paste a screenshot (Ctrl+V), or use the camera button on the PDF tab.</div>';
+ if(TX&&(IM.mode!=='fit'||!it.media[IM.i]||it.media[IM.i].id!==TX.mid))txEnd();   // text mode belongs to one image
+ if(n&&TX)return txOpts()+`<div class="fit tx-on">${mediaEl(it.media[IM.i])}<div id="txl"></div><div class="txside">${[['sel','Select text: click a text to edit it',TICON.sel],['move','Move text: drag any text',TICON.move],['new','New text: click on the image to add text',TICON.add]].map(([k,t,i])=>`<button data-tt="${k}" class="${TX.tool===k?'on':''}" title="${t}">${i}</button>`).join('')}</div><button id="txdel" title="Delete the selected text box">${ICON.trash} Delete text</button></div>`;
  if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>`;
  else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button></div>`).join('')}</div>`;
  return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick" title="Videos open in the Video Player, to import or link them and pick the part to show">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
-document.addEventListener('keydown',e=>{if(tab!=='img'||!SEL||IM.mode!=='fit'||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const n=SEL.media.length;if(n<2)return;
+document.addEventListener('keydown',e=>{if(tab!=='img'||!SEL||IM.mode!=='fit'||TX||e.target.isContentEditable||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const n=SEL.media.length;if(n<2)return;
  if(e.key==='ArrowRight'){IM.i=(IM.i+1)%n;renderR()}else if(e.key==='ArrowLeft'){IM.i=(IM.i-1+n)%n;renderR()}});
 const R=$('#R');
 R.addEventListener('input',e=>{const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
  if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL()}
+ if(t.id==='txf'){AS.tf=t.value;saveApp();txSet(x=>x.f=AS.tf)}
+ if(t.id==='txs'){AS.tsz=+t.value;saveApp();txSet(x=>x.s=AS.tsz*txW()/1000)}
  if(t.id==='mfile'){const fl=[...t.files],isV=f=>/^video\//.test(f.type)||/\.(mp4|m4v|mov|webm|mkv|avi|wmv|mpe?g|3gp)$/i.test(f.name);t.value='';
   fl.filter(f=>!isV(f)).forEach(f=>attach(f,f.name,f.type));const v=fl.filter(isV);if(v.length)vidFromItem(v)}});
 // a video chosen on an item's Images tab opens the Video Player (import or link it there), with the step picker starting on that item
@@ -442,7 +455,13 @@ R.addEventListener('click',e=>{
  if(e.target.matches('.tile img')){IM.mode='fit';IM.i=+e.target.closest('.tile').dataset.k;renderR();return}
  const b=e.target.closest('button');if(!b)return;
  if(b.dataset.a==='dvis'){const id=b.dataset.dm;DHIDE.has(id)?DHIDE.delete(id):DHIDE.add(id);renderR();return}
- if(b.dataset.a==='draw'){const m=SEL&&SEL.media.find(x=>x.id===b.dataset.dm);if(m)drawOpen(m);return}
+ if(b.dataset.a==='draw'){const m=SEL&&SEL.media.find(x=>x.id===b.dataset.dm);if(m){if(TX){txEnd();renderR()}drawOpen(m)}return}
+ if(b.dataset.a==='text'){const m=SEL&&SEL.media.find(x=>x.id===b.dataset.dm);if(m){if(TX&&TX.mid===m.id){txEnd();renderR()}else txStart(m)}return}
+ if(TX){if(b.dataset.a==='txdone'){txEnd();renderR();return}
+  if(b.dataset.tt){TX.tool=b.dataset.tt;document.querySelectorAll('.txside button').forEach(x=>x.classList.toggle('on',x===b));TX.place();return}
+  if(b.id==='txdel'){const m=txItem();if(m&&TX.sel!=null){m.text.splice(TX.sel,1);TX.sel=null;save();TX.place();txPick(null)}return}
+  if(b.id==='txb'){const m=txItem(),t=m&&TX.sel!=null?m.text[TX.sel]:null;AS.tb=!(t?t.b:AS.tb);saveApp();b.classList.toggle('on',AS.tb);txSet(x=>x.b=AS.tb);return}
+  if(b.dataset.tc){AS.tcol=b.dataset.tc;saveApp();document.querySelectorAll('.txcols button').forEach(x=>x.classList.toggle('on',x===b));txSet(x=>x.c=AS.tcol);return}}
  if(isLocked()&&(b.id==='mpick'||b.dataset.a==='maddurl'||b.dataset.a==='mdel'))return;
  if(b.id==='mpick')$('#mfile').click();
  else if(b.dataset.a==='maddurl'){const u=$('#murl').value.trim();if(u&&SEL){SEL.media.push({kind:'link',url:u});IM.i=SEL.media.length-1;save();renderR();renderL()}}
@@ -619,15 +638,15 @@ const ICON={eye:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" str
  redo:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>',
  trash:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 11v6M14 11v6"/></svg>'};
 const hasDraw=m=>!!(m&&m.draw&&m.draw.s&&m.draw.s.length);
-const mediaTools=m=>m.kind!=='file'||m.type==='video'?'':`<span class="mtools"><button class="ed" data-a="draw" data-dm="${m.id}" title="Draw on this image">${ICON.pen}</button>${hasDraw(m)?`<button data-a="dvis" data-dm="${m.id}" title="Toggle visibility">${DHIDE.has(m.id)?ICON.eyeOff:ICON.eye}</button>`:''}</span>`;
+const mediaTools=m=>m.kind!=='file'||m.type==='video'?'':`<span class="mtools"><button class="ed" data-a="draw" data-dm="${m.id}" title="Draw on this image">${ICON.pen}</button><button class="ed${TX&&TX.mid===m.id?' on':''}" data-a="text" data-dm="${m.id}" title="Text on this image">${TICON.text}</button>${hasDraw(m)||hasText(m)?`<button data-a="dvis" data-dm="${m.id}" title="Toggle visibility">${DHIDE.has(m.id)?ICON.eyeOff:ICON.eye}</button>`:''}</span>`;
 function paintStrokes(g,list,k){g.lineCap=g.lineJoin='round';for(const st of list){const p=st.p;g.strokeStyle=g.fillStyle=st.c;g.lineWidth=st.w*k;
  if(p.length<=4){g.beginPath();g.arc(p[0]*k,p[1]*k,st.w*k/2,0,7);g.fill();continue}
  g.beginPath();g.moveTo(p[0]*k,p[1]*k);for(let i=2;i<p.length-2;i+=2)g.quadraticCurveTo(p[i]*k,p[i+1]*k,(p[i]+p[i+2])/2*k,(p[i+1]+p[i+3])/2*k);g.lineTo(p[p.length-2]*k,p[p.length-1]*k);g.stroke()}}
 const imgOf=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src});
 // the picture shown on the Images tab: the plain image, or a drawn-over copy (made once per drawing, kept in memory only)
-async function shownUrl(m,src){if(!hasDraw(m)||DHIDE.has(m.id))return src;const k=JSON.stringify(m.draw);if(DRC[m.id]&&DRC[m.id].k===k)return DRC[m.id].url;
- try{const im=await imgOf(src),c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d');g.drawImage(im,0,0);paintStrokes(g,m.draw.s,im.naturalWidth/(m.draw.w||im.naturalWidth));
-  const b=await new Promise(r=>c.toBlob(r,/jpe?g/i.test((MEDIA[m.id]||{}).type||'')?'image/jpeg':'image/png',.92));if(DRC[m.id])URL.revokeObjectURL(DRC[m.id].url);DRC[m.id]={k,url:URL.createObjectURL(b)};return DRC[m.id].url}catch(e){return src}}
+async function shownUrl(m,src,noText){if(!(hasDraw(m)||(!noText&&hasText(m)))||DHIDE.has(m.id))return src;const k=JSON.stringify([m.draw,noText?0:m.text]),ck=m.id+(noText?':n':'');if(DRC[ck]&&DRC[ck].k===k)return DRC[ck].url;
+ try{const im=await imgOf(src),c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d');g.drawImage(im,0,0);if(hasDraw(m))paintStrokes(g,m.draw.s,im.naturalWidth/(m.draw.w||im.naturalWidth));if(!noText)paintText(g,m.text,1);
+  const b=await new Promise(r=>c.toBlob(r,/jpe?g/i.test((MEDIA[m.id]||{}).type||'')?'image/jpeg':'image/png',.92));if(DRC[ck])URL.revokeObjectURL(DRC[ck].url);DRC[ck]={k,url:URL.createObjectURL(b)};return DRC[ck].url}catch(e){return src}}
 const mediaSrc=id=>{if(!urls[id]){const r=MEDIA[id];if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}return urls[id]};
 // ----- the editor -----
 const DCOL=['#e5332a','#ff8a00','#ffd400','#2fb344','#1e88ff','#b44bff','#ffffff','#000000'];
@@ -642,7 +661,7 @@ async function drawOpen(m){if(isLocked())return toast('Editing is locked');const
  <div class="dwbox"><canvas id="dwcv"></canvas></div>`;w.hidden=false;
  const cv=$('#dwcv'),g=cv.getContext('2d'),box=w.querySelector('.dwbox'),dot=w.querySelector('.dwdot i');let color=col;
  const fit=()=>{const r=box.getBoundingClientRect(),d=devicePixelRatio||1;sc=Math.min((r.width-20)/W,(r.height-20)/H,1);cv.style.width=W*sc+'px';cv.style.height=H*sc+'px';cv.width=Math.round(W*sc*d);cv.height=Math.round(H*sc*d);paint()};
- const paint=()=>{const d=cv.width/W;g.clearRect(0,0,cv.width,cv.height);g.drawImage(im,0,0,cv.width,cv.height);paintStrokes(g,cur?strokes.concat([cur]):strokes,d)};
+ const paint=()=>{const d=cv.width/W;g.clearRect(0,0,cv.width,cv.height);g.drawImage(im,0,0,cv.width,cv.height);paintStrokes(g,cur?strokes.concat([cur]):strokes,d);paintText(g,m.text,d)};
  const ui=()=>{w.querySelector('[data-dw=un]').disabled=!hist.length;w.querySelector('[data-dw=re]').disabled=!fut.length;w.querySelector('[data-dw=clr]').disabled=!strokes.length;
   const z=+$('#dwsz').value;dot.style.width=dot.style.height=z+'px';dot.style.background=color;w.querySelector('.dwsw').style.background=color};
  const commit=next=>{hist.push(strokes);strokes=next;fut=[];paint();ui()};
@@ -664,6 +683,46 @@ async function drawOpen(m){if(isLocked())return toast('Editing is locked');const
  $('#dwhue').oninput=e=>{color=`hsl(${e.target.value} 90% 50%)`;AS.dcol=color;saveApp();ui()};
  $('#dwsz').oninput=e=>{AS.dsz=+e.target.value;saveApp();ui()};
  addEventListener('resize',fit);document.addEventListener('keydown',key,true);fit();ui()}
+// ---------- text on images: typed straight onto the image on the Images tab; kept as m.text and drawn into the picture like the strokes ----------
+// m.text=[{x,y,t,f:font,s:size,c:color,b:bold}] in the image's own pixels. Only the image area changes while text mode is on; leaving the step ends it.
+let TX=null;   // text mode: {mid, tool:'sel'|'move'|'new', sel:index|null}
+const TFONTS=['Arial','Segoe UI','Verdana','Tahoma','Trebuchet MS','Calibri'];
+const TICON={text:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg>',
+ sel:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 4h6M9 20h6M12 4v16"/></svg>',
+ move:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2v20M2 12h20M12 2 9 5M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/></svg>',
+ add:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6V4h11v2M8.5 4v14M6 18h5M18 13v8M14 17h8"/></svg>'};
+const hasText=m=>!!(m&&m.text&&m.text.some(t=>t.t&&t.t.trim()));
+const tcss=t=>`"${t.f}",sans-serif`;
+function paintText(g,list,k){g.textBaseline='top';for(const t of list||[]){if(!t.t)continue;g.font=`${t.b?700:400} ${t.s*k}px ${tcss(t)}`;g.fillStyle=t.c;t.t.split('\n').forEach((ln,i)=>g.fillText(ln,t.x*k,(t.y+(i*1.2+.1)*t.s)*k))}}   // .1: half the extra line height, as the HTML boxes show it
+const txItem=()=>TX&&SEL&&SEL.media.find(m=>m.id===TX.mid);
+function txStart(m){if(isLocked())return toast('Editing is locked');if(TX)txEnd();const k=SEL.media.indexOf(m);IM.mode='fit';IM.i=k;DHIDE.delete(m.id);if(!m.text)m.text=[];TX={mid:m.id,tool:'new',sel:null};renderR()}
+// ends text mode; empty boxes are dropped. Called when leaving the step, the image, or with Done
+function txEnd(){const m=txItem();if(m){m.text=m.text.filter(t=>t.t&&t.t.trim());if(!m.text.length)delete m.text;save()}TX=null}
+const txOpts=()=>{const t=TX&&TX.sel!=null&&(txItem()||{}).text?txItem().text[TX.sel]:null,d=t||{f:AS.tf||'Arial',s:0,c:AS.tcol||'#e5332a',b:!!AS.tb};
+ return `<div class="tb txbar"><b>Text</b><select id="txf" title="Font">${TFONTS.map(f=>`<option ${d.f===f?'selected':''} style="font-family:'${f}',sans-serif">${f}</option>`).join('')}</select>
+ <label class="txl2">Size<select id="txs">${[12,16,20,25,30,40,50,65,80,100].map(v=>`<option value="${v}" ${(t?Math.round(t.s*1000/txW()):AS.tsz||30)==v?'selected':''}>${v}</option>`).join('')}</select></label>
+ <button id="txb" class="${d.b?'on':''}" title="Bold"><b>B</b></button><span class="txcols">${DCOL.map(c=>`<button data-tc="${c}" style="background:${c}" class="${d.c===c?'on':''}" title="${c}"></button>`).join('')}</span><span style="flex:1"></span><button class="pri" data-a="txdone">Done</button></div>`};
+const txW=()=>{const i=$('#p-img img[data-mid]');return i&&i.naturalWidth||1000};
+// the editable boxes over the image (only the image area: off it, the app works as usual)
+function txMount(){const m=txItem(),img=m&&$('#p-img img[data-mid]'),lay=$('#txl');if(!m||!img||!lay)return;
+ const place=()=>{if(!img.naturalWidth){img.onload=place;return}const k=img.clientWidth/img.naturalWidth;lay.style.left=img.offsetLeft+'px';lay.style.top=img.offsetTop+'px';lay.style.width=img.clientWidth+'px';lay.style.height=img.clientHeight+'px';
+  lay.className='txl t-'+TX.tool;lay.innerHTML=m.text.map((t,i)=>`<div class="txb${TX.sel===i?' on':''}" data-i="${i}" ${TX.tool==='move'?'':'contenteditable="plaintext-only"'} spellcheck="false" style="left:${t.x*k}px;top:${t.y*k}px;font:${t.b?700:400} ${t.s*k}px ${tcss(t).replace(/"/g,"'")};color:${t.c}">${esc(t.t)}</div>`).join('');
+  $('#txdel').disabled=TX.sel==null};
+ TX.place=place;place()}
+const txFocus=i=>{const b=$(`#txl .txb[data-i="${i}"]`);if(b){b.focus();const r=document.createRange();r.selectNodeContents(b);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r)}};
+function txPick(i){TX.sel=i;$('#p-img .txbar').outerHTML=txOpts();document.querySelectorAll('#txl .txb').forEach(b=>b.classList.toggle('on',+b.dataset.i===i));$('#txdel').disabled=i==null}
+function txSet(fn){const m=txItem();if(!m)return;if(TX.sel!=null&&m.text[TX.sel]){fn(m.text[TX.sel]);save();TX.place()}}   // a change in the bar applies to the selected text
+$('#p-img').addEventListener('pointerdown',e=>{if(!TX)return;const lay=e.target.closest('#txl'),m=txItem(),img=$('#p-img img[data-mid]');if(!lay||!m||!img)return;
+ const k=img.clientWidth/img.naturalWidth,box=e.target.closest('.txb');
+ if(TX.tool==='move'){if(!box)return txPick(null);e.preventDefault();const i=+box.dataset.i,t=m.text[i],sx=e.clientX,sy=e.clientY,ox=t.x,oy=t.y;txPick(i);
+  const mv=ev=>{t.x=Math.max(0,ox+(ev.clientX-sx)/k);t.y=Math.max(0,oy+(ev.clientY-sy)/k);box.style.left=t.x*k+'px';box.style.top=t.y*k+'px'};
+  const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);save()};addEventListener('pointermove',mv);addEventListener('pointerup',up);return}
+ if(box)return txPick(+box.dataset.i);   // with Select or New text, clicking a text edits it
+ if(TX.tool==='new'){e.preventDefault();const r=lay.getBoundingClientRect(),sz=(AS.tsz||30)*img.naturalWidth/1000;
+  m.text.push({x:(e.clientX-r.left)/k,y:Math.max(0,(e.clientY-r.top)/k-sz*.6),t:'',f:AS.tf||'Arial',s:sz,c:AS.tcol||'#e5332a',b:!!AS.tb});const i=m.text.length-1;TX.sel=i;TX.place();txPick(i);txFocus(i);return}
+ txPick(null)});
+$('#p-img').addEventListener('input',e=>{const b=TX&&e.target.closest&&e.target.closest('.txb'),m=b&&txItem();if(m&&m.text[+b.dataset.i]){m.text[+b.dataset.i].t=b.innerText.replace(/\n$/,'');save()}});
+addEventListener('resize',()=>{if(TX&&TX.place)TX.place()});
 // ---------- PDF (several per checklist, loaded only when needed) ----------
 let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
 try{pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'}catch(e){}
@@ -796,7 +855,7 @@ async function openProject(id){let r;
   if(CUR&&DIRTY){await step(.6,'Saving the open checklist…');await flush()}await step(.8,'Preparing checklist…');const u=unpack(raw);await step(1);return u})}
  catch(e){toast('Could not read that file');return}
  if(!r||r==='cancelled')return;
- CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;stampCheck();LQ='';$('#lsearch').value='';$('#lcount').textContent='';
+ TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;stampCheck();LQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
  for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
