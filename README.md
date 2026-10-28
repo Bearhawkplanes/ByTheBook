@@ -37,8 +37,8 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - Sharing with someone else: Menu > Export for sharing… saves a clean copy ("name (shared).bcl") with every section, step, image and PDF, but nothing checked off, no sign-offs and no profile stamp. The activity log is left out unless you tick "Include the activity log". It opens on any computer without an error; their app stamps it with their own profile on the first save. A plain copy (Save a copy elsewhere, or copying the file) keeps the stamp and shows E-4420 for that checklist only (on a computer with a different profile or with no profile yet) until it is adopted.
 
 ## Profile and PINs (Main menu > Profile)
-- The main profile (username + 4-digit PIN) is created first. Its PIN always counts as Boss.
-- PINs are stored only as salted hashes in `Data/` (not in checklist files). A 4-digit PIN cannot stop someone who can edit the app files, so this is shop procedure, not high security. Wrong PINs are counted (any correct PIN resets the count, and restarting the app does not):
+- The main profile (username + main PIN of 5 to 8 digits) is created first. Its PIN always counts as Boss. Everyone else's PIN is exactly 4 digits. PIN boxes accept up to 8 digits and never show how many are needed, so the main PIN's length is not given away. A main PIN from an older version (4 digits) still works, but the Profile page asks for a new 5-8 digit one the next time it is opened.
+- PINs are stored only as salted hashes in `Data/` (not in checklist files). A short PIN cannot stop someone who can edit the app files, so this is shop procedure, not high security. Wrong PINs are counted (any correct PIN resets the count, and restarting the app does not):
   - 5 in a row: a red message suggests "Forgot PIN?" on the Profile page.
   - Every 15th in a row: a 20-minute wait before any PIN is accepted (the main PIN too). The recovery code clears it straight away.
   - 100 in a row: error E-4419 locks the whole app the same way as a tampered profile (view and Export for sharing only) until the recovery code is entered.

@@ -16,9 +16,9 @@ const defSaves = path.join(path.dirname(dataDir), 'Saves');
 const savesDir = () => { let d = cfg.savesDir || defSaves; try { fs.mkdirSync(d, { recursive: true }); fs.accessSync(d, fs.constants.W_OK); } catch (e) { d = defSaves; fs.mkdirSync(d, { recursive: true }); } return d; };
 const st = require('./storage')(savesDir, f => shell.trashItem(f));
 
-// PINs are only ever stored as salted PBKDF2 hashes; hashing happens here, not in the page.
+// PINs are only ever stored as salted PBKDF2 hashes; hashing happens here, not in the page. Main PIN 5-8 digits, others 4 (the page enforces which).
 const pbk = (pin, salt) => new Promise((res, rej) => crypto.pbkdf2(String(pin), Buffer.from(salt, 'hex'), 150000, 32, 'sha256', (e, k) => e ? rej(e) : res(k)));
-const okPin = p => /^\d{4}$/.test(String(p)), okHex = s => typeof s === 'string' && s.length >= 16 && s.length % 2 === 0 && /^[0-9a-f]+$/i.test(s);
+const okPin = p => /^\d{4,8}$/.test(String(p)), okHex = s => typeof s === 'string' && s.length >= 16 && s.length % 2 === 0 && /^[0-9a-f]+$/i.test(s);
 
 // ---- tamper detection -------------------------------------------------------------------------------
 // The profile (Data/profile.json) and a marker in the save folder are signed with a key built into this program,

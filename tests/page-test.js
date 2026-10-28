@@ -7,7 +7,7 @@ const prof = pid => ({ code: null, p: 'ok', m: 'ok', body: { pid, user: 'A', sal
 const NONE = { code: null, p: 'none', m: 'none', body: null, marker: null };          // fresh install
 const TAMPERED = { code: 'E-4417', p: 'bad', m: 'ok', body: null, marker: { pid: 'a'.repeat(32), rv: R } };
 // files: { 'name.bcl': text }, integ: what main.js 'integrity' would return
-// PIN 1234 is correct for the first entry checked; wrong PINs are counted like main.js does (window.__L), and recovery code GOOD clears them
+// PINs 1234 and 24680 are correct for the first entry checked; wrong PINs are counted like main.js does (window.__L), and recovery code GOOD clears them
 const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I = ${JSON.stringify(integ)}, ok = v => Promise.resolve(v), L = window.__L = { fails: 0, until: 0 };
  const pidOf = t => { const m = /"stamp":\\{"pid":"([0-9a-f]{32})"/.exec(t); return m ? m[1] : ''; };
  window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now(), pid: pidOf(F[f]) }))),
@@ -17,7 +17,7 @@ const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I =
   newSalt: () => ok('00112233445566778899aabbccddeeff'), newPid: () => ok('ab'.repeat(16)), integrity: () => ok(I), profileSave: () => ok(true),
   recMake: () => ok({ code: 'X', rv: { salt: '00'.repeat(16), hash: '11'.repeat(32) } }), recCheck: (c, list) => { if (c !== 'GOOD') return ok(-1); L.fails = 0; L.until = 0; return ok(0); }, hash: () => ok('22'.repeat(32)), matchPin: () => ok(null),
   pinTry: (pin, list) => { if (L.fails >= 100) return ok({ locked: 'E-4419', fails: L.fails }); if (L.until > Date.now()) return ok({ fails: L.fails, wait: L.until });
-   if (pin === '1234') { L.fails = 0; L.until = 0; return ok({ id: list[0].id, fails: 0 }); } L.fails++; L.until = L.fails < 100 && L.fails % 15 === 0 ? Date.now() + 1200000 : 0;
+   if (pin === '1234' || pin === '24680') { L.fails = 0; L.until = 0; return ok({ id: list[0].id, fails: 0 }); } L.fails++; L.until = L.fails < 100 && L.fails % 15 === 0 ? Date.now() + 1200000 : 0;
    return ok(L.fails >= 100 ? { locked: 'E-4419', fails: L.fails } : { fails: L.fails, wait: L.until }); },
   pinState: () => ok({ fails: L.fails, until: L.until }),
   onFlush: () => {}, onOpen: () => {} }; })()`;
@@ -116,10 +116,26 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(async () => { PR.people = [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }]; showProfile(true); });
   assert(await pg.evaluate(() => !!document.querySelector('[data-p=forgot]')), 'Forgot PIN button on the PIN page');
   await pg.evaluate(() => document.querySelector('[data-p=forgot]').click()); await pg.waitForTimeout(100);
-  await pg.evaluate(async () => { $('#rc').value = 'WRONG'; $('#pp').value = $('#pp2').value = '4321'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 100)); });
+  await pg.evaluate(async () => { $('#rc').value = 'WRONG'; $('#pp').value = $('#pp2').value = '43210'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 100)); });
   assert(/does not match/.test(await pg.evaluate(() => $('#perr').textContent)), 'wrong recovery code refused');
-  await pg.evaluate(async () => { $('#rc').value = 'GOOD'; $('#pp').value = $('#pp2').value = '4321'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 200)); });
+  await pg.evaluate(async () => { $('#rc').value = 'GOOD'; $('#pp').value = $('#pp2').value = '43210'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 200)); });
   assert.deepStrictEqual(await pg.evaluate(() => ({ pid: PR.pid, people: PR.people.length, unlocked: PU })), { pid: 'a'.repeat(32), people: 1, unlocked: true }, 'same profile, roster kept');
+
+  // main PIN 5-8 digits, employees exactly 4; entry boxes do not show the length
+  pg = await page({}, prof('a'.repeat(32)));
+  await pg.evaluate(() => { askPin({ title: 'Test' }).then(w => window.__res = w ? w.name : null); });
+  assert(await pg.evaluate(() => { const o = [...document.querySelectorAll('.overlay')].pop(); return !/4-digit/.test(o.textContent) && o.querySelector('input').maxLength === 8; }), 'PIN pop-up hides the length');
+  await tryPin('24680'); assert.strictEqual(await pg.evaluate(() => window.__res), 'A', '5-digit PIN accepted in the pop-up');
+  await pg.evaluate(async () => { showProfile(true); $('#pe').value = '1234'; document.querySelector('[data-p=unlock]').click(); await new Promise(r => setTimeout(r, 100)); });
+  assert(await pg.evaluate(() => !!document.querySelector('[data-p=setmain]')), 'old 4-digit main PIN must be replaced first');
+  const setMain = pin => pg.evaluate(async pin => { $('#pp').value = $('#pp2').value = pin; document.querySelector('[data-p=setmain]').click(); await new Promise(r => setTimeout(r, 150)); return ($('#perr') || {}).textContent || ''; }, pin);
+  assert(/5 to 8 digits/.test(await setMain('1111')), '4 digits refused for the main PIN');
+  await setMain('24680'); assert(await pg.evaluate(() => !document.querySelector('[data-p=setmain]') && PU), 'new main PIN saved, page open');
+  await pg.evaluate(async () => { if (!PR.req.names) document.querySelector('[data-pf=names]').click(); await new Promise(r => setTimeout(r, 100)); $('#nn').value = 'Sam'; $('#np').value = '12345'; document.querySelector('[data-p=add]').click(); await new Promise(r => setTimeout(r, 100)); });
+  assert(await pg.evaluate(() => $('#np').maxLength === 4 && !PR.people.some(p => p.name === 'Sam')), 'employee PIN box takes 4 digits only');
+  pg = await page({}, NONE);
+  await pg.evaluate(async () => { showProfile(true); $('#pu').value = 'Boss'; $('#pp').value = $('#pp2').value = '1234'; document.querySelector('[data-p=create]').click(); await new Promise(r => setTimeout(r, 100)); });
+  assert(/5 to 8 digits/.test(await pg.evaluate(() => $('#perr').textContent)) && !(await pg.evaluate(() => PR.pid)), 'new profile needs a 5-digit main PIN');
 
   // adopt from the saved list: flagged row, explanation, Boss PIN, stamp + log written, images and PDFs kept
   pg = await page({ 'mine.bcl': used, 'theirs.bcl': used.replace(/"stamp":\{"pid":"a{32}"/, '"stamp":{"pid":"' + 'b'.repeat(32) + '"'), 'shared.bcl': shared }, prof('a'.repeat(32)));

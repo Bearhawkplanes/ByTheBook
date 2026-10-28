@@ -581,7 +581,7 @@ document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.repeat||$('#hom
  if(e.key==='Enter'&&HS)openProject(HS);else if((e.key==='Delete'||e.key==='Backspace')&&HS)askDelete(HS);
  else if(e.key==='ArrowDown'||e.key==='ArrowUp'){const l=sortedLib();if(!l.length)return;let i=l.findIndex(x=>x.id===HS);i=e.key==='ArrowDown'?Math.min(l.length-1,i+1):Math.max(0,i<0?0:i-1);HS=l[i].id;renderHome();e.preventDefault()}});
 // ---------- profile and PINs ----------
-let PV=false,PU=false,FORGOT=false,TAMPER=null,CLT=null,PRX=null,EDITOK=null,FAILS=0,LOCKUNTIL=0,RECUNTIL=0;
+let PV=false,PU=false,FORGOT=false,NEWPIN=false,TAMPER=null,CLT=null,PRX=null,EDITOK=null,FAILS=0,LOCKUNTIL=0,RECUNTIL=0;
 const PR0=()=>({pid:'',user:'',salt:'',hash:'',rv:null,req:{names:false,sign:false,edit:false},people:[]});
 let PR=PR0();
 const errNow=()=>TAMPER||CLT;   // while an error is active the app is view-only: no checking, no sign-offs
@@ -613,11 +613,11 @@ const pinTaken=async(pin,except)=>!!await FS.matchPin(pin,[{id:'owner',salt:PR.s
 // PIN pop-up: resolves with {name,boss,owner} or null. boss:true accepts only the main profile or a person marked Boss.
 function askPin({title,note,boss}){return new Promise(res=>{
  const ov=document.createElement('div');ov.className='overlay';ov.style.zIndex=95;
- ov.innerHTML=`<div class="dlg" style="width:min(380px,92vw)"><div class="dh"><b>${esc(title)}</b></div>${note?`<p class="mut" style="margin:0 0 6px">${esc(note)}</p>`:''}<label>Enter your 4-digit PIN<input class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label><div class="warn" style="min-height:20px;margin-top:6px"></div><div class="dbtn"><button data-k="x">Cancel</button><button data-k="ok" class="pri">Accept</button></div></div>`;
+ ov.innerHTML=`<div class="dlg" style="width:min(380px,92vw)"><div class="dh"><b>${esc(title)}</b></div>${note?`<p class="mut" style="margin:0 0 6px">${esc(note)}</p>`:''}<label>Enter your PIN<input class="pin" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label><div class="warn" style="min-height:20px;margin-top:6px"></div><div class="dbtn"><button data-k="x">Cancel</button><button data-k="ok" class="pri">Accept</button></div></div>`;
  document.body.appendChild(ov);const inp=ov.querySelector('input'),err=ov.querySelector('.warn'),ok=ov.querySelector('[data-k=ok]');let busy=false,tm=0;
  const done=v=>{clearInterval(tm);ov.remove();res(v)};
  const wait=()=>{const w=LOCKUNTIL-Date.now();if(w>0){err.textContent=pinMsg({wait:LOCKUNTIL});inp.disabled=ok.disabled=true;return true}if(inp.disabled){inp.disabled=ok.disabled=false;err.textContent='';inp.focus()}return false};
- const submit=async()=>{if(busy||wait())return;const v=inp.value;if(!/^\d{4}$/.test(v)){err.textContent='Enter all 4 digits.';inp.select();return}
+ const submit=async()=>{if(busy||wait())return;const v=inp.value;if(!ANYPIN.test(v)){err.textContent='Enter your full PIN.';inp.select();return}
   busy=true;ok.disabled=true;let r={};try{r=await whoIs(v)}catch(e){}busy=false;ok.disabled=false;const w=r.who;
   if(w&&(!boss||w.boss))return done(w);
   if(w){err.textContent='Only the main profile or a Boss can do this.';inp.value='';inp.focus();return}
@@ -626,7 +626,7 @@ function askPin({title,note,boss}){return new Promise(res=>{
   err.textContent=pinMsg(r);inp.focus()};
  ov.addEventListener('click',e=>{const k=e.target.dataset.k;if(k==='x'||e.target===ov)done(null);else if(k==='ok')submit()});
  ov.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();submit()}else if(e.key==='Escape'){e.stopPropagation();done(null)}});
- inp.addEventListener('input',()=>{inp.value=inp.value.replace(/\D/g,'').slice(0,4)});
+ inp.addEventListener('input',()=>{inp.value=inp.value.replace(/\D/g,'').slice(0,8)});
  inp.focus();FS.pinState().then(st=>{LOCKUNTIL=st.until||0;if(LOCKUNTIL>Date.now()){wait();clearInterval(tm);tm=setInterval(wait,500)}}).catch(()=>{})})}
 function updLock(){const b=$('#lockBtn');if(!b)return;const on=pinOn('edit')&&!!CUR;b.hidden=!on;if(!on)return;
  b.textContent=EDITOK?'🔓 Lock editing':'🔒 Unlock editing';b.classList.toggle('open',!!EDITOK);
@@ -639,45 +639,50 @@ const FEATS=[
  ['names','Assign PINs to names',['Each PIN below belongs to one name, and two people cannot share a PIN','Step Init. box: filled with the name tied to the PIN that was entered','Main item sign-off: the main profile and anyone marked Boss are accepted. Boss PINs only count while this switch is on; with it off, only the main profile PIN works','Activity log shows who the PIN belongs to','Takes effect together with "Require a PIN for sign-offs"']],
  ['sign','Require a PIN for sign-offs',['Checking or unchecking a step: a PIN is asked, and the Init. box fills with the name tied to it (typing initials is switched off)','Signing off a main item: a PIN is asked, and only the main profile or a Boss is accepted (typing a name is switched off)','Unchecking a signed main item, and Uncheck everything: same rule','Activity log entries record the name tied to the PIN']],
  ['edit','Require a PIN to turn editing on',['Master file lock: turning it off asks for a PIN from the main profile or a Boss','Add, move, rename and delete buttons, descriptions, images and PDF changes stay locked until that PIN is entered (Unlock button in the top bar)']]];
-const PINF='type="password" inputmode="numeric" maxlength="4" autocomplete="off"';
+// the main PIN is 5-8 digits, everyone else's exactly 4; entry boxes take up to 8 and never say which, so the main PIN's length is not given away
+const MAINPIN=/^\d{5,8}$/,EMPPIN=/^\d{4}$/,ANYPIN=/^\d{4,8}$/;
+const PINF='type="password" inputmode="numeric" maxlength="8" autocomplete="off"',EPINF='type="password" inputmode="numeric" maxlength="4" autocomplete="off"';
 const ERRS={'E-4417':'The profile file is missing, damaged, or was edited by hand.','E-4418':'The profile does not match the record kept with the checklists (profile replaced or copied from another computer, or the record was removed).','E-4419':'100 wrong PINs were entered in a row. The app stays locked until the recovery code is entered on this page.','E-4420':'This checklist was last saved under a different profile (the profile was reset, the file came from another computer, or this computer has no profile yet). Only this checklist is affected.'};
 const errTable=()=>`<div class="et"><div class="dt" style="margin-top:22px">Error codes</div><p class="mut">These errors mean someone has tampered with the profile settings, too many wrong PINs were entered, or profile or checklist files were moved between computers. While one is active, checking boxes and sign-offs are disabled.</p><table>${Object.entries(ERRS).map(([c,d])=>`<tr><td><b>${c}</b></td><td>${d}</td></tr>`).join('')}</table></div>`;
 const recSources=()=>[PRX&&PRX.profile,PRX&&PRX.marker,CUR&&S.stamp].filter(x=>x&&x.pid&&x.rv);
 // the PIN can be kept when the profile file itself is intact (Forgot PIN page, E-4419); after E-4417/E-4418 a new one is needed
 const canKeepPin=()=>!TAMPER||!!(PRX&&PRX.body&&PRX.body.hash);
-const recForm=()=>`<div class="pf"><div class="dt">Recover with the recovery code</div><label>Recovery code<input id="rc" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" style="text-transform:uppercase"></label><label>Username<input id="pu" value="${esc(PR.user||(PRX&&PRX.body&&PRX.body.user)||'')}"></label><label>New 4-digit PIN${canKeepPin()?' (leave empty to keep the current one)':''}<input id="pp" class="pin" ${PINF}></label><label>Confirm PIN<input id="pp2" class="pin" ${PINF}></label>
+const recForm=()=>`<div class="pf"><div class="dt">Recover with the recovery code</div><label>Recovery code<input id="rc" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" style="text-transform:uppercase"></label><label>Username<input id="pu" value="${esc(PR.user||(PRX&&PRX.body&&PRX.body.user)||'')}"></label><label>New main PIN, 5 to 8 digits${canKeepPin()?' (leave empty to keep the current one)':''}<input id="pp" class="pin" ${PINF}></label><label>Confirm PIN<input id="pp2" class="pin" ${PINF}></label>
   <div id="perr" class="warn" style="min-height:20px"></div><button class="pri" data-p="recover">${canKeepPin()?'Unlock':'Recover'}</button></div>`;
 function renderProfile(){const p=$('#hprof'),back='<button data-p="back">← Back to menu</button>';
  if(TAMPER){p.innerHTML=`${back}<h2>Profile</h2><div class="warn" style="margin-bottom:10px">Error ${esc(TAMPER)} is active. Checking boxes and sign-offs are disabled.</div><p class="mut">Without the recovery code, the checklists can still be opened and taken out: open one, then Menu &gt; Export for sharing… gives a fresh copy (with its activity log if you tick the box) that works in a new install.</p>
   ${recForm()}${errTable()}`;return}
- if(!PR.pid){p.innerHTML=`${back}<h2>Set up your profile</h2><p class="mut">Choose a username and a 4-digit PIN. This is the main profile: its PIN protects this Profile page and the features you switch on here, and it can always sign off main items and unlock editing. You will be given a recovery code once; keep it safe.</p>
-  <label>Username<input id="pu"></label><label>4-digit PIN<input id="pp" class="pin" ${PINF}></label><label>Confirm PIN<input id="pp2" class="pin" ${PINF}></label>
+ if(!PR.pid){p.innerHTML=`${back}<h2>Set up your profile</h2><p class="mut">Choose a username and a main PIN of 5 to 8 digits (everyone else's PIN is 4 digits). This is the main profile: its PIN protects this Profile page and the features you switch on here, and it can always sign off main items and unlock editing. You will be given a recovery code once; keep it safe.</p>
+  <label>Username<input id="pu"></label><label>Main PIN, 5 to 8 digits<input id="pp" class="pin" ${PINF}></label><label>Confirm PIN<input id="pp2" class="pin" ${PINF}></label>
   <div id="perr" class="warn" style="min-height:20px;margin-top:6px"></div><button class="pri" data-p="create">Create profile</button>${errTable()}`;return}
  if(!PU&&FORGOT){p.innerHTML=`${back}<h2>Forgot PIN or locked out</h2><p class="mut">Enter the recovery code you were given when the profile was created. It opens this page, clears any wrong-PIN wait, and lets you choose a new main PIN or keep the current one. The profile, names and settings stay the same. To give an employee a new PIN, use "Set PIN" next to their name once this page is open.</p>${recForm()}<button data-p="noforgot">← Back to PIN entry</button>${errTable()}`;return}
- if(!PU){p.innerHTML=`${back}<h2>Profile</h2><label>Enter your 4-digit PIN<input id="pe" class="pin" ${PINF}></label><div id="perr" class="warn" style="min-height:20px;margin-top:6px"></div><div class="dbtn" style="justify-content:flex-start"><button class="pri" data-p="unlock">Unlock</button><button data-p="forgot">Forgot PIN?</button></div>${errTable()}`;setTimeout(()=>{const i=$('#pe');if(i)i.focus()},0);return}
- const people=`<div class="dt" style="margin-top:12px">Names and PINs</div><div class="prow"><span style="flex:1">${esc(PR.user)} <span class="mut">(main profile)</span></span><span class="mut">PIN ••••</span><span class="mut">Always Boss</span></div>${PR.people.map((q,i)=>`<div class="prow"><span style="flex:1">${esc(q.name)}</span><span class="mut">PIN ••••</span><label class="chk" style="font-size:12px"><input type="checkbox" data-pb="${i}" ${q.boss?'checked':''}> Boss (can sign off main items)</label><input class="pin" data-rp="${i}" ${PINF} placeholder="new PIN" style="max-width:84px"><button data-p="repin" data-i="${i}">Set PIN</button><button data-p="rm" data-i="${i}">✕</button></div>`).join('')||'<div class="mut">Nobody else added yet.</div>'}
-  <div class="prow"><input id="nn" placeholder="Name" style="max-width:170px"><input id="np" class="pin" ${PINF} placeholder="PIN" style="max-width:90px"><button data-p="add">Add</button></div><div id="perr2" class="warn"></div>
+ if(!PU){p.innerHTML=`${back}<h2>Profile</h2><label>Enter your PIN<input id="pe" class="pin" ${PINF}></label><div id="perr" class="warn" style="min-height:20px;margin-top:6px"></div><div class="dbtn" style="justify-content:flex-start"><button class="pri" data-p="unlock">Unlock</button><button data-p="forgot">Forgot PIN?</button></div>${errTable()}`;setTimeout(()=>{const i=$('#pe');if(i)i.focus()},0);return}
+ if(NEWPIN){p.innerHTML=`${back}<h2>Choose a new main PIN</h2><p class="mut">The main PIN now needs at least 5 digits (everyone else keeps 4). Pick a new one with 5 to 8 digits to continue.</p><label>New main PIN<input id="pp" class="pin" ${PINF}></label><label>Confirm PIN<input id="pp2" class="pin" ${PINF}></label><div id="perr" class="warn" style="min-height:20px"></div><button class="pri" data-p="setmain">Save main PIN</button>`;setTimeout(()=>{const i=$('#pp');if(i)i.focus()},0);return}
+ const people=`<div class="dt" style="margin-top:12px">Names and PINs</div><div class="prow"><span style="flex:1">${esc(PR.user)} <span class="mut">(main profile)</span></span><span class="mut">PIN ••••</span><span class="mut">Always Boss</span></div>${PR.people.map((q,i)=>`<div class="prow"><span style="flex:1">${esc(q.name)}</span><span class="mut">PIN ••••</span><label class="chk" style="font-size:12px"><input type="checkbox" data-pb="${i}" ${q.boss?'checked':''}> Boss (can sign off main items)</label><input class="pin" data-rp="${i}" ${EPINF} placeholder="new PIN" style="max-width:84px"><button data-p="repin" data-i="${i}">Set PIN</button><button data-p="rm" data-i="${i}">✕</button></div>`).join('')||'<div class="mut">Nobody else added yet.</div>'}
+  <div class="prow"><input id="nn" placeholder="Name" style="max-width:170px"><input id="np" class="pin" ${EPINF} placeholder="PIN" style="max-width:90px"><button data-p="add">Add</button></div><div id="perr2" class="warn"></div>
   <div class="mut" style="font-size:12px">To change someone's PIN use "Set PIN". Removing and re-adding a person gives them a new ID, and the activity log marks that as "possible tampered".</div>`;
  const feats=FEATS.map(([k,t,a])=>`<div class="pf"><label class="chk"><input type="checkbox" data-pf="${k}" ${PR.req[k]?'checked':''}> <b>${t}</b> <span class="mut">${PR.req[k]?'on':'off'}</span></label><div class="mut" style="margin-top:8px">Items affected when this is on:</div><ul>${a.map(x=>`<li>${x}</li>`).join('')}</ul>${k==='names'?people:''}</div>`).join('');
  const adopt=CLT&&CUR?`<div class="pf"><div class="dt">Open checklist: ${esc(CUR)}</div><div class="warn">Error ${esc(CLT)} is active for this checklist, so checking boxes and sign-offs are disabled.</div><p class="mut">If you recognise this file (for example it came from another computer), you can adopt it under this profile. The activity log records the change.</p><button data-p="adopt">Adopt this checklist</button></div>`:'';
  p.innerHTML=`${back}<h2>Profile: ${esc(PR.user)}</h2>${adopt}
-  <div class="pf"><div class="dt">Account</div><label>Username<input id="pu" value="${esc(PR.user)}"></label><label>New PIN (leave empty to keep the current one)<input id="pp" class="pin" ${PINF}></label><div id="perr" class="warn" style="min-height:20px"></div><button data-p="saveacct">Save account</button></div>
+  <div class="pf"><div class="dt">Account</div><label>Username<input id="pu" value="${esc(PR.user)}"></label><label>New main PIN, 5 to 8 digits (leave empty to keep the current one)<input id="pp" class="pin" ${PINF}></label><div id="perr" class="warn" style="min-height:20px"></div><button data-p="saveacct">Save account</button></div>
   <div class="dt" style="margin-top:18px">PIN-protected features <span class="mut">(all off by default)</span></div>${feats}
-  <p class="mut">PINs are stored as salted hashes in this app's settings, not inside checklist files. A 4-digit PIN cannot stop someone who can edit the app's files or run code on this computer, so treat it as shop procedure, not high security.</p>${errTable()}`}
-function showProfile(on){PV=on;FORGOT=false;if(!on)PU=false;$('#hcen').hidden=on;$('#hprof').hidden=!on;$('#hProf').classList.toggle('on',on);if(on)renderProfile();renderHome()}
+  <p class="mut">PINs are stored as salted hashes in this app's settings, not inside checklist files. A short PIN cannot stop someone who can edit the app's files or run code on this computer, so treat it as shop procedure, not high security.</p>${errTable()}`}
+function showProfile(on){PV=on;FORGOT=false;NEWPIN=false;if(!on)PU=false;$('#hcen').hidden=on;$('#hprof').hidden=!on;$('#hProf').classList.toggle('on',on);if(on)renderProfile();renderHome()}
 $('#hProf').onclick=()=>showProfile(!PV);
 $('#hprof').addEventListener('click',async e=>{const b=e.target.closest('[data-p]');if(!b||b.disabled)return;const a=b.dataset.p,v=id=>($('#'+id)||{}).value||'',err=(id,t)=>{const x=$('#'+id);if(x)x.textContent=t};
  b.disabled=true;
  try{
  if(a==='back')showProfile(false);
- else if(a==='create'){if(TAMPER||PR.pid)return;const u=v('pu').trim(),pn=v('pp');if(!u)return err('perr','Enter a username.');if(!/^\d{4}$/.test(pn))return err('perr','The PIN must be exactly 4 digits.');if(pn!==v('pp2'))return err('perr','The PINs do not match.');
+ else if(a==='create'){if(TAMPER||PR.pid)return;const u=v('pu').trim(),pn=v('pp');if(!u)return err('perr','Enter a username.');if(!MAINPIN.test(pn))return err('perr','The main PIN must be 5 to 8 digits.');if(pn!==v('pp2'))return err('perr','The PINs do not match.');
   const rec=await FS.recMake();PR=Object.assign(PR0(),{pid:await FS.newPid(),user:u,rv:rec.rv});PR.salt=await FS.newSalt();PR.hash=await FS.hash(pn,PR.salt);await savePR();PU=true;renderProfile();showRecovery(rec.code)}
- else if(a==='unlock'){const pe=v('pe');if(!/^\d{4}$/.test(pe))return err('perr','Enter all 4 digits.');
-  const r=await FS.pinTry(pe,[{id:'owner',salt:PR.salt,hash:PR.hash}]);if(r.id){PU=true;renderProfile();return}
+ else if(a==='unlock'){const pe=v('pe');if(!ANYPIN.test(pe))return err('perr','Enter your full PIN.');
+  const r=await FS.pinTry(pe,[{id:'owner',salt:PR.salt,hash:PR.hash}]);if(r.id){PU=true;NEWPIN=!MAINPIN.test(pe);renderProfile();return}   // a main PIN from before the 5-digit minimum must be replaced first
   if(!pinLock(r)){err('perr',pinMsg(r));$('#pe').value='';$('#pe').focus()}}
+ else if(a==='setmain'){const pn=v('pp');if(!MAINPIN.test(pn))return err('perr','The main PIN must be 5 to 8 digits.');if(pn!==v('pp2'))return err('perr','The PINs do not match.');
+  PR.salt=await FS.newSalt();PR.hash=await FS.hash(pn,PR.salt);await savePR();NEWPIN=false;renderProfile();toast('Main PIN saved')}
  else if(a==='forgot'||a==='noforgot'){FORGOT=a==='forgot';renderProfile()}
  else if(a==='recover'){if(Date.now()<RECUNTIL)return err('perr','Too many attempts. Wait a moment.');const u=v('pu').trim(),pn=v('pp'),keep=!pn&&!v('pp2')&&canKeepPin();
-  if(!u)return err('perr','Enter a username.');if(!keep){if(!/^\d{4}$/.test(pn))return err('perr','The PIN must be exactly 4 digits.');if(pn!==v('pp2'))return err('perr','The PINs do not match.')}
+  if(!u)return err('perr','Enter a username.');if(!keep){if(!MAINPIN.test(pn))return err('perr','The main PIN must be 5 to 8 digits.');if(pn!==v('pp2'))return err('perr','The PINs do not match.')}
   const src=TAMPER?recSources():[{pid:PR.pid,rv:PR.rv}],i=await FS.recCheck(v('rc'),src);   // without an error this is "Forgot PIN": only this profile's code
   if(i<0){if(++FAILS>=5){FAILS=0;RECUNTIL=Date.now()+30000}return err('perr','That recovery code does not match.')}
   FAILS=0;const s=src[i],old=!TAMPER?PR:PRX&&PRX.body&&PRX.body.pid===s.pid?PRX.body:null;   // keep the roster and switches only if the profile file itself is intact
@@ -686,21 +691,21 @@ $('#hprof').addEventListener('click',async e=>{const b=e.target.closest('[data-p
   if(CUR){stampCheck();newSeg('recovery',was?'Profile recovered with the recovery code ('+was+')':keep?'Recovery code used on the Profile page':'Main PIN reset with the recovery code','');save()}
   FORGOT=false;PU=true;renderProfile();if(CUR)refreshAll();renderHome();toast(was?'Profile recovered':keep?'Unlocked with the recovery code':'New main PIN saved')}
  else if(a==='adopt'){if(!CUR||!CLT)return;const was=CLT;S.stamp={pid:PR.pid,rv:PR.rv};CLT=null;newSeg('recovery','Checklist adopted by profile "'+PR.user+'"','It was saved under a different profile ('+was+')');save();renderProfile();refreshAll();toast('Checklist adopted')}
- else if(a==='saveacct'){const u=v('pu').trim(),pn=v('pp');if(!u)return err('perr','Enter a username.');if(pn&&!/^\d{4}$/.test(pn))return err('perr','The PIN must be exactly 4 digits.');
+ else if(a==='saveacct'){const u=v('pu').trim(),pn=v('pp');if(!u)return err('perr','Enter a username.');if(pn&&!MAINPIN.test(pn))return err('perr','The main PIN must be 5 to 8 digits.');
   if(PR.people.some(q=>q.name.toLowerCase()===u.toLowerCase()))return err('perr','That name is already in the list below.');
   if(pn){if(await pinTaken(pn,'owner'))return err('perr','That PIN already belongs to someone else.');PR.salt=await FS.newSalt();PR.hash=await FS.hash(pn,PR.salt)}
   PR.user=u;await savePR();renderProfile();toast('Account saved')}
- else if(a==='add'){const n=v('nn').trim(),pn=v('np');if(!n)return err('perr2','Enter a name.');if(!/^\d{4}$/.test(pn))return err('perr2','Each PIN must be exactly 4 digits.');
+ else if(a==='add'){const n=v('nn').trim(),pn=v('np');if(!n)return err('perr2','Enter a name.');if(!EMPPIN.test(pn))return err('perr2','Each PIN must be exactly 4 digits.');
   if(n.toLowerCase()===PR.user.toLowerCase()||PR.people.some(q=>q.name.toLowerCase()===n.toLowerCase()))return err('perr2','That name is already in the list.');
   if(await pinTaken(pn,null))return err('perr2','That PIN is already in use. Pick a different one.');
   const salt=await FS.newSalt();PR.people.push({id:uid(),name:n,salt,hash:await FS.hash(pn,salt),boss:false});await savePR();renderProfile()}
- else if(a==='repin'){const i=+b.dataset.i,q=PR.people[i],pn=($('[data-rp="'+i+'"]')||{}).value||'';if(!q)return;if(!/^\d{4}$/.test(pn))return err('perr2','The PIN must be exactly 4 digits.');
+ else if(a==='repin'){const i=+b.dataset.i,q=PR.people[i],pn=($('[data-rp="'+i+'"]')||{}).value||'';if(!q)return;if(!EMPPIN.test(pn))return err('perr2','The PIN must be exactly 4 digits.');
   if(await pinTaken(pn,q.id))return err('perr2','That PIN is already in use. Pick a different one.');
   q.salt=await FS.newSalt();q.hash=await FS.hash(pn,q.salt);await savePR();renderProfile();toast('PIN changed for '+q.name)}
  else if(a==='rm'){PR.people.splice(+b.dataset.i,1);await savePR();renderProfile()}
  }catch(x){err('perr','Something went wrong: '+((x&&x.message)||x))}finally{b.disabled=false}});
 $('#hprof').addEventListener('change',e=>{const t=e.target;if(t.dataset.pf){PR.req[t.dataset.pf]=t.checked;if(t.dataset.pf==='edit')EDITOK=null;savePR();renderProfile()}else if(t.dataset.pb!=null){PR.people[+t.dataset.pb].boss=t.checked;savePR()}});
-$('#hprof').addEventListener('input',e=>{if(e.target.classList.contains('pin'))e.target.value=e.target.value.replace(/\D/g,'').slice(0,4)});
+$('#hprof').addEventListener('input',e=>{if(e.target.classList.contains('pin'))e.target.value=e.target.value.replace(/\D/g,'').slice(0,8)});
 $('#hprof').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#hprof [data-p=create],#hprof [data-p=unlock],#hprof [data-p=recover]');if(b)b.click()}});
 // ---------- error pop-up, recovery code, activity log viewer ----------
 function showErr(code){if(document.querySelector('.errov'))return;const ov=document.createElement('div');ov.className='overlay errov';ov.style.zIndex=96;
