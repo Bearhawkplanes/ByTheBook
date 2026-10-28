@@ -144,7 +144,7 @@ body.dragging{user-select:none;cursor:col-resize}
 <header>
 <div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click, show</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="auto">Auto (images, else PDF)</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option></select></label><div id="menu" hidden>
 <button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="delete">Delete checklist</button>
-<button data-m="loc">Open file location</button><button data-m="export" disabled>Export <i>coming soon</i></button>
+<button data-m="loc">Open file location</button><button data-m="export">Export for sharing…</button>
 <button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><hr>
 <button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button></div></div>
@@ -490,7 +490,7 @@ $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if
 document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key==='Escape')closeDlg();else if(e.key==='Enter'){const b=$('#modal [data-d=ok]');if(b){e.preventDefault();b.click()}}});
 const menu=$('#menu');$('#menuBtn').onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
 menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
- if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
+ if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')ask('Export a clean copy for sharing? It keeps every section, step, image and PDF, but nothing is checked off, and the sign-offs, activity log and profile link are left out. The person who opens it can use it with their own profile.','Export',exportShare);else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
  else if(m==='restore')restoreBackup();
  else if(m==='log')showLog(S.name||CUR,S.log,S.segs);
@@ -526,8 +526,8 @@ const askDelete=id=>{const e=LIB.find(x=>x.id===id);if(e)ask(`Delete "${esc(e.na
 const b2d=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
 const d2b=d=>{const i=d.indexOf(','),bin=atob(d.slice(i+1)),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);return new Blob([u],{type:d.slice(5,i).split(';')[0]||'application/octet-stream'})};
 // builds the file text; the big base64 blobs are cached and spliced in, so JSON.stringify never re-scans them
-async function pack(name){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.pid,rv:PR.rv};   // every saved checklist carries the profile ID
- const o=JSON.parse(JSON.stringify(S)),big={};o.files={};if(name!=null)o.name=name;
+async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.pid,rv:PR.rv};   // every saved checklist carries the profile ID
+ const o=JSON.parse(JSON.stringify(S)),big={};o.files={};if(name!=null)o.name=name;if(strip)strip(o);
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r){const k='m:'+m.id;big[k]=r.data||(r.data=await b2d(r.blob));o.files[m.id]={name:r.name,type:r.type,data:'@@'+k+'@@'}}}
  for(const p of o.pdfs){const r=PDFS[p.id];if(r){const k='p:'+p.id;big[k]=r.data||(r.data=await b2d(new Blob([r.buf],{type:'application/pdf'})));p.data='@@'+k+'@@'}}
  const t=JSON.stringify(o).split(/"@@([mp]:[a-z0-9]+)@@"/);let out=t[0];for(let i=1;i<t.length;i+=2)out+=big[t[i]]!==undefined?'"'+big[t[i]]+'"'+t[i+1]:'"@@'+t[i]+'@@"'+t[i+1];return out}
@@ -536,6 +536,10 @@ function unpack(o){const files=o.files||{};delete o.files;
  if(o.pdf&&!(o.pdfs&&o.pdfs.length))o.pdfs=[{name:o.manual||'Manual',offset:o.offset,map:o.map,data:o.pdf}];delete o.pdf;
  const P={};(o.pdfs||[]).forEach(p=>{p.id=p.id||uid();if(p.data){P[p.id]={data:p.data};delete p.data}});return{o:norm(o),files,P}}
 async function dlCopy(){toast('Preparing copy…');const t=await pack(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+'.bcl';a.click();toast('Copy downloaded')}
+// a shareable copy: same content, images and PDFs, but no profile stamp, no progress and no log, so it opens cleanly on any computer
+const blankCopy=o=>{delete o.stamp;delete o.segs;delete o.seg;delete o.ids;o.log=[];
+ for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps]){x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft='';x.hist=[]}};
+async function exportShare(){toast('Preparing export…');const t=await pack(null,blankCopy),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+' (shared).bcl';a.click();toast('Export downloaded')}
 $('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  try{const txt=await f.text(),raw=JSON.parse(txt);if(!raw.sections&&!raw.prep&&!raw.tasks)throw 0;const base=await FS.writeNew(f.name.replace(/\.[^.]+$/,''),txt);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}};
 let HS=null;

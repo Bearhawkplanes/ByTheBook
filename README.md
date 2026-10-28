@@ -23,6 +23,7 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 ## Opening files
 - Menu > Import, or drag a `.bcl` onto the app / use "Open with": the file is copied into Saves and opened.
 - Double-clicking a `.bcl` in Explorer works only with the installer build (portable apps cannot register file types).
+- Sharing with someone else: Menu > Export for sharing… saves a clean copy ("name (shared).bcl") with every section, step, image and PDF, but nothing checked off, no sign-offs, no activity log and no profile stamp. It opens on any computer without an error; their app stamps it with their own profile on the first save. A plain copy (Save a copy elsewhere, or copying the file) keeps the stamp and shows E-4420 on a computer with a different profile, or E-4417 on one with no profile yet.
 
 ## Profile and PINs (Main menu > Profile)
 - The main profile (username + 4-digit PIN) is created first. Its PIN always counts as Boss.
