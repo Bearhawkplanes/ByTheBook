@@ -37,6 +37,13 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
   await pg.evaluate(() => document.querySelectorAll('#p-img .vth')[0].click()); await pg.waitForTimeout(1500);
   const linked = await pg.evaluate(() => document.querySelectorAll('#p-img video')[0].currentTime);
   assert(linked >= 12 && linked <= 15, 'linked clip plays its part of the video: ' + linked);
+  // a video chosen on a step's Images tab opens the player and can be linked (Electron gives the file's location)
+  await pg.evaluate(() => { select(S.sections[2].cards[0].steps[0]); setTab('img'); renderR(); });
+  await pg.setInputFiles('#mfile', vid); await pg.waitForTimeout(800);
+  assert(await pg.evaluate(() => PV3 && !$('#vaLink').disabled), 'Images tab video: player open, link offered');
+  await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(1500);
+  assert(await pg.evaluate(() => S.videos.length === 2 && S.videos[1].link && Math.round(vpDur()) === 30), 'linked from the Images tab and playing');
+  await pg.evaluate(() => vpClose());
   // saved to disk with the clip inside
   await pg.evaluate(async () => { DIRTY = true; await flush(); });
   const saved = JSON.parse(fs.readFileSync(path.join(app, 'Saves', (await pg.evaluate(() => CUR)) + '.bcl'), 'utf8'));

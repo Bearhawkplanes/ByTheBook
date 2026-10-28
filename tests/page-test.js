@@ -280,6 +280,18 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(await pg.evaluate(() => $('#pk').hidden && PV3), 'Esc closes the picker only');
   await pg.evaluate(() => vpClose());
 
+  // a video added on a step's Images tab opens the Video Player; the picker then starts on that step
+  await pg.evaluate(() => { window.fsapi.pathOf = () => window.__vidPath; window.fsapi.videoStat = async p => p ? { path: p, rel: '', name: 'Gear swing', size: 5000, mtime: 1, maxCopy: 300 * 1048576 } : null; });
+  await pg.evaluate(p => { window.__vidPath = p; select(S.sections[2].cards[0].steps[0]); setTab('img'); renderR(); }, VIDF);
+  const vBefore = await pg.evaluate(() => S.videos.length), mBefore = await pg.evaluate(() => S.sections[2].cards[0].steps[0].media.length);
+  await pg.setInputFiles('#mfile', VIDF); await pg.waitForTimeout(300);
+  assert(await pg.evaluate(() => PV3 && /Gear swing/.test($('#modal').textContent)), 'player opens and asks import or link');
+  await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(800);
+  assert.deepStrictEqual(await pg.evaluate(() => [S.videos.length, vp(VP.id).name, S.sections[2].cards[0].steps[0].media.length]), [vBefore + 1, 'Gear swing', mBefore], 'video added to the player, not copied onto the step');
+  await pg.evaluate(() => { $('#vpsel').click(); $('#vpas').click(); $('#asRef').click(); });
+  assert.strictEqual(await pg.evaluate(() => document.querySelector('#pk .pkr.on .pkt').textContent), await pg.evaluate(() => S.sections[2].cards[0].steps[0].text), 'picker starts on the step the video was added from');
+  await pg.keyboard.press('Escape'); await pg.evaluate(() => vpClose());
+
   // Import the entire video: copied into the file and playable after reopening
   pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), vstub);
   await open(pg, 'shop');
@@ -298,6 +310,54 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(async vb => { select(S.sections[0].cards[0].steps[0]); await attach(new Blob([new Uint8Array(vb)], { type: 'video/webm' }), 'walk.webm', 'video/webm'); await new Promise(r => setTimeout(r, 1500)); }, clipBytes);
   assert(await pg.evaluate(() => { const m = S.sections[0].cards[0].steps[0].media.at(-1); return m.type === 'video' && /^data:image\/jpeg/.test(m.thumb) && !!MEDIA[m.id]; }), 'attached video gets a thumbnail');
   fs.rmSync(vdir, { recursive: true, force: true });
+
+  // ---- drawing on images ----
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  await pg.evaluate(async () => { const c = document.createElement('canvas'); c.width = 800; c.height = 600; const g = c.getContext('2d'); g.fillStyle = '#888'; g.fillRect(0, 0, 800, 600);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png')); select(S.sections[1].cards[0].steps[1]); setTab('img'); IM.mode = 'fit'; await attach(blob, 'flange.png', 'image/png'); await new Promise(r => setTimeout(r, 200)); });
+  const plainSrc = await pg.evaluate(() => document.querySelector('#p-img img[data-mid]').src);
+  assert(await pg.evaluate(() => !!document.querySelector('#p-img [data-a=draw]') && !document.querySelector('#p-img [data-a=dvis]')), 'pencil shown; no eye until there is a drawing');
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=draw]').click()); await pg.waitForTimeout(300);
+  assert(await pg.evaluate(() => { const b = [...document.querySelectorAll('.dwbar button')]; return b[0].textContent === 'Apply' && b[1].textContent === 'Cancel'; }), 'Apply and Cancel first, top left');
+  const cvb = await pg.evaluate(() => { const r = $('#dwcv').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+  const stroke = async (x1, y1, x2, y2) => { await pg.mouse.move(cvb.x + cvb.w * x1, cvb.y + cvb.h * y1); await pg.mouse.down(); await pg.mouse.move(cvb.x + cvb.w * x2, cvb.y + cvb.h * y2, { steps: 8 }); await pg.mouse.up(); };
+  await stroke(.1, .1, .9, .9); await stroke(.9, .1, .1, .9);
+  const btn = k => pg.evaluate(k => document.querySelector(`[data-dw=${k}]`).click(), k);
+  const pix = () => pg.evaluate(() => { const g = $('#dwcv').getContext('2d'), c = $('#dwcv'); return [...g.getImageData(c.width / 2, c.height / 2, 1, 1).data].slice(0, 3).join(); });
+  assert.notStrictEqual(await pix(), '136,136,136', 'stroke drawn on the canvas');
+  await btn('un'); await btn('un'); assert.strictEqual(await pix(), '136,136,136', 'undo removes both strokes');
+  await btn('re'); assert.notStrictEqual(await pix(), '136,136,136', 'redo brings one back');
+  await btn('re'); await btn('clr'); assert.strictEqual(await pix(), '136,136,136', 'trash clears the drawing');
+  await btn('un'); assert.notStrictEqual(await pix(), '136,136,136', 'and can be undone');
+  await btn('no');
+  assert(await pg.evaluate(() => $('#dw').hidden && !S.sections[1].cards[0].steps[1].media.at(-1).draw), 'Cancel keeps nothing');
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=draw]').click()); await pg.waitForTimeout(300);
+  await pg.evaluate(() => { document.querySelector('[data-dw=col]').click(); document.querySelector('[data-dc="#1e88ff"]').click(); $('#dwsz').value = 20; $('#dwsz').dispatchEvent(new Event('input')); });
+  await stroke(.2, .5, .8, .5); await btn('ok'); await pg.waitForTimeout(400);
+  const dm = await pg.evaluate(() => { const m = S.sections[1].cards[0].steps[1].media.at(-1); return { draw: m.draw, src: document.querySelector('#p-img img[data-mid]').src, eye: document.querySelector('#p-img [data-a=dvis]') }; });
+  assert(dm.draw.w === 800 && dm.draw.s.length === 1 && dm.draw.s[0].c === '#1e88ff' && JSON.stringify(dm.draw).length < 2000, 'drawing stored as one small stroke list');
+  assert.notStrictEqual(dm.src, plainSrc, 'the Images tab shows the drawn-over picture');
+  assert.strictEqual(await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').title), 'Toggle visibility');
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').click()); await pg.waitForTimeout(300);
+  assert.strictEqual(await pg.evaluate(() => document.querySelector('#p-img img[data-mid]').src), plainSrc, 'eye hides the drawing');
+  const eyes = await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').innerHTML);
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').click()); await pg.waitForTimeout(300);
+  assert(await pg.evaluate(() => document.querySelector('#p-img img[data-mid]').src) !== plainSrc && eyes !== await pg.evaluate(() => document.querySelector('#p-img [data-a=dvis]').innerHTML), 'eye shows it again, with the other icon');
+  const drawn = JSON.parse(await pg.evaluate(() => pack()));
+  assert.deepStrictEqual(drawn.sections[1].cards[0].steps[1].media.at(-1).draw, dm.draw, 'drawing saved in the file');
+  const ex2 = JSON.parse(await pg.evaluate(() => pack(null, blankCopy(false))));
+  assert.deepStrictEqual(ex2.sections[1].cards[0].steps[1].media.at(-1).draw, dm.draw, 'and kept by Export for sharing');
+  // reopen later: the drawing comes back in the editor and can be deleted
+  pg = await page({ 'drawn.bcl': JSON.stringify(drawn) }, prof('a'.repeat(32)));
+  await open(pg, 'drawn');
+  await pg.evaluate(() => { select(S.sections[1].cards[0].steps[1]); setTab('img'); IM.mode = 'fit'; IM.i = S.sections[1].cards[0].steps[1].media.length - 1; renderR(); }); await pg.waitForTimeout(300);
+  await pg.evaluate(() => document.querySelector('#p-img [data-a=draw]').click()); await pg.waitForTimeout(300);
+  assert.notStrictEqual(await pix(), '136,136,136', 'saved drawing shown in the editor');
+  await btn('clr'); await btn('ok'); await pg.waitForTimeout(300);
+  assert(await pg.evaluate(() => !S.sections[1].cards[0].steps[1].media.at(-1).draw && !document.querySelector('#p-img [data-a=dvis]')), 'drawing deleted, eye gone');
+  await pg.evaluate(() => { S.locked = true; refreshAll(); renderR(); });
+  assert(await pg.evaluate(() => getComputedStyle(document.querySelector('#p-img [data-a=draw]')).display === 'none'), 'pencil hidden while editing is locked');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

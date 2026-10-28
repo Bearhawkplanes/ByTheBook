@@ -161,6 +161,19 @@ body.dragging{user-select:none;cursor:col-resize}
 #iw{z-index:61}.iwd{width:min(720px,94vw)}#iwv{display:block;width:100%;max-height:42vh;background:#000;border-radius:8px;margin-bottom:10px}#iwst{margin:4px 0 8px}
 #iw label.iwr{display:grid;grid-template-columns:auto 5.5em 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin:8px 0 0;cursor:pointer;color:var(--fg)}#iw .iwr input{width:auto;margin:0}#iw .iwr:has(input:checked){border-color:var(--acc)}.iwz{font-variant-numeric:tabular-nums;font-weight:700}
 #iwsl{margin-top:12px}
+.mtools{position:absolute;top:8px;left:8px;z-index:2;display:flex;gap:4px}
+.mtools button,.tile .mtools button{position:static;display:flex;align-items:center;padding:4px 6px;background:rgba(0,0,0,.6);color:#fff;border-color:transparent}
+#dw{position:fixed;inset:0;z-index:62;display:flex;flex-direction:column;background:var(--bg)}
+.dwbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;background:var(--hbg);color:var(--hfg)}.dwbar button{display:inline-flex;align-items:center;gap:6px}.dwbar button:disabled{opacity:.4}
+.dwbar .dwok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700}.dwbar .dwno{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700}
+.dwsep{width:1px;height:24px;background:rgba(255,255,255,.25)}
+.dwl{display:flex;gap:8px;align-items:center;margin:0;color:inherit;font-size:13px}.dwl input{width:120px}
+.dwdot{width:42px;height:42px;display:inline-flex;align-items:center;justify-content:center}.dwdot i{display:block;border-radius:50%;max-width:40px;max-height:40px;box-shadow:0 0 0 1px rgba(255,255,255,.4)}
+.dwcol{position:relative}.dwsw{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid #fff}
+.dwpop{position:absolute;top:calc(100% + 6px);left:0;z-index:3;width:230px;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px}.dwpop[hidden]{display:none}
+#dwhue{width:100%;height:12px;appearance:none;border-radius:6px;background:linear-gradient(90deg,red,#ff0,lime,cyan,blue,#f0f,red)}
+.dwpre{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}.dwpre button{height:22px;padding:0;border:1px solid var(--line);border-radius:4px}
+.dwbox{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}#dwcv{touch-action:none;cursor:crosshair;box-shadow:0 0 0 1px var(--line)}
 #pk{z-index:61}.pkd{width:min(780px,94vw);height:86vh;display:flex;flex-direction:column;gap:8px}
 .pktabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);flex:none;scrollbar-width:thin}.pktabs .stab.on{box-shadow:inset 0 -3px 0 var(--acc);color:var(--fg)}
 #pklist{flex:1;min-height:0;overflow:auto;position:relative;padding-right:4px}
@@ -227,7 +240,7 @@ body.dragging{user-select:none;cursor:col-resize}
 <div class="tb"><button id="vpplay">▶ Play</button><button id="vpbk" title="Back 5 seconds">−5 s</button><button id="vpfw" title="Forward 5 seconds">+5 s</button><span id="vptime" class="vtnum">0:00.0 / 0:00.0</span><select id="vprate" title="Speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><span style="flex:1"></span><button id="vpsel">Select Timestamps</button></div>
 <div class="tb" id="vpselrow" hidden><label class="vtl">Start<input id="ta" class="vtnum" title="h:mm:ss.s, m:ss.s or seconds"></label><label class="vtl">End<input id="tb" class="vtnum" title="h:mm:ss.s, m:ss.s or seconds"></label><span id="tlen" class="mut vtnum"></span><button id="vppsel">▶ Play selection</button><span style="flex:1"></span><button id="vpas" class="pri">Assign to…</button></div>
 </section></div></div>
-<div id="iw" class="overlay" hidden></div><div id="pk" class="overlay" hidden></div>
+<div id="iw" class="overlay" hidden></div><div id="dw" hidden></div><div id="pk" class="overlay" hidden></div>
 <div id="modal" class="overlay" hidden></div><div id="toast" hidden></div>
 <script src="lib/pdf.min.js"></script>
 <script src="lib/pdf.worker.min.js"></script>
@@ -384,7 +397,7 @@ function setTab(t){tab=t;document.querySelectorAll('.tabs button').forEach(b=>b.
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 const urls={};
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
- if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id])el.src=urls[id]}}
+ if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id]):urls[id]}}}
 async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.startsWith('video');if(vid&&blob.size>MAXCOPY)return toast('Videos over 300 MB are too big to copy into a checklist: use Video Player to link it');
  const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
@@ -403,7 +416,7 @@ function renderR(){
 }
 let IM={mode:'fit',i:0};
 const mediaEl=m=>{if(isVid(m))return `<div class="vth" data-vk="${esc(vkey(m))}" title="Click to play">${m.thumb?`<img src="${m.thumb}" alt="">`:''}<span class="vpl">▶</span><span class="vcap">${vlabel(m)}</span></div>`;   // only the thumbnail until clicked
- if(m.kind==='file')return `<img data-mid="${m.id}" alt="${esc(m.name)}">`;
+ if(m.kind==='file')return `<img data-mid="${m.id}" alt="${esc(m.name)}">`+mediaTools(m);
  if(/\.(mp4|webm|mov)(\?|$)/i.test(m.url))return `<video src="${esc(m.url)}" controls></video>`;
  if(/^data:image|\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(m.url))return `<img src="${esc(m.url)}">`;
  return `<a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.url)}</a>`};
@@ -412,18 +425,24 @@ function imgPane(it){const n=it.media.length;IM.i=Math.max(0,Math.min(n-1,IM.i))
  let body='<div class="mut">No images or videos on this item yet. Add files, paste a screenshot (Ctrl+V), or use the camera button on the PDF tab.</div>';
  if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>`;
  else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button></div>`).join('')}</div>`;
- return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
+ return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick" title="Videos open in the Video Player, to import or link them and pick the part to show">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
 document.addEventListener('keydown',e=>{if(tab!=='img'||!SEL||IM.mode!=='fit'||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const n=SEL.media.length;if(n<2)return;
  if(e.key==='ArrowRight'){IM.i=(IM.i+1)%n;renderR()}else if(e.key==='ArrowLeft'){IM.i=(IM.i-1+n)%n;renderR()}});
 const R=$('#R');
 R.addEventListener('input',e=>{const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
  if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL()}
- if(t.id==='mfile')for(const fl of t.files)attach(fl,fl.name,fl.type)});
+ if(t.id==='mfile'){const fl=[...t.files],isV=f=>/^video\//.test(f.type)||/\.(mp4|m4v|mov|webm|mkv|avi|wmv|mpe?g|3gp)$/i.test(f.name);t.value='';
+  fl.filter(f=>!isV(f)).forEach(f=>attach(f,f.name,f.type));const v=fl.filter(isV);if(v.length)vidFromItem(v)}});
+// a video chosen on an item's Images tab opens the Video Player (import or link it there), with the step picker starting on that item
+async function vidFromItem(files){if(!SEL||isLocked())return;PKLAST=SEL;vpOpen();for(const f of files){const p=FS.pathOf?FS.pathOf(f):'',st=p&&await FS.videoStat(p);
+ await vpAdd(st||{blob:f,name:f.name.replace(/\.[^.]+$/,''),size:f.size});if(files.length>1)await new Promise(r=>{const w=setInterval(()=>{if($('#modal').hidden&&!LD){clearInterval(w);r()}},150)})}}
 R.addEventListener('click',e=>{
  const vt=e.target.closest('.vth');if(vt){if(!vt.classList.contains('on'))vidPlay(vt.dataset.vk);return}
  if(e.target.matches('.tile img')){IM.mode='fit';IM.i=+e.target.closest('.tile').dataset.k;renderR();return}
  const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.a==='dvis'){const id=b.dataset.dm;DHIDE.has(id)?DHIDE.delete(id):DHIDE.add(id);renderR();return}
+ if(b.dataset.a==='draw'){const m=SEL&&SEL.media.find(x=>x.id===b.dataset.dm);if(m)drawOpen(m);return}
  if(isLocked()&&(b.id==='mpick'||b.dataset.a==='maddurl'||b.dataset.a==='mdel'))return;
  if(b.id==='mpick')$('#mfile').click();
  else if(b.dataset.a==='maddurl'){const u=$('#murl').value.trim();if(u&&SEL){SEL.media.push({kind:'link',url:u});IM.i=SEL.media.length-1;save();renderR();renderL()}}
@@ -493,14 +512,15 @@ function vpUI(){const x=vv(),d=vpDur(),p=t=>d?(t/d*100)+'%':'0%';$('#tlhead').st
  for(const [id,t] of [['ta',VP.a],['tb',VP.b]]){const i=$('#'+id);if(document.activeElement!==i)i.value=fmtT(t)}$('#tlen').textContent='Length '+fmtT(VP.b-VP.a)}
 function vpSelUI(){$('#tl').classList.toggle('sel',VP.sel);$('#vpsel').classList.toggle('on',VP.sel);$('#vpselrow').hidden=!VP.sel;vpUI()}
 const vpFrac=e=>{const r=$('#tl').getBoundingClientRect();return Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))};
-async function vpAdd(){if(isLocked())return toast('Editing is locked');const f=await FS.videoPick();if(!f)return;
- const big=f.size>f.maxCopy;dlg(`<div class="dh"><b>Add "${esc(f.name)}" (${MB(f.size)})</b></div>
+// f: a picked file ({path,...} from main.js), or {blob,name,size} when the page has no file location (then it can only be copied in)
+async function vpAdd(f){if(isLocked())return toast('Editing is locked');f=f||await FS.videoPick();if(!f)return;
+ const big=f.size>(f.maxCopy||MAXCOPY);dlg(`<div class="dh"><b>Add "${esc(f.name)}" (${MB(f.size)})</b></div>
  <button class="vopt" id="vaCopy" ${big?'disabled':''}><b>Import the entire video</b><span>Copies the whole video into this checklist file, so it works on any computer. Adds ${MB(f.size)} to the file.${big?' Not possible: videos over 300 MB are too big to copy into a checklist. Link it, then install just the parts you need.':''}</span></button>
- <button class="vopt" id="vaLink"><b>Call to the existing file</b><span>The checklist only remembers where the video is. Nothing is added to the file, but if the video is moved, renamed or changed it will not play properly.${f.rel?' It is inside the save folder, so it keeps working if that folder (or USB drive) moves.':''}</span></button>
+ <button class="vopt" id="vaLink" ${f.path?'':'disabled'}><b>Call to the existing file</b><span>The checklist only remembers where the video is. Nothing is added to the file, but if the video is moved, renamed or changed it will not play properly.${f.rel?' It is inside the save folder, so it keeps working if that folder (or USB drive) moves.':''}${f.path?'':' Not possible here: the file\'s location is unknown.'}</span></button>
  <div class="dbtn"><button data-d="x">Cancel</button></div>`);
  $('#vaLink').onclick=()=>{closeDlg();const id=uid();S.videos.push({id,name:f.name,size:f.size,link:{path:f.path,rel:f.rel,size:f.size,mtime:f.mtime}});save();vpShow(id)};
- $('#vaCopy').onclick=async()=>{closeDlg();const r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=await FS.videoRead({path:f.path});await step(1);return b}).catch(()=>null);
-  if(!r||r==='cancelled')return toast('Could not import that video');const id=uid();VIDS[id]={blob:new Blob([r],{type:/\.webm$/i.test(f.path)?'video/webm':'video/mp4'})};S.videos.push({id,name:f.name,size:f.size,link:null});save();vpShow(id)}}
+ $('#vaCopy').onclick=async()=>{closeDlg();const r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=f.blob||await FS.videoRead({path:f.path});await step(1);return b}).catch(()=>null);
+  if(!r||r==='cancelled')return toast('Could not import that video');const id=uid();VIDS[id]={blob:r instanceof Blob?r:new Blob([r],{type:/\.webm$/i.test(f.path)?'video/webm':'video/mp4'})};S.videos.push({id,name:f.name,size:f.size,link:null});save();vpShow(id)}}
 function vpRemove(id){if(isLocked())return toast('Editing is locked');const v=vp(id);if(!v)return;let n=0;for(const s of S.sections)for(const c of s.cards)for(const x of [c,...c.steps])n+=x.media.filter(m=>m.kind==='vref'&&m.vid===id).length;
  ask(`Remove "${esc(v.name)}" from this checklist?${n?` ${n} linked clip${n>1?'s':''} on checklist items will stop playing. Installed clips are not affected.`:''}`,'Remove',()=>{S.videos=S.videos.filter(x=>x.id!==id);delete VIDS[id];if(VP.id===id){const x=vv();x.pause();x.removeAttribute('src');x.load();if(VP.own)URL.revokeObjectURL(VP.url);VP.id=null;VP.url='';VP.own=false;VP.sel=false;vpSelUI()}vpList();save();if(S.videos[0])vpShow(S.videos[0].id);else vpMsg('No videos yet: + Add video…')},1)}
 // ----- Assign to: link the selection, or install it as a clip -----
@@ -570,7 +590,7 @@ async function installWin(v,it,a,b,thumbFn){vv().pause();const w=$('#iw');let jo
  catch(x){if(!w.hidden){$('#iwst').textContent=/cancel/.test(x.message)?'Cancelled':'Could not make the clip: '+((x&&x.message)||x)}return}
  if(w.hidden){FS.clipDone(job.id);return}
  $('#iwst').textContent='Pick a quality. The sizes are exact.';$('.iwd .ldb').hidden=true;$('#iwsl').hidden=!job.audio;sizes();$('[data-iw=ok]').disabled=false}
-$('#vidBtn').onclick=vpOpen;$('#vpBack').onclick=vpClose;$('#vpadd').onclick=vpAdd;$('#vpas').onclick=vpAssign;
+$('#vidBtn').onclick=vpOpen;$('#vpBack').onclick=vpClose;$('#vpadd').onclick=()=>vpAdd();$('#vpas').onclick=vpAssign;
 $('#vplist').onclick=e=>{const r=e.target.closest('[data-id]');if(!r)return;if(e.target.closest('[data-a=rm]'))vpRemove(r.dataset.id);else if(r.dataset.id!==VP.id)vpShow(r.dataset.id)};
 $('#vpplay').onclick=()=>{const x=vv();if(!x.currentSrc)return;x.paused?x.play().catch(()=>{}):x.pause()};
 $('#vpbk').onclick=()=>{vv().currentTime=Math.max(0,vv().currentTime-5)};$('#vpfw').onclick=()=>{vv().currentTime=Math.min(vpDur(),vv().currentTime+5)};
@@ -589,6 +609,61 @@ for(const [id,k] of [['ta','a'],['tb','b']]){const i=$('#'+id);
  i.addEventListener('change',()=>{const t=parseT(i.value),d=vpDur();if(t!=null&&d){if(k==='a')VP.a=Math.max(0,Math.min(t,VP.b-0.1));else VP.b=Math.min(d,Math.max(t,VP.a+0.1))}i.blur();vpUI()});
  i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur()});i.addEventListener('blur',vpUI)}
 document.addEventListener('keydown',e=>{if(!PV3||!$('#modal').hidden||!$('#iw').hidden||!$('#pk').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key===' '){e.preventDefault();$('#vpplay').click()}else if(e.key==='Escape')vpClose()});
+// ---------- drawing on images: the strokes are kept on the media entry (m.draw, a few KB), never as a second copy of the image ----------
+// m.draw={w,h,s:[{c:color,w:width,p:[x,y,x,y,...]}]} in the image's own pixels; the image tab shows a drawn-over copy made on the fly
+const DHIDE=new Set(),DRC={};   // DHIDE: images whose drawing is hidden (this session); DRC: drawn-over copies by media id
+const ICON={eye:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ eyeOff:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12c2.5 3.6 6 6 10 6s7.5-2.4 10-6"/><path d="M4.6 15.4 3 17.5M9.2 17.6 8.5 20M14.8 17.6l.7 2.4M19.4 15.4l1.6 2.1"/></svg>',
+ pen:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>',
+ undo:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
+ redo:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>',
+ trash:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 11v6M14 11v6"/></svg>'};
+const hasDraw=m=>!!(m&&m.draw&&m.draw.s&&m.draw.s.length);
+const mediaTools=m=>m.kind!=='file'||m.type==='video'?'':`<span class="mtools"><button class="ed" data-a="draw" data-dm="${m.id}" title="Draw on this image">${ICON.pen}</button>${hasDraw(m)?`<button data-a="dvis" data-dm="${m.id}" title="Toggle visibility">${DHIDE.has(m.id)?ICON.eyeOff:ICON.eye}</button>`:''}</span>`;
+function paintStrokes(g,list,k){g.lineCap=g.lineJoin='round';for(const st of list){const p=st.p;g.strokeStyle=g.fillStyle=st.c;g.lineWidth=st.w*k;
+ if(p.length<=4){g.beginPath();g.arc(p[0]*k,p[1]*k,st.w*k/2,0,7);g.fill();continue}
+ g.beginPath();g.moveTo(p[0]*k,p[1]*k);for(let i=2;i<p.length-2;i+=2)g.quadraticCurveTo(p[i]*k,p[i+1]*k,(p[i]+p[i+2])/2*k,(p[i+1]+p[i+3])/2*k);g.lineTo(p[p.length-2]*k,p[p.length-1]*k);g.stroke()}}
+const imgOf=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src});
+// the picture shown on the Images tab: the plain image, or a drawn-over copy (made once per drawing, kept in memory only)
+async function shownUrl(m,src){if(!hasDraw(m)||DHIDE.has(m.id))return src;const k=JSON.stringify(m.draw);if(DRC[m.id]&&DRC[m.id].k===k)return DRC[m.id].url;
+ try{const im=await imgOf(src),c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d');g.drawImage(im,0,0);paintStrokes(g,m.draw.s,im.naturalWidth/(m.draw.w||im.naturalWidth));
+  const b=await new Promise(r=>c.toBlob(r,/jpe?g/i.test((MEDIA[m.id]||{}).type||'')?'image/jpeg':'image/png',.92));if(DRC[m.id])URL.revokeObjectURL(DRC[m.id].url);DRC[m.id]={k,url:URL.createObjectURL(b)};return DRC[m.id].url}catch(e){return src}}
+const mediaSrc=id=>{if(!urls[id]){const r=MEDIA[id];if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}return urls[id]};
+// ----- the editor -----
+const DCOL=['#e5332a','#ff8a00','#ffd400','#2fb344','#1e88ff','#b44bff','#ffffff','#000000'];
+async function drawOpen(m){if(isLocked())return toast('Editing is locked');const src=mediaSrc(m.id);if(!src)return;let im;try{im=await imgOf(src)}catch(e){return toast('Could not open that image')}
+ const W=im.naturalWidth,H=im.naturalHeight,f=m.draw&&m.draw.w?W/m.draw.w:1;   // older drawings are scaled to the image's current size
+ let strokes=hasDraw(m)?m.draw.s.map(s=>({c:s.c,w:s.w*f,p:s.p.map(v=>v*f)})):[],hist=[],fut=[],cur=null,sc=1;
+ const col=AS.dcol||'#e5332a',size=AS.dsz||6,w=$('#dw');
+ w.innerHTML=`<div class="dwbar"><button class="dwok" data-dw="ok">Apply</button><button class="dwno" data-dw="no">Cancel</button><span class="dwsep"></span>
+ <label class="dwl" title="Pen size">Size<input type="range" id="dwsz" min="1" max="40" value="${size}"><span class="dwdot"><i></i></span></label>
+ <span class="dwcol"><button data-dw="col" title="Pen color"><span class="dwsw" style="background:${col}"></span> Color ▾</button><span class="dwpop" hidden><input type="range" id="dwhue" min="0" max="360" value="0" title="Any color"><span class="dwpre">${DCOL.map(c=>`<button data-dc="${c}" style="background:${c}" title="${c}"></button>`).join('')}</span></span></span>
+ <span class="dwsep"></span><button data-dw="un" title="Undo (Ctrl+Z)">${ICON.undo}</button><button data-dw="re" title="Redo (Ctrl+Y)">${ICON.redo}</button><button data-dw="clr" title="Delete all drawing on this image">${ICON.trash}</button></div>
+ <div class="dwbox"><canvas id="dwcv"></canvas></div>`;w.hidden=false;
+ const cv=$('#dwcv'),g=cv.getContext('2d'),box=w.querySelector('.dwbox'),dot=w.querySelector('.dwdot i');let color=col;
+ const fit=()=>{const r=box.getBoundingClientRect(),d=devicePixelRatio||1;sc=Math.min((r.width-20)/W,(r.height-20)/H,1);cv.style.width=W*sc+'px';cv.style.height=H*sc+'px';cv.width=Math.round(W*sc*d);cv.height=Math.round(H*sc*d);paint()};
+ const paint=()=>{const d=cv.width/W;g.clearRect(0,0,cv.width,cv.height);g.drawImage(im,0,0,cv.width,cv.height);paintStrokes(g,cur?strokes.concat([cur]):strokes,d)};
+ const ui=()=>{w.querySelector('[data-dw=un]').disabled=!hist.length;w.querySelector('[data-dw=re]').disabled=!fut.length;w.querySelector('[data-dw=clr]').disabled=!strokes.length;
+  const z=+$('#dwsz').value;dot.style.width=dot.style.height=z+'px';dot.style.background=color;w.querySelector('.dwsw').style.background=color};
+ const commit=next=>{hist.push(strokes);strokes=next;fut=[];paint();ui()};
+ const pt=e=>{const r=cv.getBoundingClientRect();return[Math.round((e.clientX-r.left)/sc*10)/10,Math.round((e.clientY-r.top)/sc*10)/10]};
+ cv.onpointerdown=e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);cur={c:color,w:Math.round(+$('#dwsz').value/sc*10)/10,p:pt(e)};paint()};
+ cv.onpointermove=e=>{if(!cur)return;const [x,y]=pt(e),p=cur.p;if(Math.hypot(x-p[p.length-2],y-p[p.length-1])*sc<1.5)return;p.push(x,y);paint()};   // skip points closer than ~1.5 screen pixels: smaller files, same look
+ cv.onpointerup=cv.onpointercancel=()=>{if(!cur)return;const s=cur;cur=null;commit(strokes.concat([s]))};
+ const close=()=>{w.hidden=true;w.innerHTML='';removeEventListener('resize',fit);document.removeEventListener('keydown',key,true)};
+ const key=e=>{if(w.hidden)return;const k=e.key.toLowerCase();if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}
+  else if((e.ctrlKey||e.metaKey)&&(k==='y'||(k==='z'&&e.shiftKey))){e.preventDefault();w.querySelector('[data-dw=re]').click()}else if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();w.querySelector('[data-dw=un]').click()}};
+ w.onclick=e=>{const pc=e.target.closest('[data-dc]');if(pc){color=pc.dataset.dc;AS.dcol=color;saveApp();w.querySelector('.dwpop').hidden=true;ui();return}
+  const b=e.target.closest('[data-dw]');if(!b){if(!e.target.closest('.dwcol'))w.querySelector('.dwpop').hidden=true;return}const a=b.dataset.dw;
+  if(a==='col')w.querySelector('.dwpop').hidden=!w.querySelector('.dwpop').hidden;
+  else if(a==='un'&&hist.length){fut.push(strokes);strokes=hist.pop();paint();ui()}
+  else if(a==='re'&&fut.length){hist.push(strokes);strokes=fut.pop();paint();ui()}
+  else if(a==='clr'&&strokes.length)commit([]);
+  else if(a==='no')close();
+  else if(a==='ok'){if(strokes.length)m.draw={w:W,h:H,s:strokes};else delete m.draw;DHIDE.delete(m.id);close();save();renderR();toast(strokes.length?'Drawing saved':'Drawing removed')}};
+ $('#dwhue').oninput=e=>{color=`hsl(${e.target.value} 90% 50%)`;AS.dcol=color;saveApp();ui()};
+ $('#dwsz').oninput=e=>{AS.dsz=+e.target.value;saveApp();ui()};
+ addEventListener('resize',fit);document.addEventListener('keydown',key,true);fit();ui()}
 // ---------- PDF (several per checklist, loaded only when needed) ----------
 let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
 try{pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'}catch(e){}

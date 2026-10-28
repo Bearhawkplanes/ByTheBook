@@ -74,8 +74,17 @@ Top bar > Video Player (next to PDF Viewer). The player shows the videos of the 
   - Call to timestamps: the step plays that part straight from the video. Nothing is copied, but if a linked video file is moved or changed it won't function properly.
 - Then pick the step: the whole checklist in one list, with a search box and a tab per section to jump there. Hovering highlights a row in the Selection color (Settings); clicking keeps it highlighted and shows a green "Assign here" button right beside it. Clicking anywhere outside the list clears it. Keys: ↑/↓ move, Enter assigns, Esc closes. The list starts on the step you assigned last (or the one selected in the checklist), and steps that already have videos say so. The player stays open, ready for the next clip.
 - On an item's Images tab a video shows only a thumbnail until it is clicked. A clip plays just its part, on a loop. A loaded video stays loaded while you are on that item and for one minute after you click away, then it is unloaded.
-- Videos added through "+ Add image / video files" on the Images tab are copied into the checklist whole (up to 300 MB).
+- A checklist can hold any number of videos, imported and linked mixed; click one in the player's list to switch to it. Clips from any of them can go on any step.
+- Choosing a video with "+ Add image / video files" on a step's Images tab opens the Video Player with the same import / link choice, and the step picker then starts on that step.
 - Export for sharing keeps copied videos and installed clips. Linked videos are not copied, and the export window says so.
+
+## Drawing on images
+For torque patterns, bolt numbering and the like.
+- Every image on the Images tab has a pencil in its top-left corner (hidden while editing is locked). Click it to draw.
+- Top left: Apply (green) and Cancel (red). Then pen Size (with a preview dot), Color (presets, or the rainbow slider for any colour), Undo / Redo (Ctrl+Z / Ctrl+Y), and the trash can, which deletes all drawing on that image (Undo brings it back). Esc cancels.
+- Applied drawings are saved in the checklist as pen strokes, a few KB, not as a second copy of the image. They are included in Export for sharing.
+- Open the pencil again any time to add to the drawing, or trash + Apply to remove it.
+- Images with a drawing also get an eye button ("Toggle visibility") to hide or show the drawing; the closed eye means it is hidden. Hiding lasts until the checklist is closed and does not change the file.
 
 ## Activity log
 - Every checklist keeps its own log: Menu > Activity log…, Settings > Open the full activity log, or the LOG button on a selected file in the main menu (no need to open it). Filter by name, event or item; Download CSV.

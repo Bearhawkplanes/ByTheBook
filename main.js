@@ -166,10 +166,9 @@ const handlers = {
   // video
   videoPick: async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a video', properties: ['openFile'], filters: [{ name: 'Videos', extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'wmv', 'mpg', 'mpeg', '3gp'] }, { name: 'All files', extensions: ['*'] }] });
-    if (r.canceled || !r.filePaths[0]) return null;
-    const p = r.filePaths[0], s = fs.statSync(p);
-    return { path: p, rel: relToSaves(p), name: path.basename(p).replace(/\.[^.]+$/, ''), size: s.size, mtime: s.mtimeMs, maxCopy: MAX_COPY };
+    return r.canceled || !r.filePaths[0] ? null : handlers.videoStat(r.filePaths[0]);
   },
+  videoStat: p => { try { const s = fs.statSync(String(p)); return s.isFile() ? { path: String(p), rel: relToSaves(String(p)), name: path.basename(String(p)).replace(/\.[^.]+$/, ''), size: s.size, mtime: s.mtimeMs, maxCopy: MAX_COPY } : null; } catch (e) { return null; } },
   // where a linked video is now; size and mtime let the page warn when the file was changed
   videoInfo: v => { const p = vidPath(v); try { const s = fs.statSync(p); return { exists: s.isFile(), url: pathToFileURL(p).href, size: s.size, mtime: s.mtimeMs }; } catch (e) { return { exists: false }; } },
   videoRead: async v => { const p = vidPath(v); if (fs.statSync(p).size > MAX_COPY) throw new Error('Too big to copy into a checklist'); return fsp.readFile(p); },
