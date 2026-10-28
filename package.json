@@ -1,0 +1,51 @@
+{
+  "name": "build-checklist",
+  "version": "0.4.0",
+  "description": "Offline build checklist with manual PDF viewer",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable",
+    "dist:installer": "electron-builder --win nsis",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:mac": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "local.buildchecklist",
+    "productName": "Build Checklist",
+    "files": [
+      "main.js",
+      "preload.js",
+      "storage.js",
+      "index.html",
+      "lib/**"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "bcl",
+        "name": "Build Checklist file",
+        "role": "Editor"
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "BuildChecklist.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Office"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    }
+  }
+}
