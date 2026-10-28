@@ -7,7 +7,7 @@ const prof = pid => ({ code: null, p: 'ok', m: 'ok', body: { pid, user: 'A', sal
 const NONE = { code: null, p: 'none', m: 'none', body: null, marker: null };          // fresh install
 const TAMPERED = { code: 'E-4417', p: 'bad', m: 'ok', body: null, marker: { pid: 'a'.repeat(32), rv: R } };
 // files: { 'name.bcl': text }, integ: what main.js 'integrity' would return
-// PINs 1234 and 24680 are correct for the first entry checked; wrong PINs are counted like main.js does (window.__L), and recovery code GOOD clears them
+// PINs 1234 and 24680 are correct for the first entry checked (the main profile), 1357 for employee p1; wrong PINs are counted like main.js does (window.__L), and recovery code GOOD clears them
 const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I = ${JSON.stringify(integ)}, ok = v => Promise.resolve(v), L = window.__L = { fails: 0, until: 0 };
  const pidOf = t => { const m = /"stamp":\\{"pid":"([0-9a-f]{32})"/.exec(t); return m ? m[1] : ''; };
  window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now(), pid: pidOf(F[f]) }))),
@@ -17,6 +17,7 @@ const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I =
   newSalt: () => ok('00112233445566778899aabbccddeeff'), newPid: () => ok('ab'.repeat(16)), integrity: () => ok(I), profileSave: () => ok(true),
   recMake: () => ok({ code: 'X', rv: { salt: '00'.repeat(16), hash: '11'.repeat(32) } }), recCheck: (c, list) => { if (c !== 'GOOD') return ok(-1); L.fails = 0; L.until = 0; return ok(0); }, hash: () => ok('22'.repeat(32)), matchPin: () => ok(null),
   pinTry: (pin, list) => { if (L.fails >= 100) return ok({ locked: 'E-4419', fails: L.fails }); if (L.until > Date.now()) return ok({ fails: L.fails, wait: L.until });
+   if (pin === '1357' && list.some(x => x.id === 'p1')) { L.fails = 0; L.until = 0; return ok({ id: 'p1', fails: 0 }); }
    if (pin === '1234' || pin === '24680') { L.fails = 0; L.until = 0; return ok({ id: list[0].id, fails: 0 }); } L.fails++; L.until = L.fails < 100 && L.fails % 15 === 0 ? Date.now() + 1200000 : 0;
    return ok(L.fails >= 100 ? { locked: 'E-4419', fails: L.fails } : { fails: L.fails, wait: L.until }); },
   pinState: () => ok({ fails: L.fails, until: L.until }),
@@ -137,6 +138,26 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(async () => { showProfile(true); $('#pu').value = 'Boss'; $('#pp').value = $('#pp2').value = '1234'; document.querySelector('[data-p=create]').click(); await new Promise(r => setTimeout(r, 100)); });
   assert(/5 to 8 digits/.test(await pg.evaluate(() => $('#perr').textContent)) && !(await pg.evaluate(() => PR.pid)), 'new profile needs a 5-digit main PIN');
 
+  // every PIN prompt takes the 5-digit main PIN and a 4-digit employee PIN
+  const strict = { ...prof('a'.repeat(32)) }; strict.body = { ...strict.body, req: { names: true, sign: true, edit: true }, people: [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }] };
+  pg = await page({ 'shop.bcl': used.replace(/"done":true/g, '"done":false') }, strict);
+  await open(pg, 'shop');
+  const prompt = async (trigger, pin) => { await pg.evaluate(trigger); await pg.waitForTimeout(80); const t = await pg.evaluate(() => { const o = [...document.querySelectorAll('.overlay')].pop(); return o ? o.querySelector('b').textContent : ''; }); await tryPin(pin); await pg.waitForTimeout(80); return t; };
+  const box = (s, c, j) => `document.querySelector('.row[data-s="${s}"][data-c="${c}"]${j == null ? ':not([data-j])' : `[data-j="${j}"]`} input[data-a=done]')`;
+  assert.strictEqual(await prompt(() => document.querySelector('#lockBtn').click(), '24680'), 'Unlock editing');
+  assert(await pg.evaluate(() => EDITOK && EDITOK.name === 'A'), 'unlock editing with the 5-digit main PIN');
+  await pg.evaluate(() => { const t = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === S.sections[1].title); t && t.click(); });
+  const steps = await pg.evaluate(() => S.sections[1].cards[0].steps.length);
+  for (let j = 0; j < steps; j++) assert.strictEqual(await prompt(new Function(`const c=${box(1, 0, j)};c.click()`), '1357'), 'Sign this step');
+  assert(await pg.evaluate(() => S.sections[1].cards[0].steps.every(x => x.done && x.init === 'Joe')), 'steps signed with the 4-digit employee PIN');
+  assert.strictEqual(await prompt(new Function(`${box(1, 0)}.click()`), '24680'), 'Sign off this item');
+  assert(await pg.evaluate(() => S.sections[1].cards[0].done && S.sections[1].cards[0].sig.by === 'A'), 'item signed off with the 5-digit main PIN');
+  assert.strictEqual(await prompt(() => { document.querySelector('[data-m="uncheck"]').click(); document.querySelector('#modal [data-d=ok]').click(); }, '24680'), 'Uncheck everything');
+  assert(await pg.evaluate(() => !S.sections[1].cards[0].done), 'uncheck everything with the 5-digit main PIN');
+  await pg.evaluate(() => { S.locked = true; openSettings(); });
+  assert.strictEqual(await prompt(() => { const c = $('#lockc'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); }, '24680'), 'Turn off the master file lock');
+  assert(await pg.evaluate(() => !S.locked), 'master lock off with the 5-digit main PIN');
+
   // adopt from the saved list: flagged row, explanation, Boss PIN, stamp + log written, images and PDFs kept
   pg = await page({ 'mine.bcl': used, 'theirs.bcl': used.replace(/"stamp":\{"pid":"a{32}"/, '"stamp":{"pid":"' + 'b'.repeat(32) + '"'), 'shared.bcl': shared }, prof('a'.repeat(32)));
   await pg.evaluate(() => openHome()); await pg.waitForTimeout(200);
@@ -144,7 +165,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(() => document.querySelector('#flist .frow.adopt .adq').click());
   assert(/different profile/.test(await pg.evaluate(() => $('#modal').textContent)), 'explanation shown');
   await pg.evaluate(() => document.querySelector('#modal [data-d=ok]').click()); await pg.waitForTimeout(50);
-  await tryPin('1234'); await pg.waitForTimeout(200);
+  await tryPin('24680'); await pg.waitForTimeout(200);
   const ad = await pg.evaluate(async () => ({ list: [...document.querySelectorAll('#flist .frow.adopt')].length, file: await window.fsapi.read('theirs.bcl') }));
   const ao = JSON.parse(ad.file);
   assert.strictEqual(ad.list, 0, 'flag gone after adopting');
