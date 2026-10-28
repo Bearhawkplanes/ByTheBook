@@ -490,7 +490,7 @@ $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if
 document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key==='Escape')closeDlg();else if(e.key==='Enter'){const b=$('#modal [data-d=ok]');if(b){e.preventDefault();b.click()}}});
 const menu=$('#menu');$('#menuBtn').onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
 menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
- if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')ask('Export a clean copy for sharing? It keeps every section, step, image and PDF, but nothing is checked off, and the sign-offs, activity log and profile link are left out. The person who opens it can use it with their own profile.','Export',exportShare);else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
+ if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
  else if(m==='restore')restoreBackup();
  else if(m==='log')showLog(S.name||CUR,S.log,S.segs);
@@ -537,9 +537,14 @@ function unpack(o){const files=o.files||{};delete o.files;
  const P={};(o.pdfs||[]).forEach(p=>{p.id=p.id||uid();if(p.data){P[p.id]={data:p.data};delete p.data}});return{o:norm(o),files,P}}
 async function dlCopy(){toast('Preparing copy…');const t=await pack(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+'.bcl';a.click();toast('Copy downloaded')}
 // a shareable copy: same content, images and PDFs, but no profile stamp, no progress and no log, so it opens cleanly on any computer
-const blankCopy=o=>{delete o.stamp;delete o.segs;delete o.seg;delete o.ids;o.log=[];
+// keepLog: the old entries stay readable, under a marked segment, so the checks can be re-entered from them
+const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
+ if(keepLog){o.seg=(o.seg||0)+1;(o.segs=o.segs||{})[o.seg]={kind:'recovery',label:'Exported as a fresh copy',note:'Entries above come from the original file',at:now()};o.log.push({at:now(),ev:'Exported as a fresh copy',item:'Entries above come from the original file',by:'',uid:'',seg:o.seg,flag:'recovery'})}
+ else{delete o.segs;delete o.seg;o.log=[]}
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps]){x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft='';x.hist=[]}};
-async function exportShare(){toast('Preparing export…');const t=await pack(null,blankCopy),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+' (shared).bcl';a.click();toast('Export downloaded')}
+function exportDlg(){dlg(`<div class="dh"><b>Export for sharing</b></div><p>Saves a fresh copy with every section, step, image and PDF. Nothing is checked off, and sign-offs and the profile link are left out, so it opens on any computer or a new install. This checklist is not changed.</p><label class="chk"><input type="checkbox" id="exlog"> Include the activity log (read-only history, e.g. to re-enter checks after moving to a new install)</label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Export</button></div>`);
+ DLGOK=()=>exportShare($('#exlog').checked)}
+async function exportShare(keepLog){toast('Preparing export…');const t=await pack(null,blankCopy(keepLog)),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+' (shared).bcl';a.click();toast('Export downloaded')}
 $('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  try{const txt=await f.text(),raw=JSON.parse(txt);if(!raw.sections&&!raw.prep&&!raw.tasks)throw 0;const base=await FS.writeNew(f.name.replace(/\.[^.]+$/,''),txt);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}};
 let HS=null;
@@ -617,7 +622,7 @@ const ERRS={'E-4417':'The profile file is missing, damaged, or was edited by han
 const errTable=()=>`<div class="et"><div class="dt" style="margin-top:22px">Error codes</div><p class="mut">These errors mean someone has tampered with the profile settings, or profile or checklist files were moved between computers. While one is active, checking boxes and sign-offs are disabled.</p><table>${Object.entries(ERRS).map(([c,d])=>`<tr><td><b>${c}</b></td><td>${d}</td></tr>`).join('')}</table></div>`;
 const recSources=()=>[PRX&&PRX.profile,PRX&&PRX.marker,CUR&&S.stamp].filter(x=>x&&x.pid&&x.rv);
 function renderProfile(){const p=$('#hprof'),back='<button data-p="back">← Back to menu</button>';
- if(TAMPER){p.innerHTML=`${back}<h2>Profile</h2><div class="warn" style="margin-bottom:10px">Error ${esc(TAMPER)} is active. Checking boxes and sign-offs are disabled.</div>
+ if(TAMPER){p.innerHTML=`${back}<h2>Profile</h2><div class="warn" style="margin-bottom:10px">Error ${esc(TAMPER)} is active. Checking boxes and sign-offs are disabled.</div><p class="mut">Without the recovery code, the checklists can still be opened and taken out: open one, then Menu &gt; Export for sharing… gives a fresh copy (with its activity log if you tick the box) that works in a new install.</p>
   <div class="pf"><div class="dt">Recover with the recovery code</div><label>Recovery code<input id="rc" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX" autocomplete="off" style="text-transform:uppercase"></label><label>Username<input id="pu" value="${esc(PR.user||(PRX&&PRX.body&&PRX.body.user)||'')}"></label><label>New 4-digit PIN<input id="pp" class="pin" ${PINF}></label><label>Confirm PIN<input id="pp2" class="pin" ${PINF}></label>
   <div id="perr" class="warn" style="min-height:20px"></div><button class="pri" data-p="recover">Recover</button></div>${errTable()}`;return}
  if(!PR.pid){p.innerHTML=`${back}<h2>Set up your profile</h2><p class="mut">Choose a username and a 4-digit PIN. This is the main profile: its PIN protects this Profile page and the features you switch on here, and it can always sign off main items and unlock editing. You will be given a recovery code once; keep it safe.</p>
@@ -700,8 +705,9 @@ async function viewLogOf(id){if(id===CUR){showLog(id,S.log,S.segs);return}
  const r=await load('Reading log of '+id,async step=>{await step(.1,'Reading file…');const t=await FS.read(id+'.bcl');await step(.6,'Reading log…');const o=JSON.parse(t);await step(1);return{log:o.log||[],segs:o.segs||{}}});
  if(r&&r!=='cancelled')showLog(id,r.log,r.segs)}
 // a checklist stamped with a profile ID that does not match the current profile is flagged when it opens
+// (also on a computer with no profile yet: only that checklist is affected; only a damaged profile locks the whole app)
 function stampCheck(){CLT=null;const st=S.stamp;if(!st||!st.pid)return;
- if(!PR.pid){if(!TAMPER){TAMPER='E-4417';PRX=PRX||{body:null,profile:null,marker:null}}}else if(st.pid!==PR.pid&&!TAMPER)CLT='E-4420'}
+ if(st.pid!==PR.pid&&!TAMPER)CLT='E-4420'}
 function afterOpen(){const c=errNow();if(!c)return;const lg=S.log||[],last=lg[lg.length-1];
  if(!(last&&last.flag&&last.ev==='Error '+c+' detected')){newSeg('tamper','Error '+c+' detected','Checklist opened while the error was active');save()}showErr(c)}
 
