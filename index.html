@@ -191,6 +191,15 @@ body.dragging{user-select:none;cursor:col-resize}
 .xpl button{display:grid;gap:3px;text-align:left;padding:10px 12px;border-radius:8px}.xpl button span{font-size:12px;opacity:.75;font-weight:400}.xpl button.on{background:color-mix(in srgb,var(--acc) 18%,transparent);border-color:var(--acc)}
 .xpr{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;overflow:hidden}.xpr h3{margin:0}.xpr p{margin:0}
 .xpo{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}.xpo .chk{margin:0}label.xpi{display:flex;gap:6px;align-items:center;margin:0;font-size:13px;color:var(--fg)}.xpi select{width:auto}
+.xpdf{flex:1;min-height:0;display:flex;gap:14px}
+.xpopts{width:210px;flex:none;overflow:auto;display:flex;flex-direction:column;gap:5px;padding-right:2px}
+.xph{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:6px 0 1px}.xph:first-child{margin-top:0}
+.xpgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+label.xpc{display:flex;gap:8px;align-items:center;margin:0;padding:6px 9px;border:1px solid var(--line);border-radius:7px;cursor:pointer;color:var(--fg);font-size:13px;line-height:1.25;user-select:none}
+#xp label.xpc input{width:auto;height:auto;min-height:0;padding:0;margin:0;flex:none;accent-color:var(--acc)}label.xpc span{min-width:0;overflow-wrap:anywhere}
+label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-color:var(--acc);background:color-mix(in srgb,var(--acc) 14%,transparent)}
+.xppv{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:6px}
+@media (max-width:900px){.xpl{width:170px}.xpdf{flex-direction:column}.xpopts{width:auto;max-height:118px;flex-direction:row;flex-wrap:wrap;align-content:flex-start}.xph{width:100%}.xpgrid{display:contents}}
 #xppages{flex:1;min-height:200px;overflow:auto;background:#6f747a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center}
 .xppg{width:100%;max-width:820px;flex:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}.xppg canvas{display:block;width:100%;height:100%}
 #pk{z-index:61}
@@ -916,10 +925,13 @@ function exportDlg(){const w=$('#xp');XP.pdf=null;XP.skip=new Set();w.hidden=fal
 const xpClose=()=>{XP.busy++;clearTimeout(XP.tm);XP.pdf=null;$('#xp').hidden=true;$('#xp').innerHTML=''};
 function xpShow(k){XP.k=k;document.querySelectorAll('#xp [data-xk]').forEach(b=>b.classList.toggle('on',b.dataset.xk===k));const r=$('#xpr');$('#xpgo').disabled=false;
  if(k==='fresh'){r.innerHTML=`<h3>Fresh copy</h3><p>Saves a fresh copy with every section, step, image and PDF. Nothing is checked off, and sign-offs and the profile link are left out, so it opens on any computer or a new install. This checklist is not changed.</p>${S.videos.some(v=>v.link)?`<p class="warn">${S.videos.filter(v=>v.link).length} linked video(s) are not copied, so their clips only play on computers that have the same video files. Install the clips (Video Player &gt; Assign to… &gt; Install selection) to include them.</p>`:''}<label class="chk"><input type="checkbox" id="exlog"> Include the activity log (read-only history, e.g. to re-enter checks after moving to a new install)</label>`;return}
- const o=PO();r.innerHTML=`<h3>Printable checklist</h3><p class="mut" style="margin:0">A blank checklist to print and fill in by hand: sections, main items and steps with tick boxes, book pages, initials and dates. No images, videos or descriptions. Each section starts on a new page.</p>
- <div class="xpo"><label class="xpi">Paper <select id="xpp"><option ${o.paper==='Letter'?'selected':''}>Letter</option><option ${o.paper==='A4'?'selected':''}>A4</option></select></label>${[['contents','Contents page'],['qty','Qty / size column'],['spec','Spec column'],['itemSign','Item sign-off lines'],['secEnd','Section sign-off box and notes']].map(([k,t])=>`<label class="chk"><input type="checkbox" data-po="${k}" ${o[k]?'checked':''}> ${t}</label>`).join('')}</div>
- <div class="xpo"><span class="mut">Sections:</span>${S.sections.map((s,i)=>`<label class="chk"><input type="checkbox" data-ps="${i}" ${XP.skip.has(i)?'':'checked'}> ${esc(s.title||'Untitled')}</label>`).join('')}</div>
- <div id="xpinfo" class="mut"></div><div id="xppages"></div>`;$('#xppages').onscroll=xpWhere;xpMake()}
+ // options in a slim column beside the preview, so the PDF gets the full height; each option is a box with its tick and words
+ const o=PO(),chip=(a,t,on,tip)=>`<label class="xpc"${tip?` title="${tip}"`:''}><input ${a} ${on?'checked':''}><span>${t}</span></label>`;
+ r.innerHTML=`<div class="xpdf"><div class="xpopts">
+ <div class="xph">Paper</div><div class="xpgrid">${['Letter','A4'].map(v=>chip(`type="radio" name="xpp" value="${v}"`,v,o.paper===v)).join('')}</div>
+ <div class="xph">Include</div>${[['contents','Contents page','Build details to fill in, and where each section starts'],['qty','Qty / size column'],['spec','Spec column'],['itemSign','Item sign-off lines','Under each main item, in sections that use sign-off'],['secEnd','Section sign-off and notes','A signature box and note lines at the end of each section']].map(([k,t,tip])=>chip(`type="checkbox" data-po="${k}"`,t,o[k],tip)).join('')}
+ <div class="xph">Sections</div>${S.sections.map((s,i)=>chip(`type="checkbox" data-ps="${i}"`,esc(s.title||'Untitled'),!XP.skip.has(i))).join('')}
+ </div><div class="xppv"><div id="xpinfo" class="mut"></div><div id="xppages"></div></div></div>`;$('#xppages').onscroll=xpWhere;xpMake()}
 // what goes on paper: only the checklist itself (blank copies)
 const pdfData=()=>{const st=x=>({text:x.text,page:x.page,qty:x.qty,size:x.size,spec:x.spec});
  return{name:S.name||'Unnamed',manual:S.manual||'',version:APPV,printed:new Date().toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}),
@@ -932,14 +944,14 @@ function xpMake(){clearTimeout(XP.tm);const k=++XP.busy;$('#xpgo').disabled=true
 async function xpPreview(k){const box=$('#xppages');let doc;try{doc=await pdfjsLib.getDocument({data:XP.pdf.slice()}).promise}catch(e){$('#xpinfo').textContent='Could not show the preview';return}if(k!==XP.busy)return;
  box.innerHTML='';const io=new IntersectionObserver(es=>es.forEach(async en=>{const d=en.target;if(!en.isIntersecting||d.dataset.done)return;d.dataset.done=1;const pg=await doc.getPage(+d.dataset.n),v=pg.getViewport({scale:1}),vp=pg.getViewport({scale:d.clientWidth/v.width*(devicePixelRatio||1)}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;if(k===XP.busy)d.appendChild(c)}),{root:box,rootMargin:'600px'});
  for(let n=1;n<=doc.numPages;n++){const v=(await doc.getPage(n)).getViewport({scale:1}),d=document.createElement('div');d.className='xppg';d.dataset.n=n;d.style.aspectRatio=v.width+'/'+v.height;box.appendChild(d);io.observe(d)}xpWhere()}
-function xpWhere(){const box=$('#xppages'),f=box&&box.firstElementChild;if(!f||!XP.pages)return;const n=Math.min(XP.pages,Math.floor((box.scrollTop+box.clientHeight/3)/(f.offsetHeight+12))+1);$('#xpinfo').textContent=`Page ${n} of ${XP.pages} · ${PO().paper}`}
+function xpWhere(){const box=$('#xppages');if(!box||!box.firstElementChild||!XP.pages)return;const top=box.getBoundingClientRect().top+box.clientHeight/3;let n=1;for(const d of box.children)if(d.getBoundingClientRect().top<=top)n=+d.dataset.n;$('#xpinfo').textContent=`Page ${n} of ${XP.pages} · ${PO().paper}`}
 async function xpExport(){const b=$('#xpgo');b.disabled=true;let f=null;
  try{if(XP.k==='fresh')f=await FS.saveFile({title:'Export a fresh copy',name:uniqueName(S.name,'-')+' (shared).bcl',filters:[{name:'Checklist',extensions:['bcl']}]},await pack(null,blankCopy($('#exlog').checked)));
   else if(XP.pdf)f=await FS.saveFile({title:'Export printable checklist',name:(S.name||'Checklist').replace(/[\\/:*?"<>|]+/g,'_')+' - checklist.pdf',filters:[{name:'PDF',extensions:['pdf']}]},XP.pdf);
   if(f){xpClose();toast('Saved: '+f)}}
  catch(e){toast('Could not export: '+String((e&&e.message)||e).replace(/^.*Error: /,''))}finally{if(!$('#xp').hidden)b.disabled=false}}
 $('#xp').addEventListener('click',e=>{const t=e.target;if(t.closest('[data-xp=x]'))return xpClose();const k=t.closest('[data-xk]');if(k&&k.dataset.xk!==XP.k)return xpShow(k.dataset.xk);if(t.closest('#xpgo'))xpExport()});
-$('#xp').addEventListener('change',e=>{const t=e.target,o=PO();if(t.id==='xpp')o.paper=t.value;else if(t.dataset.po)o[t.dataset.po]=t.checked;else if(t.dataset.ps!=null){t.checked?XP.skip.delete(+t.dataset.ps):XP.skip.add(+t.dataset.ps)}else return;AS.pdf=o;saveApp();xpMake()});
+$('#xp').addEventListener('change',e=>{const t=e.target,o=PO();if(t.name==='xpp')o.paper=t.value;else if(t.dataset.po)o[t.dataset.po]=t.checked;else if(t.dataset.ps!=null){t.checked?XP.skip.delete(+t.dataset.ps):XP.skip.add(+t.dataset.ps)}else return;AS.pdf=o;saveApp();xpMake()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#xp').hidden&&$('#modal').hidden)xpClose()});
 $('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  try{const txt=await f.text(),raw=JSON.parse(txt);if(!raw.sections&&!raw.prep&&!raw.tasks)throw 0;const base=await FS.writeNew(f.name.replace(/\.[^.]+$/,''),txt);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}};

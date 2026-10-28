@@ -524,9 +524,15 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(dItems.length > 10 && dItems.every(x => Object.keys(x).every(k => ['text', 'page', 'qty', 'size', 'spec', 'steps'].includes(k))), 'only the checklist goes to the PDF (no images, descriptions or progress)');
   assert(await pg.evaluate(n => document.querySelectorAll('#xppages .xppg').length === n && document.querySelectorAll('#xppages canvas').length >= 1, L1.n), 'preview shows the real PDF pages');
   assert(/^Page 1 of \d+ · Letter$/.test(await pg.evaluate(() => $('#xpinfo').textContent)), 'page indicator');
+  await pg.setViewportSize({ width: 860, height: 700 }); await pg.evaluate(() => xpWhere());
+  const smallInfo = await pg.evaluate(() => [$('#xpinfo').textContent, $('#xppages').scrollTop, [...$('#xppages').children].map(d => Math.round(d.getBoundingClientRect().top)), Math.round($('#xppages').getBoundingClientRect().top), $('#xppages').clientHeight]);
+  assert(/^Page 1 of /.test(smallInfo[0]) && smallInfo[4] < 600, 'small window: the preview scrolls inside the window, and the counter is right: ' + JSON.stringify(smallInfo));
+  await pg.setViewportSize({ width: 1280, height: 720 }); await pg.evaluate(() => xpWhere());
+  const lay2 = await pg.evaluate(() => { const o = $('#xp .xpopts').getBoundingClientRect(), v = $('#xppages').getBoundingClientRect(), r = $('#xpr').getBoundingClientRect(); return { side: o.right <= v.left, tall: v.height / r.height, boxed: [...document.querySelectorAll('#xp .xpopts input')].every(i => i.closest('label.xpc')) }; });
+  assert(lay2.side && lay2.tall > 0.85 && lay2.boxed, 'options in a column beside the preview, which gets the full height; every option boxed with its words: ' + JSON.stringify(lay2));
   await pg.evaluate(() => { $('#xppages').scrollTop = $('#xppages').scrollHeight; $('#xppages').dispatchEvent(new Event('scroll')); }); await pg.waitForTimeout(300);
   assert.strictEqual(await pg.evaluate(() => $('#xpinfo').textContent), `Page ${L1.n} of ${L1.n} · Letter`, 'scrolls through the pages');
-  await pg.evaluate(() => { $('#xpp').value = 'A4'; $('#xpp').dispatchEvent(new Event('change', { bubbles: true })); const c = document.querySelector('[data-po=spec]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); const s0 = document.querySelector('[data-ps="0"]'); s0.checked = false; s0.dispatchEvent(new Event('change', { bubbles: true })); });
+  await pg.evaluate(() => { document.querySelector('#xp input[name=xpp][value=A4]').click(); const c = document.querySelector('[data-po=spec]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); const s0 = document.querySelector('[data-ps="0"]'); s0.checked = false; s0.dispatchEvent(new Event('change', { bubbles: true })); });
   await pg.waitForTimeout(800);
   const call2 = await pg.evaluate(() => window.__pdfCalls.at(-1));
   assert(call2.o.paper === 'A4' && call2.o.spec === false && call2.d.sections.length === call1.d.sections.length - 1, 'paper, columns and sections change the PDF');
