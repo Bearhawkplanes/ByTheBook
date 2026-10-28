@@ -474,10 +474,10 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const pp = await (await b.newContext()).newPage(); pp.on('pageerror', e => errors.push('print.html: ' + e.message));
   await pp.goto('file://' + path.join(__dirname, '..', 'print.html'));
   const st = (n, extra) => Object.assign({ text: 'Step ' + n, page: '4-' + n }, extra || {});
-  const PD = { name: 'Wing kit', manual: 'Manual rev C', printed: '28 Oct 2026', version: '0.5.0', sections: [
+  const PD = { name: 'Frame kit', manual: 'Manual rev C', printed: '28 Oct 2026', version: '0.5.0', sections: [
     { title: 'Prep', sign: false, cards: [{ text: 'Tools', page: '1', steps: [st(1), st(2), st(3)] }] },
-    { title: 'Left wing', sign: true, cards: Array.from({ length: 6 }, (_, i) => ({ text: 'Item ' + (i + 1), page: '5-' + i, steps: Array.from({ length: 5 }, (_, j) => st(j + 1, { qty: '12', size: 'AN3-5A', spec: '25 in-lb' })) })) },
-    { title: 'Left wing', sign: false, cards: [{ text: 'Very long item', steps: Array.from({ length: 70 }, (_, j) => st(j + 1)) }] },
+    { title: 'Left side', sign: true, cards: Array.from({ length: 6 }, (_, i) => ({ text: 'Item ' + (i + 1), page: '5-' + i, steps: Array.from({ length: 5 }, (_, j) => st(j + 1, { qty: '12', size: 'M6 x 20', spec: '25 in-lb' })) })) },
+    { title: 'Left side', sign: false, cards: [{ text: 'Very long item', steps: Array.from({ length: 70 }, (_, j) => st(j + 1)) }] },
     { title: 'Empty', sign: true, cards: [] }] };
   const all = { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true };
   const lay = o => pp.evaluate(async ([D, o]) => { const n = await render(D, o); return { n, pages: [...document.querySelectorAll('.page')].map(p => ({ sec: p.querySelector('h1').textContent, si: p.dataset.si, tp: p.querySelector('.tp').textContent, sp: (p.querySelector('.sp') || {}).textContent || '',
@@ -490,8 +490,8 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const secs = L1.pages.slice(1);
   assert(secs.every(p => p.si != null && /: page \d+ of \d+$/.test(p.sp)), 'every page names its section and its page in that section');
   const lw = secs.filter(p => p.si === '1');
-  assert(lw.length >= 2 && lw.every((p, i) => p.sp === `Left wing: page ${i + 1} of ${lw.length}`), 'multi-page section counted on its own: ' + lw.map(p => p.sp));
-  assert(secs.filter(p => p.si === '2').every(p => p.sp.startsWith('Left wing: page')) && secs.filter(p => p.si === '2')[0].sp.endsWith('page 1 of ' + secs.filter(p => p.si === '2').length), 'a second section with the same name has its own count');
+  assert(lw.length >= 2 && lw.every((p, i) => p.sp === `Left side: page ${i + 1} of ${lw.length}`), 'multi-page section counted on its own: ' + lw.map(p => p.sp));
+  assert(secs.filter(p => p.si === '2').every(p => p.sp.startsWith('Left side: page')) && secs.filter(p => p.si === '2')[0].sp.endsWith('page 1 of ' + secs.filter(p => p.si === '2').length), 'a second section with the same name has its own count');
   const itemPages = {}; secs.forEach((p, i) => p.items.forEach(t => (itemPages[p.si + t] = itemPages[p.si + t] || []).push(i)));
   assert(Object.entries(itemPages).filter(([k]) => k.startsWith('1')).every(([, v]) => v.length === 1), 'items that fit are never split across pages');
   const longP = secs.filter(p => p.si === '2');
@@ -502,7 +502,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.deepStrictEqual([0, 1, 2, 3].map(si => secs.filter(p => p.si === String(si)).filter(p => p.end).length), [1, 1, 1, 1], 'one section-complete box per section, at its end');
   assert(secs.filter(p => p.si === '3').length === 1, 'empty section still gets its page');
   assert.deepStrictEqual(L1.pages[1].cols, ['Done', 'No.', 'Step', 'Qty / size', 'Spec', 'Book pg', 'Init.', 'Date']);
-  assert(/Left wing\(inspector sign-off\)page 3/.test(L1.toc[1].replace(/\s+/g, '')) || /page 3/.test(L1.toc[1]), 'contents lists where sections start: ' + L1.toc[1]);
+  assert(/Left side\(inspector sign-off\)page 3/.test(L1.toc[1].replace(/\s+/g, '')) || /page 3/.test(L1.toc[1]), 'contents lists where sections start: ' + L1.toc[1]);
   assert.deepStrictEqual([L1.pages[1].w, L1.pages[1].h], [816, 1056], 'Letter is 8.5 x 11 in');
   const L2 = await lay({ paper: 'A4', contents: false, qty: false, spec: false, itemSign: false, secEnd: false });
   assert(L2.pages[0].sec === 'Prep' && L2.pages.every(p => !p.end && !p.so) && L2.pages.every(p => p.fits), 'options switch the extras off');

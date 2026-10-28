@@ -76,9 +76,9 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 One window: the kinds of export on the left, their settings on the right, and Export… at the bottom, which opens the usual Save window so you choose where the file goes.
 - Fresh copy (.bcl): every section, step, image, PDF and installed clip, with nothing checked off and no profile link, for sharing or a new install. Optionally with the activity log.
 - Printable checklist (PDF): a blank checklist to print and fill in by hand. The right side shows the real PDF; scroll through the pages ("Page 3 of 9").
-  - Each section starts on a new page. Every page shows the checklist name, the section, "Page x of N" and the page within that section ("Left wing: page 2 of 3").
+  - Each section starts on a new page. Every page shows the checklist name, the section, "Page x of N" and the page within that section ("Engine: page 2 of 3").
   - Main items are grey rows with their steps numbered under them (1.1, 1.2…). Columns: Done tick box, No., Step, Qty / size, Spec, Book pg, Init., Date. A main item and its steps stay on one page; only an item longer than a page continues on the next, marked "(continued)".
-  - Options (remembered): paper size Letter or A4; Contents page (with build details to fill in and where each section starts); Qty / size column; Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
+  - Options (remembered): paper size Letter or A4; Contents page (with project details to fill in and where each section starts); Qty / size column; Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
   - No images, videos, PDFs, descriptions or progress: it is always a blank copy.
 
 ## Video Player
