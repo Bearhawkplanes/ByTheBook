@@ -7,11 +7,20 @@ module.exports = (getDir, trash) => {
   const bakOf = n => path.join(getDir(), 'Backups', path.basename(n) + '.bak');
   const uniq = base => { base = clean(base); let n = base, k = 2; while (fs.existsSync(path.join(getDir(), n + '.bcl'))) n = base + ' ' + k++; return n; };
   const put = async (base, text) => { const n = uniq(base); await fsp.writeFile(file(n + '.bcl'), text); return n; };
+  const stamps = new Map();   // file -> {mtime, pid}: each file is read again only after it changes
+  const stampOf = async (f, mtime) => { const c = stamps.get(f); if (c && c.mtime === mtime) return c.pid; let pid = '';
+    try { const m = (await fsp.readFile(f, 'utf8')).match(/"stamp":\{"pid":"([0-9a-f]{32})"/); if (m) pid = m[1]; } catch (e) {}
+    stamps.set(f, { mtime, pid }); return pid; };
   const chains = new Map();
   const queue = (f, fn) => { const p = (chains.get(f) || Promise.resolve()).then(fn); chains.set(f, p.catch(() => {})); return p; };
   const swap = async (tmp, f) => { for (let i = 0; ; i++) { try { return await fsp.rename(tmp, f); } catch (e) { if (i >= 4) throw e; await new Promise(r => setTimeout(r, 120)); } } }; // antivirus can briefly lock files on Windows
   return {
-    list: () => { try { return fs.readdirSync(getDir()).filter(f => /\.bcl$/i.test(f)).map(f => ({ name: f.replace(/\.bcl$/i, ''), mtime: fs.statSync(path.join(getDir(), f)).mtimeMs })); } catch (e) { return []; } },
+    list: async () => {   // pid: the profile stamp, so the list can flag checklists from another profile
+      let names; try { names = fs.readdirSync(getDir()).filter(f => /\.bcl$/i.test(f)); } catch (e) { return []; }
+      const out = [];
+      for (const f of names) { try { const p = path.join(getDir(), f), mtime = fs.statSync(p).mtimeMs; out.push({ name: f.replace(/\.bcl$/i, ''), mtime, pid: await stampOf(p, mtime) }); } catch (e) {} }   // one file at a time: they can be large
+      return out;
+    },
     read: n => fsp.readFile(file(n), 'utf8'),
     write: (n, text) => queue(file(n), async () => {   // atomic write; keeps one backup copy (refreshed at most every 5 min)
       const f = file(n), tmp = f + '.tmp';

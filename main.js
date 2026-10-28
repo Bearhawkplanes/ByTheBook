@@ -44,6 +44,12 @@ function cleanProfile(b) {   // only known fields are ever written
     req: { names: !!req.names, sign: !!req.sign, edit: !!req.edit },
     people: (Array.isArray(b.people) ? b.people : []).map(p => ({ id: String(p.id || ''), name: String(p.name || ''), salt: String(p.salt || ''), hash: String(p.hash || ''), boss: !!p.boss })) };
 }
+// ---- wrong-PIN limits ---------------------------------------------------------------------------------
+// Counted here and kept in the signed profile, so restarting the app does not reset them. Any correct PIN resets them.
+// 5 in a row: the page suggests "Forgot PIN"; every 15th: 20-minute wait; 100: error E-4419 until the recovery code is entered.
+const PIN_WAIT = 20 * 60000, PIN_WAIT_EVERY = 15, PIN_MAX = 100;
+const pinLimits = () => { const P = readSigned(profFile()); return P.s === 'ok' ? { fails: P.body.fails || 0, until: P.body.until || 0 } : { fails: 0, until: 0 }; };
+const setLimits = (fails, until) => { const P = readSigned(profFile()); if (P.s !== 'ok') return; const b = P.body; delete b.fails; delete b.until; if (fails) b.fails = fails; if (until) b.until = until; writeSigned(profFile(), b); };
 function writeMarker() { const P = readSigned(profFile()); if (P.s === 'ok') { try { writeSigned(markFile(), { pid: P.body.pid, rv: P.body.rv }); } catch (e) {} } }
 
 let win = null, pending = null, closing = false;
@@ -72,9 +78,11 @@ const handlers = {
       else writeMarker();                           // brand-new or empty save folder: just record it
     } else if (P.s === 'bad') code = 'E-4417';
     else if (M.s !== 'none') code = 'E-4417';       // marker without a profile
+    if (!code && P.s === 'ok' && (P.body.fails || 0) >= PIN_MAX) code = 'E-4419';
     return { code, p: P.s, m: M.s, body: P.s === 'ok' ? P.body : null, marker: M.s === 'ok' ? M.body : null };
   },
-  profileSave: b => { const c = cleanProfile(b); writeSigned(profFile(), c); writeSigned(markFile(), { pid: c.pid, rv: c.rv }); return true; },
+  profileSave: b => { const c = cleanProfile(b), L = pinLimits(); if (L.fails) c.fails = L.fails; if (L.until) c.until = L.until;   // the page cannot reset the PIN counter
+    writeSigned(profFile(), c); writeSigned(markFile(), { pid: c.pid, rv: c.rv }); return true; },
   recMake: async () => {
     let c = ''; for (let i = 0; i < 20; i++) c += ALPHA[crypto.randomInt(ALPHA.length)];
     const salt = crypto.randomBytes(16).toString('hex');
@@ -84,7 +92,9 @@ const handlers = {
   recCheck: async (code, list) => {
     const c = normCode(code); if (c.length !== 20 || !Array.isArray(list)) return -1;
     const rs = await Promise.all(list.map(async x => { if (!x || !okRv(x.rv)) return false; return crypto.timingSafeEqual(await pbk(c, x.rv.salt), Buffer.from(x.rv.hash, 'hex')); }));
-    return rs.indexOf(true);
+    const i = rs.indexOf(true);
+    if (i >= 0) { const P = readSigned(profFile()); if (P.s === 'ok' && P.body.pid === list[i].pid) setLimits(0, 0); }   // the right recovery code clears the wrong-PIN limits
+    return i;
   },
   hash: async (pin, salt) => { if (!okPin(pin) || !okHex(salt)) throw new Error('Bad PIN input'); return (await pbk(pin, salt)).toString('hex'); },
   // list: [{id, salt, hash}] -> id of the entry the PIN belongs to, or null. Every entry is always checked.
@@ -92,7 +102,20 @@ const handlers = {
     if (!okPin(pin) || !Array.isArray(list)) return null;
     const rs = await Promise.all(list.map(async c => { if (!c || !okHex(c.salt) || !/^[0-9a-f]{64}$/i.test(c.hash || '')) return false; return crypto.timingSafeEqual(await pbk(pin, c.salt), Buffer.from(c.hash, 'hex')); }));
     const i = rs.indexOf(true); return i < 0 ? null : list[i].id;
-  }
+  },
+  // a PIN typed by a person (unlike matchPin, which only checks whether a new PIN is already taken): counted against the limits
+  // -> {id} on success, {fails, wait: time the wait ends} on a miss, {locked: 'E-4419'} once the limit is reached
+  pinTry: async (pin, list) => {
+    const L = pinLimits();
+    if (L.fails >= PIN_MAX) return { locked: 'E-4419', fails: L.fails };
+    if (L.until > Date.now()) return { fails: L.fails, wait: L.until };
+    const id = await handlers.matchPin(pin, list);
+    if (id) { if (L.fails || L.until) setLimits(0, 0); return { id, fails: 0 }; }
+    const f = L.fails + 1, until = f < PIN_MAX && f % PIN_WAIT_EVERY === 0 ? Date.now() + PIN_WAIT : 0;
+    setLimits(f, until);
+    return f >= PIN_MAX ? { locked: 'E-4419', fails: f } : { fails: f, wait: until };
+  },
+  pinState: () => pinLimits()
 };
 ipcMain.handle('fs', (e, op, ...a) => {
   if (!win || e.sender !== win.webContents || !Object.prototype.hasOwnProperty.call(handlers, op)) throw new Error('Not allowed');
@@ -101,7 +124,7 @@ ipcMain.handle('fs', (e, op, ...a) => {
 
 function createWindow() {
   win = new BrowserWindow({ width: 1500, height: 900, autoHideMenuBar: true, title: 'Build Checklist',
-    webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js') } });
+    webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged, preload: path.join(__dirname, 'preload.js') } });
   win.loadFile(path.join(__dirname, 'index.html'));
   win.webContents.setWindowOpenHandler(({ url }) => { if (web(url)) shell.openExternal(url); return { action: 'deny' }; });   // http(s) only
   win.webContents.on('will-navigate', (e, url) => { if (!/^(file|blob):/i.test(url)) { e.preventDefault(); if (web(url)) shell.openExternal(url); } });

@@ -7,13 +7,19 @@ const prof = pid => ({ code: null, p: 'ok', m: 'ok', body: { pid, user: 'A', sal
 const NONE = { code: null, p: 'none', m: 'none', body: null, marker: null };          // fresh install
 const TAMPERED = { code: 'E-4417', p: 'bad', m: 'ok', body: null, marker: { pid: 'a'.repeat(32), rv: R } };
 // files: { 'name.bcl': text }, integ: what main.js 'integrity' would return
-const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I = ${JSON.stringify(integ)}, ok = v => Promise.resolve(v);
- window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now() }))),
+// PIN 1234 is correct for the first entry checked; wrong PINs are counted like main.js does (window.__L)
+const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I = ${JSON.stringify(integ)}, ok = v => Promise.resolve(v), L = window.__L = { fails: 0, until: 0 };
+ const pidOf = t => { const m = /"stamp":\\{"pid":"([0-9a-f]{32})"/.exec(t); return m ? m[1] : ''; };
+ window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now(), pid: pidOf(F[f]) }))),
   read: n => ok(F[n]), write: (n, t) => { F[n] = t; return ok(true); }, writeNew: (n, t) => { F[n + '.bcl'] = t; return ok(n); },
   rename: () => ok(true), remove: n => { delete F[n]; return ok(true); }, importPath: () => ok(null), choose: () => ok(null), resetDir: () => ok('/saves'),
   openDir: () => ok(), reveal: () => ok(), pending: () => ok(null), backup: () => ok(null), restore: () => ok(null),
   newSalt: () => ok('00112233445566778899aabbccddeeff'), newPid: () => ok('ab'.repeat(16)), integrity: () => ok(I), profileSave: () => ok(true),
-  recMake: () => ok({ code: 'X', rv: { salt: '00'.repeat(16), hash: '11'.repeat(32) } }), recCheck: () => ok(-1), hash: () => ok('22'.repeat(32)), matchPin: () => ok(null),
+  recMake: () => ok({ code: 'X', rv: { salt: '00'.repeat(16), hash: '11'.repeat(32) } }), recCheck: (c, list) => ok(c === 'GOOD' ? 0 : -1), hash: () => ok('22'.repeat(32)), matchPin: () => ok(null),
+  pinTry: (pin, list) => { if (L.fails >= 100) return ok({ locked: 'E-4419', fails: L.fails }); if (L.until > Date.now()) return ok({ fails: L.fails, wait: L.until });
+   if (pin === '1234') { L.fails = 0; L.until = 0; return ok({ id: list[0].id, fails: 0 }); } L.fails++; L.until = L.fails < 100 && L.fails % 15 === 0 ? Date.now() + 1200000 : 0;
+   return ok(L.fails >= 100 ? { locked: 'E-4419', fails: L.fails } : { fails: L.fails, wait: L.until }); },
+  pinState: () => ok({ fails: L.fails, until: L.until }),
   onFlush: () => {}, onOpen: () => {} }; })()`;
 const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps]));
 
@@ -61,6 +67,53 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   pg = await page({ 'shop.bcl': JSON.stringify(ex) }, NONE);
   assert.deepStrictEqual(await open(pg, 'shop'), { tamper: null, clt: null }, 'recovery export works in a new install');
   assert(!(await pg.evaluate(() => isLocked())), 'and is editable');
+
+  // wrong PINs: hint at 5, 20-minute wait at 15, E-4419 at 100
+  pg = await page({ 'shop.bcl': used }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const tryPin = async pin => pg.evaluate(async pin => { const ov = [...document.querySelectorAll('.overlay')].pop(); ov.querySelector('input').value = pin; ov.querySelector('[data-k=ok]').click();
+    await new Promise(r => setTimeout(r, 60)); const o = [...document.querySelectorAll('.overlay')].pop(); return o && o.querySelector('.warn') ? o.querySelector('.warn').textContent : ''; }, pin);
+  await pg.evaluate(() => { window.__res = 'pending'; askPin({ title: 'Test' }).then(w => window.__res = w ? w.name : null); });
+  let msg; for (let i = 1; i <= 4; i++) msg = await tryPin('0000');
+  assert.strictEqual(msg, 'Wrong PIN.');
+  msg = await tryPin('0000'); assert(/5 in a row.*Forgot PIN/.test(msg), 'hint after 5: ' + msg);
+  for (let i = 6; i <= 15; i++) msg = await tryPin('0000');
+  assert(/Try again in 20:00/.test(msg), '20-minute wait at 15: ' + msg);
+  msg = await tryPin('1234'); assert(/Try again in/.test(msg), 'even the right PIN waits');
+  await pg.evaluate(() => { window.__L.until = 0; });
+  await pg.evaluate(async () => { [...document.querySelectorAll('.overlay')].pop().querySelector('[data-k=x]').click(); });
+  await pg.evaluate(() => { askPin({ title: 'Test' }).then(w => window.__res = w ? w.name : null); });
+  await tryPin('1234'); assert.strictEqual(await pg.evaluate(() => window.__res), 'A', 'right PIN accepted after the wait');
+  assert.strictEqual(await pg.evaluate(() => window.__L.fails), 0, 'right PIN resets the count');
+  await pg.evaluate(() => { window.__L.fails = 99; askPin({ title: 'Test' }).then(w => window.__res = w); });
+  await tryPin('0000');
+  assert.strictEqual(await pg.evaluate(() => TAMPER), 'E-4419', '100th wrong PIN locks the app');
+  assert(await pg.evaluate(() => !!document.querySelector('.errov')), 'error pop-up shown');
+
+  // Forgot PIN without an error: recovery code -> new PIN, same profile and roster
+  pg = await page({}, prof('a'.repeat(32)));
+  await pg.evaluate(async () => { PR.people = [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }]; showProfile(true); });
+  assert(await pg.evaluate(() => !!document.querySelector('[data-p=forgot]')), 'Forgot PIN button on the PIN page');
+  await pg.evaluate(() => document.querySelector('[data-p=forgot]').click()); await pg.waitForTimeout(100);
+  await pg.evaluate(async () => { $('#rc').value = 'WRONG'; $('#pp').value = $('#pp2').value = '4321'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 100)); });
+  assert(/does not match/.test(await pg.evaluate(() => $('#perr').textContent)), 'wrong recovery code refused');
+  await pg.evaluate(async () => { $('#rc').value = 'GOOD'; $('#pp').value = $('#pp2').value = '4321'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 200)); });
+  assert.deepStrictEqual(await pg.evaluate(() => ({ pid: PR.pid, people: PR.people.length, unlocked: PU })), { pid: 'a'.repeat(32), people: 1, unlocked: true }, 'same profile, roster kept');
+
+  // adopt from the saved list: flagged row, explanation, Boss PIN, stamp + log written, images and PDFs kept
+  pg = await page({ 'mine.bcl': used, 'theirs.bcl': used.replace(/"stamp":\{"pid":"a{32}"/, '"stamp":{"pid":"' + 'b'.repeat(32) + '"'), 'shared.bcl': shared }, prof('a'.repeat(32)));
+  await pg.evaluate(() => openHome()); await pg.waitForTimeout(200);
+  assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#flist .frow.adopt')].map(r => r.dataset.id)), ['theirs'], 'only the other profile\'s checklist is flagged');
+  await pg.evaluate(() => document.querySelector('#flist .frow.adopt .adq').click());
+  assert(/different profile/.test(await pg.evaluate(() => $('#modal').textContent)), 'explanation shown');
+  await pg.evaluate(() => document.querySelector('#modal [data-d=ok]').click()); await pg.waitForTimeout(50);
+  await tryPin('1234'); await pg.waitForTimeout(200);
+  const ad = await pg.evaluate(async () => ({ list: [...document.querySelectorAll('#flist .frow.adopt')].length, file: await window.fsapi.read('theirs.bcl') }));
+  const ao = JSON.parse(ad.file);
+  assert.strictEqual(ad.list, 0, 'flag gone after adopting');
+  assert.strictEqual(ao.stamp.pid, 'a'.repeat(32)); assert(/adopted by "A"/.test(ao.log.at(-1).ev) && ao.log.at(-1).by === 'A', 'log records who adopted it');
+  assert.deepStrictEqual(ao.files, U.files); assert.strictEqual(ao.pdfs[0].data, U.pdfs[0].data);
+  assert.deepStrictEqual(await open(pg, 'theirs'), { tamper: null, clt: null }, 'opens without E-4420 afterwards');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
