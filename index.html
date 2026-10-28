@@ -1246,10 +1246,12 @@ $('#modal').addEventListener('click',async e=>{const s=e.target.dataset.sv;if(!s
  const moved=async d=>{SAVEDIR=d;if(CUR){DIRTY=true;await flush()}await refreshLib();renderHome();openSettings();toast('Save location updated')};
  if(s==='choose'){const d=await FS.choose();if(d)await moved(d)}else if(s==='open')FS.openDir();else if(s==='reset')await moved(await FS.resetDir())});
 async function importPath(p){try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(e){toast('Could not open that file')}}
-(async()=>{try{APPV=FS.appVersion?await FS.appVersion():''}catch(e){}const MIG=await initProfile();SAVEDIR=await FS.dir();await refreshLib();
+// start-up; the loading window (splash.html) shows the steps, and the main window appears when the menu is ready
+const BOOT=(t,p)=>{try{FS.loading&&FS.loading(t,p)}catch(e){}};
+(async()=>{try{APPV=FS.appVersion?await FS.appVersion():''}catch(e){}BOOT('Checking the profile…',.25);const MIG=await initProfile();SAVEDIR=await FS.dir();BOOT('Reading saved checklists…',.5);await refreshLib();
  if(!localStorage.getItem('ewf-seeded')){try{localStorage.setItem('ewf-seeded','1')}catch(e){}
   if(!LIB.length){const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));await addEntry(o,'Demo engine build')}}
- setSplit(AS.split||.5);await openHome();if(MIG)showRecovery(MIG);else if(TAMPER)showErr(TAMPER);
+ BOOT('Opening…',.85);setSplit(AS.split||.5);try{await openHome()}finally{FS.ready&&FS.ready()}if(MIG)showRecovery(MIG);else if(TAMPER)showErr(TAMPER);
  setTimeout(()=>updRefresh(false),4000);setInterval(()=>updRefresh(false),3*3600000);   // main.js decides whether a check is due
- setInterval(flush,60000);FS.onFlush(flush);FS.onOpen(importPath);const pp=await FS.pending();if(pp)importPath(pp)})();
+ setInterval(flush,60000);FS.onFlush(flush);FS.onOpen(importPath);const pp=await FS.pending();if(pp)importPath(pp)})().catch(e=>{FS.ready&&FS.ready();throw e});
 </script></body></html>

@@ -5,7 +5,7 @@ const { _electron } = require('playwright'), fs = require('fs'), path = require(
 const [W, FILE] = process.argv.slice(2), name = path.basename(FILE, '.bcl');
 (async () => {
   const t0 = Date.now(), ea = await _electron.launch({ executablePath: W + '/app/build-checklist', args: ['--no-sandbox', '--js-flags=--expose-gc'] });
-  const pg = await ea.firstWindow(), errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.on('console', m => m.type() === 'error' && errs.push(m.text()));
+  await ea.firstWindow(); let pg; for (let i = 0; i < 1200 && !pg; i++) { pg = ea.windows().find(p => /index\.html/.test(p.url())); if (!pg) await new Promise(r => setTimeout(r, 100)); } const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await pg.waitForFunction(() => typeof LIB !== 'undefined' && LIB.length >= 1 && !document.getElementById('home').hidden, null, { timeout: 120000 }); const tHome = Date.now() - t0;
   const R = { file_MB: +(fs.statSync(FILE).size / 1048576).toFixed(0), start_to_menu_s: tHome / 1000 };
   const mem = async () => { const m = await ea.evaluate(async ({ app }) => (await app.getAppMetrics()).reduce((a, p) => a + p.memory.workingSetSize, 0)); return Math.round(m / 1024) + ' MB'; };

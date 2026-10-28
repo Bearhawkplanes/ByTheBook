@@ -24,6 +24,7 @@
       "bcl.js",
       "index.html",
       "print.html",
+      "splash.html",
       "lib/**"
     ],
     "asarUnpack": [

@@ -41,6 +41,11 @@ Install Node.js LTS once, then in this folder:
 Settings > Save file location lets you move the Saves folder, e.g. to an external drive.
 If the app sits somewhere it cannot write (Program Files, a Mac /Applications), it falls back to Documents/Build Checklist.
 
+## Loading screen
+While the app starts, a small loading window shows a spinning wrench, a loading bar and what it is doing ("Reading saved checklists…"). The main window appears when the menu is ready. Before that, the portable `.exe` unpacks itself every time it starts, which can take a while on a slow computer with nothing on screen; the installer version (`BuildChecklist-Setup.exe`) skips that step and starts faster.
+
+To use your own animation instead of the wrench, put a file named `loading.gif`, `loading.webm`, `loading.mp4`, `loading.png`, `loading.webp`, `loading.apng` or `loading.svg` (under 30 MB; a few MB opens fastest) in the `Data` folder. It loops, without sound, at up to 220 × 220 pixels. Delete it to get the wrench back.
+
 ## Starting a new job
 Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "<name> - new job"), then makes a fresh copy inside the app with every section, step, image, PDF and video and nothing checked off, and opens it. Its activity log starts with "New job started, from the checklist …". The original keeps its progress. A master file lock carries over to the job.
 

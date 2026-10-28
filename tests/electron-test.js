@@ -9,11 +9,17 @@ fs.cpSync(built, app, { recursive: true });   // Saves/ and Data/ are created ne
 const vid = path.join(work, 'Engine walkaround.mp4'), ff = require('ffmpeg-static');
 execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:duration=30', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=30', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', vid]);
 
+const mainWin = async ea => { for (let i = 0; i < 600; i++) { const w = ea.windows().find(p => /index\.html/.test(p.url())); if (w) return w; await new Promise(r => setTimeout(r, 100)); } throw new Error('no main window'); };
 (async () => {
   const ea = await _electron.launch({ executablePath: path.join(app, 'build-checklist'), args: ['--no-sandbox'] });
   await ea.evaluate(({ dialog }, f) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [f] }); }, vid);   // stands in for picking the file
-  const pg = await ea.firstWindow(), errors = []; pg.on('pageerror', e => errors.push(e.message));
-  await pg.waitForTimeout(1500);
+  // the loading window comes first; the main window appears (and the loading window closes) when the menu is ready
+  await ea.firstWindow(); const early = await ea.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map(w => w.webContents.getURL().split('/').pop().split('?')[0] + (w.isVisible() ? '' : ' (hidden)')));
+  assert(early.includes('splash.html') && early.includes('index.html (hidden)'), 'at start the loading window shows and the main window waits: ' + early);
+  const pg = await mainWin(ea), errors = []; pg.on('pageerror', e => errors.push(e.message));
+  await pg.waitForFunction(() => typeof LIB !== 'undefined' && !$('#home').hidden, null, { timeout: 60000 }); await pg.waitForTimeout(500);
+  const wins = await ea.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter(w => w.isVisible()).map(w => w.webContents.getURL().split('/').pop()));
+  assert.deepStrictEqual(wins, ['index.html'], 'only the main window is left once the menu is ready: ' + wins);
   await pg.evaluate(() => document.querySelector('[data-m="demo"]').click()); await pg.waitForTimeout(2000);
   await pg.evaluate(() => { select(S.sections[1].cards[0].steps[0]); $('#vidBtn').click(); $('#vpadd').click(); }); await pg.waitForTimeout(300);
   await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(1500);
@@ -73,6 +79,13 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
   assert(jk.some(k => k.startsWith('m:')) && jk.some(k => k.startsWith('p:')) && !JSON.parse(await B.read(jobF)).sections[0].cards[0].steps[0].done, 'new job file has its own copy of the media, nothing ticked');
 
   await ea.close();
+  // the shop's own animation: Data/loading.gif replaces the wrench
+  execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=120x120:rate=10:duration=1', path.join(app, 'Data', 'loading.gif')]);
+  const ea2 = await _electron.launch({ executablePath: path.join(app, 'build-checklist'), args: ['--no-sandbox'] }), sp2 = await (async () => { for (let i = 0; i < 300; i++) { const w = ea2.windows().find(p => /splash\.html/.test(p.url())); if (w) return w; await new Promise(r => setTimeout(r, 50)); } })();
+  await sp2.waitForFunction(() => !!document.querySelector('#art img'), null, { timeout: 15000 }).catch(() => {});
+  const own = await sp2.evaluate(() => { const i = document.querySelector('#art img'); return i ? i.naturalWidth : 0; }).catch(() => -1);
+  await mainWin(ea2); await ea2.close();
+  assert(own === 120, 'loading.gif in Data replaces the wrench: ' + own);
   fs.rmSync(work, { recursive: true, force: true });
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All app tests passed. Clip sizes (with sound): native ' + sizes[0] + ', medium ' + sizes[1] + ', low ' + sizes[2] + '; printable PDF ' + pdfInfo.pages + ' pages');

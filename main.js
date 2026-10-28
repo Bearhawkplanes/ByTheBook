@@ -271,10 +271,33 @@ ipcMain.handle('fs', (e, op, ...a) => {
   return handlers[op](...a);
 });
 
+// the loading window (splash.html) shows at once; the main window stays hidden until its menu is ready (the page sends 'ready').
+// A loading.gif / .webm / ... in the Data folder replaces the wrench.
+let splash = null, shown = false;
+const SPLASH_EXT = { gif: 0, png: 0, apng: 0, webp: 0, svg: 0, webm: 1, mp4: 1 };
+function customSplash() {
+  for (const [x, v] of Object.entries(SPLASH_EXT)) { const f = path.join(dataDir, 'loading.' + x);
+    try { if (fs.statSync(f).size < 30 * 1048576) return { c: pathToFileURL(f).href, ...(v ? { v: '1' } : {}) }; } catch (e) {} }
+  return {};
+}
+function showMain() {
+  if (shown || !win) return; shown = true; win.show();
+  if (splash && !splash.isDestroyed()) { const s = splash; splash = null; s.webContents.executeJavaScript("step('Ready',1)").catch(() => {}); setTimeout(() => { if (!s.isDestroyed()) s.destroy(); }, 150); }
+}
+ipcMain.on('loading', (e, t, p) => { if (win && e.sender === win.webContents && splash && !splash.isDestroyed()) splash.webContents.executeJavaScript('step(' + JSON.stringify(String(t || '')) + ',' + (+p || 0) + ')').catch(() => {}); });
+ipcMain.on('ready', e => { if (win && e.sender === win.webContents) showMain(); });
 function createWindow() {
-  win = new BrowserWindow({ width: 1500, height: 900, autoHideMenuBar: true, title: 'Build Checklist',
+  try {
+    splash = new BrowserWindow({ width: 460, height: 400, frame: false, resizable: false, maximizable: false, fullscreenable: false, center: true, show: true, backgroundColor: '#14171a', title: 'Build Checklist',
+      webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: false } });
+    splash.loadFile(path.join(__dirname, 'splash.html'), { query: customSplash() });
+    splash.on('closed', () => { splash = null; });
+  } catch (e) { splash = null; }
+  win = new BrowserWindow({ width: 1500, height: 900, autoHideMenuBar: true, title: 'Build Checklist', show: false, backgroundColor: '#14171a',
     webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged, preload: path.join(__dirname, 'preload.js') } });
   win.loadFile(path.join(__dirname, 'index.html'));
+  // never leave the app invisible: show the window anyway if the page fails or takes very long
+  const late = setTimeout(showMain, 30000); if (late.unref) late.unref(); win.webContents.on('did-fail-load', showMain); win.webContents.on('render-process-gone', showMain);
   win.webContents.setWindowOpenHandler(({ url }) => { if (web(url)) shell.openExternal(url); return { action: 'deny' }; });   // http(s) only
   win.webContents.on('will-navigate', (e, url) => { if (!/^(file|blob):/i.test(url)) { e.preventDefault(); if (web(url)) shell.openExternal(url); } });
   // make sure the open checklist is written to disk before the window closes; if that fails, say so
@@ -296,7 +319,7 @@ function createWindow() {
     win.webContents.send('flush');
     timer = setTimeout(() => finish(false), 60000);
   });
-  win.on('closed', () => { win = null; if (pdfWin && !pdfWin.isDestroyed()) pdfWin.destroy(); });   // the hidden print window must not keep the app open
+  win.on('closed', () => { win = null; if (splash && !splash.isDestroyed()) splash.destroy(); if (pdfWin && !pdfWin.isDestroyed()) pdfWin.destroy(); });   // the hidden print window must not keep the app open
 }
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
