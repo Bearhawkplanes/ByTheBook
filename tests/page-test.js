@@ -7,7 +7,7 @@ const prof = pid => ({ code: null, p: 'ok', m: 'ok', body: { pid, user: 'A', sal
 const NONE = { code: null, p: 'none', m: 'none', body: null, marker: null };          // fresh install
 const TAMPERED = { code: 'E-4417', p: 'bad', m: 'ok', body: null, marker: { pid: 'a'.repeat(32), rv: R } };
 // files: { 'name.bcl': text }, integ: what main.js 'integrity' would return
-// PIN 1234 is correct for the first entry checked; wrong PINs are counted like main.js does (window.__L)
+// PIN 1234 is correct for the first entry checked; wrong PINs are counted like main.js does (window.__L), and recovery code GOOD clears them
 const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I = ${JSON.stringify(integ)}, ok = v => Promise.resolve(v), L = window.__L = { fails: 0, until: 0 };
  const pidOf = t => { const m = /"stamp":\\{"pid":"([0-9a-f]{32})"/.exec(t); return m ? m[1] : ''; };
  window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now(), pid: pidOf(F[f]) }))),
@@ -15,7 +15,7 @@ const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I =
   rename: () => ok(true), remove: n => { delete F[n]; return ok(true); }, importPath: () => ok(null), choose: () => ok(null), resetDir: () => ok('/saves'),
   openDir: () => ok(), reveal: () => ok(), pending: () => ok(null), backup: () => ok(null), restore: () => ok(null),
   newSalt: () => ok('00112233445566778899aabbccddeeff'), newPid: () => ok('ab'.repeat(16)), integrity: () => ok(I), profileSave: () => ok(true),
-  recMake: () => ok({ code: 'X', rv: { salt: '00'.repeat(16), hash: '11'.repeat(32) } }), recCheck: (c, list) => ok(c === 'GOOD' ? 0 : -1), hash: () => ok('22'.repeat(32)), matchPin: () => ok(null),
+  recMake: () => ok({ code: 'X', rv: { salt: '00'.repeat(16), hash: '11'.repeat(32) } }), recCheck: (c, list) => { if (c !== 'GOOD') return ok(-1); L.fails = 0; L.until = 0; return ok(0); }, hash: () => ok('22'.repeat(32)), matchPin: () => ok(null),
   pinTry: (pin, list) => { if (L.fails >= 100) return ok({ locked: 'E-4419', fails: L.fails }); if (L.until > Date.now()) return ok({ fails: L.fails, wait: L.until });
    if (pin === '1234') { L.fails = 0; L.until = 0; return ok({ id: list[0].id, fails: 0 }); } L.fails++; L.until = L.fails < 100 && L.fails % 15 === 0 ? Date.now() + 1200000 : 0;
    return ok(L.fails >= 100 ? { locked: 'E-4419', fails: L.fails } : { fails: L.fails, wait: L.until }); },
@@ -89,6 +89,27 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await tryPin('0000');
   assert.strictEqual(await pg.evaluate(() => TAMPER), 'E-4419', '100th wrong PIN locks the app');
   assert(await pg.evaluate(() => !!document.querySelector('.errov')), 'error pop-up shown');
+  // E-4419 is view-only like a tampered profile: no checking, no editing, but export still works
+  await pg.evaluate(() => document.querySelectorAll('.errov').forEach(x => x.remove()));
+  assert(await pg.evaluate(() => isLocked() && !!errNow()), 'view-only');
+  const before = await pg.evaluate(() => S.sections[0].cards[0].steps[0].done);
+  await pg.evaluate(() => { const c = document.querySelector('#left input[type=checkbox][data-a]') || document.querySelector('input[type=checkbox][data-a]'); if (c) c.click(); });
+  assert.strictEqual(await pg.evaluate(() => S.sections[0].cards[0].steps[0].done), before, 'checkbox does nothing');
+  await pg.evaluate(() => document.querySelectorAll('.errov').forEach(x => x.remove()));
+  ex = JSON.parse((await exportFile(pg, true)).text);
+  assert(!ex.stamp && !items(ex).some(x => x.done) && ex.pdfs[0].data.length > 1000, 'export works under E-4419');
+
+  // foreman during a 20-minute wait: recovery code opens the Profile page without changing the main PIN, then Set PIN for an employee
+  pg = await page({}, prof('a'.repeat(32)));
+  await pg.evaluate(() => { window.__L.fails = 15; window.__L.until = Date.now() + 1200000; PR.people = [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }]; showProfile(true); });
+  await pg.evaluate(async () => { $('#pe').value = '1234'; document.querySelector('[data-p=unlock]').click(); await new Promise(r => setTimeout(r, 100)); });
+  assert(/Try again in .*recovery code/.test(await pg.evaluate(() => $('#perr').textContent)), 'main PIN waits too, with a pointer to the recovery code');
+  await pg.evaluate(async () => { document.querySelector('[data-p=forgot]').click(); await new Promise(r => setTimeout(r, 50)); $('#rc').value = 'GOOD'; document.querySelector('[data-p=recover]').click(); await new Promise(r => setTimeout(r, 200)); });
+  assert.deepStrictEqual(await pg.evaluate(() => ({ PU, hash: PR.hash, fails: window.__L.fails, until: window.__L.until })), { PU: true, hash: '11'.repeat(32), fails: 0, until: 0 }, 'unlocked, main PIN kept, wait cleared');
+  await pg.evaluate(async () => { document.querySelector('[data-pf=names]') && !PR.req.names && document.querySelector('[data-pf=names]').click(); await new Promise(r => setTimeout(r, 100));
+    document.querySelector('[data-rp="0"]').value = '7777'; document.querySelector('[data-p=repin][data-i="0"]').click(); await new Promise(r => setTimeout(r, 200)); });
+  assert.notStrictEqual(await pg.evaluate(() => PR.people[0].hash), '55'.repeat(32), 'employee PIN changed');
+  assert.strictEqual(await pg.evaluate(() => PR.people[0].id), 'p1', 'same employee ID');
 
   // Forgot PIN without an error: recovery code -> new PIN, same profile and roster
   pg = await page({}, prof('a'.repeat(32)));

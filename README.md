@@ -40,9 +40,10 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - The main profile (username + 4-digit PIN) is created first. Its PIN always counts as Boss.
 - PINs are stored only as salted hashes in `Data/` (not in checklist files). A 4-digit PIN cannot stop someone who can edit the app files, so this is shop procedure, not high security. Wrong PINs are counted (any correct PIN resets the count, and restarting the app does not):
   - 5 in a row: a red message suggests "Forgot PIN?" on the Profile page.
-  - Every 15th in a row: a 20-minute wait before any PIN is accepted.
-  - 100 in a row: error E-4419 locks the whole app until the recovery code is entered.
-- Forgot the main PIN: Profile > Forgot PIN? > enter the recovery code and a new PIN. The profile, names and settings stay the same. Other people's PINs are changed by the main profile with "Set PIN".
+  - Every 15th in a row: a 20-minute wait before any PIN is accepted (the main PIN too). The recovery code clears it straight away.
+  - 100 in a row: error E-4419 locks the whole app the same way as a tampered profile (view and Export for sharing only) until the recovery code is entered.
+- Forgot PIN or locked out: Profile > Forgot PIN? > enter the recovery code. It opens the Profile page and clears any wait or E-4419. Type a new main PIN, or leave it empty to keep the current one. The profile, names and settings stay the same.
+- An employee forgot their PIN: the main profile opens the Profile page (with the recovery code if a wait is running), types a new PIN next to the person's name and clicks "Set PIN". They keep the same ID, so the activity log is not marked.
 - Assign PINs to names: a roster of people, each with a unique PIN; mark people as Boss. Boss PINs only count while this is on.
 - Require a PIN for sign-offs: checking or unchecking a step asks for a PIN and the Init. box fills with the name (typing initials is switched off). Signing off a main item, unchecking a signed item and Uncheck everything accept only the main profile or a Boss. The activity log records the names.
 - Require a PIN to turn editing on: editing controls stay locked until a main-profile or Boss PIN is entered (Unlock button in the top bar). Turning the master file lock off needs that PIN too (Settings > This checklist is always open). Leaving to the main menu or opening another checklist locks editing again.
