@@ -21,6 +21,7 @@ const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I =
    if (pin === '1234' || pin === '24680') { L.fails = 0; L.until = 0; return ok({ id: list[0].id, fails: 0 }); } L.fails++; L.until = L.fails < 100 && L.fails % 15 === 0 ? Date.now() + 1200000 : 0;
    return ok(L.fails >= 100 ? { locked: 'E-4419', fails: L.fails } : { fails: L.fails, wait: L.until }); },
   pinState: () => ok({ fails: L.fails, until: L.until }),
+  appVersion: () => ok(window.__appv || '0.5.0'),
   onFlush: () => {}, onOpen: () => {} }; })()`;
 const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps]));
 
@@ -407,6 +408,63 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.deepStrictEqual(JSON.parse(await pg.evaluate(() => pack())).sections[1].cards[0].steps[1].media.at(-1).text.map(t => t.t), ['Bolt 1A'], 'text saved in the file');
   await pg.evaluate(() => { S.locked = true; refreshAll(); renderR(); });
   assert(await pg.evaluate(() => getComputedStyle(document.querySelector('#p-img [data-a=draw]')).display === 'none' && getComputedStyle(document.querySelector('#p-img [data-a=text]')).display === 'none'), 'pencil and text buttons hidden while editing is locked');
+
+  // ---- updates: bar at the bottom of the menu page ----
+  const ustub = (st, extra) => async pg => { await pg.addInitScript(([st, extra]) => { const f = window.fsapi, U = window.__U = Object.assign({ auto: false, skip: '', snooze: 0, last: 0, found: null, version: '0.5.0', canInstall: true }, st); window.__opened = []; window.__ucalls = [];
+    window.open = u => { window.__opened.push(u); return null; };
+    f.updGet = async () => JSON.parse(JSON.stringify(U)); f.updSet = async p => { window.__ucalls.push(['set', p]); Object.assign(U, p); return true; };
+    f.updCheck = async force => { window.__ucalls.push(['check', force]); return force ? (U.found || { none: true }) : null; };
+    f.updDownload = async () => { window.__ucalls.push(['download']); window.__prog && [.3, .7, 1].forEach(v => window.__prog(v)); return { ok: true }; };
+    f.updInstall = async () => { window.__ucalls.push(['install']); return true; }; f.onUpdProgress = cb => { window.__prog = cb; }; Object.assign(window, extra || {}); }, [st, extra]); };
+  const relF = { version: '0.6.0', url: 'https://github.com/Bearhawkplanes/Build-Checklist/releases/tag/v0.6.0', notes: 'x', asset: { name: 'BuildChecklist.exe' } };
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), ustub({ found: relF }));
+  await pg.evaluate(() => updRefresh(false)); await pg.waitForTimeout(100);
+  const bar = () => pg.evaluate(() => ({ shown: !$('#updbar').hidden, text: $('#updbar').innerText.replace(/\s+/g, ' ').trim() }));
+  let ub = await bar();
+  assert(ub.shown && /Version 0\.6\.0 is available \(you have 0\.5\.0\) What's new\?/.test(ub.text) && /Install Dismiss Skip this version/.test(ub.text), 'bar on the menu page: ' + ub.text);
+  assert(await pg.evaluate(() => { const r = $('#updbar').getBoundingClientRect(); return Math.abs(r.bottom - innerHeight) < 2 && r.width >= innerWidth - 2; }), 'full width along the bottom');
+  await pg.evaluate(() => document.querySelector('[data-u=new]').click());
+  assert.deepStrictEqual(await pg.evaluate(() => window.__opened), [relF.url], "What's new? opens the release page");
+  await pg.evaluate(() => document.querySelector('[data-u=later]').click()); await pg.waitForTimeout(50);
+  const sn = await pg.evaluate(() => ({ hidden: $('#updbar').hidden, snooze: window.__U.snooze }));
+  const mid = new Date(); mid.setHours(24, 0, 0, 0);
+  assert(sn.hidden && sn.snooze === mid.getTime(), 'Dismiss hides it until tomorrow');
+  await pg.evaluate(() => updRefresh(false)); assert(!(await bar()).shown, 'still hidden today');
+  await pg.evaluate(() => { window.__U.snooze = Date.now() - 1; return updRefresh(false); }); assert((await bar()).shown, 'back the next day');
+  await pg.evaluate(() => document.querySelector('[data-u=skip]').click()); await pg.waitForTimeout(50);
+  assert(!(await bar()).shown && await pg.evaluate(() => window.__U.skip) === '0.6.0', 'Skip this version');
+  await pg.evaluate(() => updRefresh(false)); assert(!(await bar()).shown, 'skipped version stays hidden');
+  await pg.evaluate(() => { window.__U.found = { ...window.__U.found, version: '0.7.0' }; return updRefresh(false); }); assert((await bar()).shown, 'a newer version shows again');
+  // Install: confirm, download with progress, save the open checklist, restart
+  await open(pg, 'shop'); await pg.evaluate(() => { S.name = S.name; DIRTY = true; openHome(); }); await pg.waitForTimeout(100);
+  await pg.evaluate(() => document.querySelector('[data-u=inst]').click());
+  assert(/closes and opens again on the new version/.test(await pg.evaluate(() => $('#modal').textContent)), 'asks first');
+  await pg.evaluate(() => document.querySelector('#modal [data-d=ok]').click()); await pg.waitForTimeout(200);
+  assert.deepStrictEqual(await pg.evaluate(() => window.__ucalls.filter(c => c[0] !== 'set' && c[0] !== 'check').map(c => c[0])), ['download', 'install'], 'downloaded, then installed');
+  assert(await pg.evaluate(() => /Restarting/.test($('#updbar').innerText) && !DIRTY), 'saved before restarting');
+  // no in-place install possible (e.g. a Mac): the button opens the download page
+  pg = await page({}, prof('a'.repeat(32)), ustub({ found: relF, canInstall: false }));
+  await pg.evaluate(() => updRefresh(false)); await pg.waitForTimeout(50);
+  assert.strictEqual(await pg.evaluate(() => document.querySelector('[data-u=inst]').textContent), 'Download');
+  await pg.evaluate(() => document.querySelector('[data-u=inst]').click());
+  assert.deepStrictEqual(await pg.evaluate(() => [window.__opened, window.__ucalls.filter(c => c[0] === 'download').length]), [[relF.url], 0], 'Download opens the page');
+  // Settings: version shown, automatic checks off by default, Check now
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), ustub({}));
+  await open(pg, 'shop'); await pg.evaluate(() => { updRefresh(false); }); await pg.waitForTimeout(50); await pg.evaluate(() => openSettings());
+  assert(await pg.evaluate(() => /This is version 0\.5\.0/.test($('#modal').textContent) && !$('#updauto').checked), 'version shown; automatic checks off');
+  await pg.evaluate(() => { $('#updauto').checked = true; $('#updauto').dispatchEvent(new Event('change', { bubbles: true })); }); await pg.waitForTimeout(50);
+  assert.strictEqual(await pg.evaluate(() => window.__U.auto), true, 'switch saved');
+  await pg.evaluate(() => document.querySelector('[data-up=now]').click()); await pg.waitForTimeout(100);
+  assert.strictEqual(await pg.evaluate(() => $('#updmsg').textContent), 'You have the latest version.');
+  // ---- a checklist saved by a newer version opens view-only and is never saved here ----
+  const newerFile = JSON.stringify(Object.assign(JSON.parse(shared), { app: '9.1.0', futureThing: { keep: 1 } }));
+  pg = await page({ 'new.bcl': newerFile, 'old.bcl': shared }, prof('a'.repeat(32)));
+  assert.deepStrictEqual(await open(pg, 'new'), { tamper: null, clt: null });
+  assert(await pg.evaluate(() => errNow() === 'E-4421' && isLocked() && /saved by version 9\.1\.0; this app is version 0\.5\.0/.test(document.querySelector('.errov').textContent)), 'view-only with an explanation');
+  await pg.evaluate(async () => { document.querySelectorAll('.errov').forEach(x => x.remove()); S.sections[0].cards[0].text = 'changed'; save(); DIRTY = true; await flush(); await new Promise(r => setTimeout(r, 100)); });
+  assert.strictEqual(await pg.evaluate(async () => await window.fsapi.read('new.bcl')), newerFile, 'the file is never written');
+  await open(pg, 'old');
+  assert(await pg.evaluate(async () => { DIRTY = true; await flush(); return JSON.parse(await window.fsapi.read('old.bcl')).app === '0.5.0' && !errNow(); }), 'normal files are saved with this version');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

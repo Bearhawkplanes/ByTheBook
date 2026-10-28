@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('fsapi', {
   pathOf: f => { try { return webUtils.getPathForFile(f) || ''; } catch (e) { return ''; } },   // where a file chosen in the page lives, so it can be linked
   clipMake: (v, a, b) => call('clipMake', v, a, b), clipRead: (id, q, au) => call('clipRead', id, q, au), clipDone: id => call('clipDone', id), clipCancel: () => call('clipCancel'),
   onClipProgress: cb => ipcRenderer.on('clip-progress', (e, f) => cb(f)),
+  appVersion: () => call('appVersion'), updGet: () => call('updGet'), updSet: p => call('updSet', p), updCheck: f => call('updCheck', f), updDownload: () => call('updDownload'), updInstall: () => call('updInstall'),
+  onUpdProgress: cb => ipcRenderer.on('upd-progress', (e, f) => cb(f)),
   // the main process waits for this to report back before closing; false means the save failed
   onFlush: cb => ipcRenderer.on('flush', async () => { let ok = true; try { ok = (await cb()) !== false; } catch (e) { ok = false; } ipcRenderer.send('flushed', ok); }),
   onOpen: cb => ipcRenderer.on('open-file', (e, p) => cb(p))

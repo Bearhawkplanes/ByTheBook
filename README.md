@@ -8,6 +8,16 @@ Get the latest version from the Releases page (right side of the repository page
 Windows may warn the first time because the app is not code-signed: click "More info" > "Run anyway".
 To update, replace the exe with the new one; keep the `Saves/` and `Data/` folders.
 
+## Updates
+- Settings > Updates shows the version you have. "Check for updates automatically" (off by default) asks GitHub about once a day, only when online; "Check now" asks straight away.
+- When a newer version is out, a bar appears along the bottom of the menu page: "Version 1.2.0 is available (you have 1.1.0)" with:
+  - What's new?: opens the release page on GitHub with the list of changes.
+  - Install: saves your work, downloads the new version (the bar shows progress), checks it is complete and undamaged, closes, swaps in the new program in the same folder and opens again. Checklists, profile and settings stay exactly as they are. The version you had is kept next to the app as "BuildChecklist (previous)", so you can go back by opening that.
+  - Dismiss: hides the bar until tomorrow. Skip this version: no more reminders about this version (a newer one still shows).
+- Install works in place for the portable Windows .exe and the Linux AppImage; the Windows installer version runs the new installer. Elsewhere (Mac) the button says Download and opens the download page.
+- Updates come from this repository's Releases, so they must be public for the check to work. Pre-releases are ignored, which is handy for trying a version first.
+- Checklists remember which version saved them. If an older copy of the app opens a checklist saved by a newer one, it opens view-only with a message to update, and never saves it, so nothing new in it is lost. An older copy also won't overwrite a profile saved by a newer one.
+
 ## Publishing a new version (maintainer)
 Raise `"version"` in `package.json` and commit. On GitHub: Releases > Draft a new release > choose a tag > type the matching tag (for example `v0.6.0`) > "Create new tag on publish" > Publish release. GitHub Actions then builds both Windows files and attaches them to that release (takes about 5 minutes).
 

@@ -103,7 +103,9 @@ body.locked .ed{display:none!important}
 @media(max-width:700px){header{grid-template-columns:auto 1fr auto}#ptitle{font-size:18px}}
 #R{border-left:0}#split{cursor:col-resize;background:var(--line);touch-action:none;transition:background .1s}#split:hover,#split.drag{background:var(--acc)}#split.snap{background:var(--ok)}
 body.dragging{user-select:none;cursor:col-resize}
-#home{position:fixed;inset:0;z-index:30;display:flex;background:var(--bg)}
+#home{position:fixed;inset:0;z-index:30;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;background:var(--bg)}
+#updbar{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 18px;background:var(--hbg);color:var(--hfg);border-top:2px solid var(--acc)}#updbar[hidden]{display:none}
+#updbar .ubv{font-size:14px}#updbar .ubst{font-size:13px;opacity:.85}#updbar .ubst.err{color:var(--warn);opacity:1}#updbar .pri{font-weight:700}#updbar button:disabled{opacity:.5}
 .hh{font-weight:600;font-size:15px;margin-bottom:10px}
 #hmain{flex:1;display:flex;justify-content:center;overflow:auto;padding:48px 24px}.hcenter{width:min(640px,100%);text-align:center}
 .hcenter h1{font-size:34px;margin:0 0 24px;letter-spacing:-.02em}.hbtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:36px}
@@ -245,7 +247,7 @@ body.dragging{user-select:none;cursor:col-resize}
 <button id="hBack" hidden style="margin-bottom:24px">Back to the open checklist</button>
 <h2>Open recent</h2><div id="rlist"></div></div>
 <div id="hprof" class="hcenter" hidden></div>
-<div id="hdel" hidden><button class="delbtn" id="hdelb">DELETE</button><small>or DEL</small></div></section></div>
+<div id="hdel" hidden><button class="delbtn" id="hdelb">DELETE</button><small>or DEL</small></div></section><div id="updbar" hidden></div></div>
 <div id="ld" hidden><div class="ldc"><div id="ldt"></div><div class="ldb"><i id="ldf"></i></div><div class="ldh">ESC to cancel</div></div></div>
 <div id="pv" hidden><div id="pvtop"><button id="pvBack">← Return</button><b id="pvt"></b></div><div id="pvbody"><aside id="pvside"><div class="hh">PDFs in this checklist</div><div id="pvlist"></div><button id="pvadd">+ Import PDF…</button><div class="hh" style="margin-top:16px">Search results</div><div id="pvres"></div></aside>
 <section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page names and words…" style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
@@ -304,7 +306,7 @@ function demoData(){const m=(c,t)=>[{kind:'link',url:ph(c,t)}],I=(t,o)=>Object.a
 function demoBuf(){const bin=atob(DEMOPDF),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u.buffer}
 let CUR=null,S=norm(),LIB=[];
 const FS=window.fsapi;let DIRTY=false,SAVEDIR='';
-const save=()=>{if(!CUR)return;DIRTY=true;clearTimeout(save.t);save.t=setTimeout(flush,3000)};
+let RO=null;const save=()=>{if(!CUR||RO)return;DIRTY=true;clearTimeout(save.t);save.t=setTimeout(flush,3000)};
 let SEL=null,tab='desc';
 // each PIN-based entry records the user ID. If a name shows up with an ID not seen for it before, a new "possible tampered" segment starts.
 function segOn(o,kind,label,note,by,uid){const lg=(o.log=o.log||[]);o.seg=(o.seg||0)+1;(o.segs=o.segs||{})[o.seg]={kind,label,note:note||'',at:now()};lg.push({at:now(),ev:label,item:note||'',by:by||'',uid:uid||'',seg:o.seg,flag:kind})}
@@ -828,7 +830,7 @@ function openSettings(){
  <div class="ds"><div class="dt">This checklist</div>
  <label class="chk"><input type="checkbox" id="lockc" ${S.locked?'checked':''}> Master file: lock editing (checking, initials and sign-offs still work)</label>
  <label>Manual / revision<input id="mrev" value="${esc(S.manual)}" ${isLocked()?'disabled':''}></label></div>
- ${savedirHtml()}<div class="ds"><div class="dt">Profile and PINs</div><p class="mut">Set these up in Profile on the main menu. Everything is off by default.</p></div>
+ ${savedirHtml()}${updHtml()}<div class="ds"><div class="dt">Profile and PINs</div><p class="mut">Set these up in Profile on the main menu. Everything is off by default.</p></div>
  <div class="ds"><div class="dt">Activity log</div><button data-d="log">Open the full activity log</button></div>`)}
 $('#cog').onclick=openSettings;
 $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||e.target===$('#modal'))closeDlg();else if(d.d==='ok'){const f=DLGOK;closeDlg();f&&f()}
@@ -854,7 +856,7 @@ async function refreshLib(){let rec={};try{rec=JSON.parse(localStorage.getItem('
 function markOpened(id,to){let r={};try{r=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}if(to){r[to]=r[id]||0;delete r[id]}else r[id]=Date.now();try{localStorage.setItem('ewf-recent',JSON.stringify(r))}catch(e){}}
 let FLP=Promise.resolve();   // saves run one at a time, in order
 function flush(){return FLP=FLP.then(flushNow,flushNow)}
-async function flushNow(){if(!CUR||!DIRTY)return true;DIRTY=false;clearTimeout(save.t);const id=CUR;
+async function flushNow(){if(!CUR||!DIRTY)return true;if(RO){DIRTY=false;return true}DIRTY=false;clearTimeout(save.t);const id=CUR;
  try{await FS.write(id+'.bcl',await pack());const e=LIB.find(x=>x.id===id);if(e)e.saved=Date.now();return true}catch(x){DIRTY=true;toast('Could not save: '+((x&&x.message)||x));return false}}
 async function addEntry(obj,name){const base=uniqueName(name);obj.name=obj.name||base;await FS.write(base+'.bcl',JSON.stringify(obj));LIB.push({id:base,name:base,saved:Date.now(),opened:0});return base}
 async function syncName(){const nn=uniqueName(S.name,CUR);if(nn===CUR)return;DIRTY=true;await flush();
@@ -865,7 +867,7 @@ async function openProject(id){let r;
   if(CUR&&DIRTY){await step(.6,'Saving the open checklist…');await flush()}await step(.8,'Preparing checklist…');const u=unpack(raw);await step(1);return u})}
  catch(e){toast('Could not read that file');return}
  if(!r||r==='cancelled')return;
- TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;stampCheck();LQ='';$('#lsearch').value='';$('#lcount').textContent='';
+ TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();   // RO: saved by a newer version, so view-only and never saved hereLQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
  for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
@@ -881,6 +883,7 @@ async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.p
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r){const k='m:'+m.id;big[k]=r.data||(r.data=await b2d(r.blob));o.files[m.id]={name:r.name,type:r.type,data:'@@'+k+'@@'}}}
  for(const p of o.pdfs){const r=PDFS[p.id];if(r){const k='p:'+p.id;big[k]=r.data||(r.data=await b2d(new Blob([r.buf],{type:'application/pdf'})));p.data='@@'+k+'@@'}}
  for(const v of o.videos){const r=VIDS[v.id];if(r&&!v.link){const k='v:'+v.id;big[k]=r.data||(r.data=await b2d(r.blob));v.data='@@'+k+'@@'}}
+ if(APPV)o.app=APPV;   // the version that saved it: an older copy opens it view-only instead of dropping what it does not know
  const t=JSON.stringify(o).split(/"@@([mpv]:[a-z0-9]+)@@"/);let out=t[0];for(let i=1;i<t.length;i+=2)out+=big[t[i]]!==undefined?'"'+big[t[i]]+'"'+t[i+1]:'"@@'+t[i]+'@@"'+t[i+1];return out}
 // nothing heavy is decoded here: images and PDFs stay as text until they are first shown
 function unpack(o){const files=o.files||{};delete o.files;
@@ -932,8 +935,8 @@ document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.repeat||$('#hom
 let PV=false,PU=false,FORGOT=false,NEWPIN=false,TAMPER=null,CLT=null,PRX=null,EDITOK=null,FAILS=0,LOCKUNTIL=0,RECUNTIL=0;
 const PR0=()=>({pid:'',user:'',salt:'',hash:'',rv:null,req:{names:false,sign:false,edit:false,log:false},people:[]});
 let PR=PR0();
-const errNow=()=>TAMPER||CLT;   // while an error is active the app is view-only: no checking, no sign-offs
-const savePR=()=>(TAMPER||!PR.pid)?Promise.resolve():FS.profileSave(JSON.parse(JSON.stringify(PR))).catch(()=>{});
+const errNow=()=>TAMPER||(RO?'E-4421':null)||CLT;   // while an error is active the app is view-only: no checking, no sign-offs
+const savePR=()=>(TAMPER||!PR.pid)?Promise.resolve():FS.profileSave(JSON.parse(JSON.stringify(PR))).catch(e=>toast(String((e&&e.message)||e).replace(/^.*Error: /,'')));
 // The profile lives in Data/profile.json (signed) with a matching marker in the save folder; the main process checks both.
 async function initProfile(){let r=await FS.integrity(),MIG=null;
  if(!r.body&&r.p==='none'&&r.m==='none'){   // one-time move of an older browser-storage profile into the signed file
@@ -1058,7 +1061,7 @@ $('#hprof').addEventListener('input',e=>{if(e.target.classList.contains('pin'))e
 $('#hprof').addEventListener('keydown',e=>{if(e.key==='Enter'){const b=$('#hprof [data-p=create],#hprof [data-p=unlock],#hprof [data-p=recover]');if(b)b.click()}});
 // ---------- error pop-up, recovery code, activity log viewer ----------
 function showErr(code){if(document.querySelector('.errov'))return;const ov=document.createElement('div');ov.className='overlay errov';ov.style.zIndex=96;
- ov.innerHTML=`<div class="dlg" style="width:min(340px,92vw);text-align:center"><div class="dh" style="justify-content:center"><b style="color:#f85149">Error ${esc(code)}</b></div><p class="mut">See the Profile page.</p><div class="dbtn" style="justify-content:center"><button class="pri" data-k="ok">OK</button></div></div>`;
+ ov.innerHTML=`<div class="dlg" style="width:min(${code==='E-4421'?420:340}px,92vw);text-align:center"><div class="dh" style="justify-content:center"><b style="color:#f85149">${code==='E-4421'?'Saved by a newer version':'Error '+esc(code)}</b></div><p class="mut">${code==='E-4421'?`This checklist was saved by version ${esc(RO)}; this app is version ${esc(APPV)}. To keep everything in it safe, it is view-only here and nothing is saved. Update the app (Settings &gt; Updates) to edit it.`:'See the Profile page.'}</p><div class="dbtn" style="justify-content:center"><button class="pri" data-k="ok">OK</button></div></div>`;
  document.body.appendChild(ov);ov.querySelector('button').focus();const done=()=>ov.remove();
  ov.addEventListener('click',e=>{if(e.target===ov||e.target.dataset.k==='ok')done()});ov.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();e.stopPropagation();done()}})}
 function showRecovery(code){const ov=document.createElement('div');ov.className='overlay rcov';ov.style.zIndex=97;
@@ -1091,7 +1094,7 @@ async function viewLogOf(id){if(!await logOk())return;if(id===CUR){showLog(S.nam
 // (also on a computer with no profile yet: only that checklist is affected; only a damaged profile locks the whole app)
 function stampCheck(){CLT=null;const st=S.stamp;if(!st||!st.pid)return;
  if(st.pid!==PR.pid&&!TAMPER)CLT='E-4420'}
-function afterOpen(){const c=errNow();if(!c)return;const lg=S.log||[],last=lg[lg.length-1];
+function afterOpen(){const c=errNow();if(!c)return;if(c==='E-4421')return showErr(c);const lg=S.log||[],last=lg[lg.length-1];
  if(!(last&&last.flag&&last.ev==='Error '+c+' detected')){newSeg('tamper','Error '+c+' detected','Checklist opened while the error was active');save()}showErr(c)}
 
 // ---------- resizable split ----------
@@ -1121,6 +1124,31 @@ async function newCl(){if(!$('#modal').hidden)return;if(CUR&&DIRTY)await flush()
 document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey||!$('#modal').hidden)return;const k=e.key.toLowerCase();
  if(k==='s'){e.preventDefault();if(!CUR)return;if(e.shiftKey)saveAs();else{DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}}
  else if(k==='n'&&!e.shiftKey){e.preventDefault();newCl()}});
+// ---------- updates: a bar at the bottom of the menu page; Settings > Updates switches automatic checks on (off by default) ----------
+let UPD=null,APPV='';
+const verNewer=(a,b)=>{const p=v=>String(v||'').replace(/^v/i,'').split(/[-+]/)[0].split('.').map(n=>parseInt(n,10)||0),x=p(a),y=p(b);for(let i=0;i<3;i++)if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0);return false};
+async function updRefresh(force){if(!FS.updGet)return null;let r=null;try{r=await FS.updCheck(!!force)}catch(e){r={error:String(e.message||e)}}try{UPD=await FS.updGet()}catch(e){}updBar(force);return r}
+const nextDay=()=>{const d=new Date();d.setHours(24,0,0,0);return d.getTime()};
+function updBar(force,st){const b=$('#updbar'),f=UPD&&UPD.found,show=!!f&&(force||st||(f.version!==UPD.skip&&Date.now()>=UPD.snooze));b.hidden=!show;if(!show)return;
+ b.innerHTML=`<span class="ubv">Version <b>${esc(f.version)}</b> is available <span class="mut">(you have ${esc(UPD.version)})</span></span><button data-u="new" title="Opens the release page on GitHub">What's new?</button>
+ <span class="ubst${st&&st.err?' err':''}">${st?esc(st.t):''}</span><span style="flex:1"></span>
+ <button class="pri" data-u="inst" ${st&&st.busy?'disabled':''} title="${UPD.canInstall?'Download it, then restart into the new version':'Open the download page'}">${UPD.canInstall?'Install':'Download'}</button><button data-u="later" title="Remind me again tomorrow">Dismiss</button><button data-u="skip" title="Don't remind me about this version">Skip this version</button>`}
+$('#updbar').addEventListener('click',async e=>{const b=e.target.closest('[data-u]'),f=UPD&&UPD.found;if(!b||!f)return;const u=b.dataset.u;
+ if(u==='new')window.open(f.url||'https://github.com/Bearhawkplanes/Build-Checklist/releases');
+ else if(u==='later'){await FS.updSet({snooze:nextDay()});UPD.snooze=nextDay();$('#updbar').hidden=true}
+ else if(u==='skip'){await FS.updSet({skip:f.version});UPD.skip=f.version;$('#updbar').hidden=true}
+ else if(u==='inst'){if(!UPD.canInstall)return window.open(f.url||'https://github.com/Bearhawkplanes/Build-Checklist/releases');
+  ask(`Install version ${esc(f.version)}? The app saves your work, downloads the update, closes and opens again on the new version. Checklists, profile and settings stay exactly as they are; the version you have now is kept next to the app as "(previous)".`,'Install',async()=>{
+   updBar(true,{t:'Downloading… 0%',busy:true});
+   try{await FS.updDownload();updBar(true,{t:'Restarting…',busy:true});if(CUR&&DIRTY)await flush();await FS.updInstall()}
+   catch(x){updBar(true,{t:'Update failed: '+String((x&&x.message)||x).replace(/^.*Error: /,''),err:true})}})}});
+if(FS.onUpdProgress)FS.onUpdProgress(v=>{const st=$('#updbar .ubst');if(st&&!$('#updbar').hidden)st.textContent='Downloading… '+Math.round(v*100)+'%'});
+const updHtml=()=>`<div class="ds"><div class="dt">Updates</div><p class="mut" style="margin:0 0 6px">This is version ${esc(APPV||'?')}.</p>
+ <label class="chk"><input type="checkbox" id="updauto" ${UPD&&UPD.auto?'checked':''}> Check for updates automatically (about once a day, when online)</label>
+ <div class="tb" style="margin-top:6px"><button data-up="now">Check now</button><span id="updmsg" class="mut"></span></div></div>`;
+$('#modal').addEventListener('change',async e=>{if(e.target.id!=='updauto')return;await FS.updSet({auto:e.target.checked});updRefresh(false)});
+$('#modal').addEventListener('click',async e=>{if(e.target.dataset.up!=='now')return;const m=$('#updmsg');m.textContent='Checking…';const r=await updRefresh(true);if(!$('#updmsg'))return;
+ $('#updmsg').textContent=!r||r.error?'Could not reach GitHub'+(r&&r.error?': '+r.error.replace(/^.*Error: /,''):''):r.none?'You have the latest version.':'Version '+r.version+' is available: see the bar at the bottom of the menu page.'});
 // ---------- start ----------
 applyTheme();renderL();renderR();setTab('desc');
 const savedirHtml=()=>`<div class="ds"><div class="dt">Save file location</div><div class="lg" style="word-break:break-all;margin-bottom:8px">${esc(SAVEDIR)}</div><div class="tb"><button data-sv="choose">Change…</button><button data-sv="open">Open folder</button><button data-sv="reset">Reset to default</button></div><p class="mut">Default: the Saves folder next to the app. Pick a folder on an external drive to keep saves there. Files already saved stay in the old folder.</p></div>`;
@@ -1128,9 +1156,10 @@ $('#modal').addEventListener('click',async e=>{const s=e.target.dataset.sv;if(!s
  const moved=async d=>{SAVEDIR=d;if(CUR){DIRTY=true;await flush()}await refreshLib();renderHome();openSettings();toast('Save location updated')};
  if(s==='choose'){const d=await FS.choose();if(d)await moved(d)}else if(s==='open')FS.openDir();else if(s==='reset')await moved(await FS.resetDir())});
 async function importPath(p){try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(e){toast('Could not open that file')}}
-(async()=>{const MIG=await initProfile();SAVEDIR=await FS.dir();await refreshLib();
+(async()=>{try{APPV=FS.appVersion?await FS.appVersion():''}catch(e){}const MIG=await initProfile();SAVEDIR=await FS.dir();await refreshLib();
  if(!localStorage.getItem('ewf-seeded')){try{localStorage.setItem('ewf-seeded','1')}catch(e){}
   if(!LIB.length){const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));await addEntry(o,'Demo engine build')}}
  setSplit(AS.split||.5);await openHome();if(MIG)showRecovery(MIG);else if(TAMPER)showErr(TAMPER);
+ setTimeout(()=>updRefresh(false),4000);setInterval(()=>updRefresh(false),3*3600000);   // main.js decides whether a check is due
  setInterval(flush,60000);FS.onFlush(flush);FS.onOpen(importPath);const pp=await FS.pending();if(pp)importPath(pp)})();
 </script></body></html>

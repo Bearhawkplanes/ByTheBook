@@ -1,0 +1,28 @@
+# Checks the self-update on real Windows: an old portable build (0.0.1) updates itself to this version from a
+# fake GitHub server on the test machine, restarts, and keeps Saves/ and Data/. Start it from the Actions tab
+# ("Update test (Windows)" > Run workflow). Nothing is published.
+name: Update test (Windows)
+on:
+  workflow_dispatch:
+jobs:
+  update:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx electron-builder --win portable --publish never -c.extraMetadata.version=0.0.1
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: Move-Item dist\BuildChecklist.exe old.exe
+      - run: npx electron-builder --win portable --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - run: Move-Item dist\BuildChecklist.exe new.exe
+      - run: node tests/update-test.js old.exe new.exe

@@ -41,6 +41,12 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
   - Export for sharing (`exportDlg` > `exportShare` > `blankCopy`) keeps all content, images and PDFs, and clears progress, stamp and `ids`. "Include the activity log" keeps the old log read-only under an "Exported as a fresh copy" segment, so the checks can be re-entered by hand in a new install.
 - Security is deliberately "deters casual tampering". The README says what it does not stop; keep that honest when changing things.
 
+## Updates (main.js `checkUpdate/downloadUpdate/installUpdate`, page `updRefresh/updBar`)
+- `UPDATE_URL` = GitHub releases/latest (override `BCL_UPDATE_URL` for tests). State in `Data/config.json` `upd` {auto (off by default), last, skip, snooze, found}. Automatic checks at most ~once a day (`updCheck(false)`); the page calls it at start and every 3 h.
+- Build kinds (`kind()`): portable exe (`PORTABLE_EXECUTABLE_FILE`, asset `BuildChecklist.exe`), Windows installer (asset `BuildChecklist-Setup.exe`, just run it), AppImage (`APPIMAGE`, asset `BuildChecklist.AppImage`). Download goes next to the program as `.update-<name>`, size + `digest` (sha256) checked; install keeps `<name> (previous)` and a helper (PowerShell / sh) waits for this process to exit, swaps and relaunches with the same `--flags`.
+- Version stamps: `.bcl` gets `app` (version that saved it) in `pack()`; a newer file opens with `RO` set (E-4421 in `errNow`, view-only, `save`/`flushNow` never write). The profile gets `app` in `cleanProfile`; `profileSave` refuses to overwrite a newer one.
+- Tests: `tests/main-test.js` (fake GitHub server), `tests/page-test.js` (bar, Settings, read-only), `tests/update-test.js` (real self-update of two builds; Linux AppImage here, Windows via `.github/workflows/update-test.yml`, run from the Actions tab). Test hooks in main.js: `BCL_VERSION_MARK`, `BCL_UPDATE_AUTO`.
+
 ## Releases
 - Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a release is published, and attached to it. Never commit built `.exe` files or `dist/` to the repo.
 - To release: bump `version` in `package.json` (and `package-lock.json`), commit and push; then the owner publishes a release on GitHub with tag `vX.Y.Z` (cloud sessions cannot push tags: HTTP 403). Ask the owner before preparing a release.

@@ -28,6 +28,62 @@ const TMP = path.join(os.tmpdir(), 'build-checklist-video');
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}   // leftovers from a crash
 const relToSaves = p => { const r = path.relative(savesDir(), p); return r && !r.startsWith('..') && !path.isAbsolute(r) ? r : ''; };
 const vidPath = v => !v ? '' : v.rel ? path.join(savesDir(), v.rel) : String(v.path || '');
+// ---- updates ------------------------------------------------------------------------------------------
+// Optional (Settings, off by default): asks GitHub's "latest release" address at most about once a day. Installing downloads the new
+// program next to the running one, checks its size and SHA-256, and swaps it in after this copy closes; the previous version is kept
+// as "<name> (previous)". Checklists and Data/ are never touched. BCL_UPDATE_URL points it at a test server.
+const UPDATE_URL = process.env.BCL_UPDATE_URL || 'https://api.github.com/repos/Bearhawkplanes/Build-Checklist/releases/latest';
+const verNum = v => String(v || '').replace(/^v/i, '').split(/[-+]/)[0].split('.').map(n => parseInt(n, 10) || 0);
+const newer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+// what this copy can replace itself with: the portable .exe, the Windows installer, or the Linux AppImage (a Mac only gets the download page)
+const kind = () => !app.isPackaged ? null : process.env.PORTABLE_EXECUTABLE_FILE ? { k: 'portable', file: process.env.PORTABLE_EXECUTABLE_FILE, asset: /^BuildChecklist\.exe$/i }
+  : process.platform === 'win32' ? { k: 'setup', asset: /^BuildChecklist-Setup\.exe$/i } : process.env.APPIMAGE ? { k: 'appimage', file: process.env.APPIMAGE, asset: /\.AppImage$/i } : null;
+const writable = d => { try { fs.accessSync(d, fs.constants.W_OK); return true; } catch (e) { return false; } };
+const updCfg = () => Object.assign({ auto: false, last: 0, skip: '', snooze: 0, found: null }, cfg.upd || {});
+const UA = () => ({ 'User-Agent': 'Build-Checklist/' + app.getVersion(), Accept: 'application/vnd.github+json' });
+let dl = null;   // the checked download, ready to install: {version, file}
+async function checkUpdate() {
+  let r; try { const res = await fetch(UPDATE_URL, { headers: UA(), signal: AbortSignal.timeout(15000) }); if (!res.ok) throw new Error('GitHub answered ' + res.status); r = await res.json(); }
+  catch (e) { return { error: (e && e.message) || String(e) }; }
+  const c = updCfg(), v = String(r.tag_name || '').replace(/^v/i, ''); c.last = Date.now(); c.found = null;
+  if (v && !r.draft && !r.prerelease && newer(v, app.getVersion())) {
+    const K = kind(), a = K && (r.assets || []).find(x => K.asset.test(x.name));
+    c.found = { version: v, url: /^https:\/\//.test(r.html_url) ? r.html_url : '', notes: String(r.body || '').slice(0, 4000), asset: a ? { name: a.name, size: a.size, url: a.browser_download_url, digest: a.digest || '' } : null };
+  }
+  cfg.upd = c; saveCfg(); return c.found || { none: true, latest: v };
+}
+async function downloadUpdate() {
+  const f = updCfg().found, K = kind(); if (!f || !f.asset) throw new Error('There is no update to download');
+  const dir = K && K.file ? path.dirname(K.file) : K ? os.tmpdir() : TMP; await fsp.mkdir(dir, { recursive: true });   // not TMP for the installer: TMP is cleared when the app closes
+  const out = path.join(dir, K && K.k === 'setup' ? f.asset.name : '.update-' + f.asset.name);   // not runnable by its name until it is checked and swapped in
+  const res = await fetch(f.asset.url, { headers: { 'User-Agent': UA()['User-Agent'] } }); if (!res.ok || !res.body) throw new Error('Download failed (' + res.status + ')');
+  const fh = await fsp.open(out, 'w'), h = crypto.createHash('sha256'); let n = 0;
+  try { for await (const ch of res.body) { await fh.write(ch); h.update(ch); n += ch.length; if (win) win.webContents.send('upd-progress', f.asset.size ? Math.min(1, n / f.asset.size) : 0); } } finally { await fh.close(); }
+  if (n !== f.asset.size || (f.asset.digest && f.asset.digest.toLowerCase() !== 'sha256:' + h.digest('hex'))) { fs.rmSync(out, { force: true }); throw new Error('The download was incomplete or damaged; nothing was changed'); }
+  dl = { version: f.version, file: out }; return { ok: true, size: n };
+}
+// the swap happens after this copy has closed (a helper waits for it), so the new version starts cleanly with the same Saves/ and Data/
+function installUpdate() {
+  const K = kind(); if (!dl || !K) throw new Error('Download the update first');
+  if (K.k === 'setup') spawn(dl.file, [], { detached: true, stdio: 'ignore' }).unref();
+  else {
+    const flags = process.argv.slice(1).filter(a => /^--[\w-]+(=.*)?$/.test(a));   // start the new version with the same options (not files)
+    const cur = K.file, ext = path.extname(cur), prev = path.join(path.dirname(cur), path.basename(cur, ext) + ' (previous)' + ext);
+    if (K.k === 'appimage') {   // Linux lets a running AppImage be replaced
+      fs.copyFileSync(cur, prev); fs.chmodSync(dl.file, 0o755); fs.renameSync(dl.file, cur);
+      spawn('/bin/sh', ['-c', 'p=$1; a=$2; shift 2; while kill -0 "$p" 2>/dev/null; do sleep 0.3; done; exec "$a" "$@"', 'sh', String(process.pid), cur, ...flags], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      const q = v => "'" + String(v).replace(/'/g, "''") + "'", ps = path.join(os.tmpdir(), 'build-checklist-update-' + process.pid + '.ps1');
+      fs.writeFileSync(ps, '\ufeff' + [`$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)}`,
+        `Wait-Process -Id ${process.pid} -Timeout 300 -ErrorAction SilentlyContinue`,
+        '$ok=$false;for($i=0;$i -lt 120 -and -not $ok;$i++){try{if(Test-Path -LiteralPath $prev){Remove-Item -LiteralPath $prev -Force -ErrorAction Stop};Move-Item -LiteralPath $cur -Destination $prev -Force -ErrorAction Stop;$ok=$true}catch{Start-Sleep -Milliseconds 500}}',
+        'if($ok){try{Move-Item -LiteralPath $new -Destination $cur -Force -ErrorAction Stop}catch{Move-Item -LiteralPath $prev -Destination $cur -Force}}',
+        flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur', 'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force'].join('\r\n'));
+      spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    }
+  }
+  setTimeout(() => app.quit(), 300); return true;
+}
 let clip = null;   // the clip being made: {id, dir, proc, cancelled}
 const ff = (args, dur, onProgress) => new Promise((res, rej) => {   // runs ffmpeg at low priority so the app stays responsive on slow computers
   if (!FFMPEG) return rej(new Error('The video tool (ffmpeg) is missing from this copy of the app'));
@@ -89,7 +145,7 @@ function cleanProfile(b) {   // only known fields are ever written
   const req = b.req || {};
   return { pid: b.pid, user: String(b.user || ''), salt: String(b.salt || ''), hash: String(b.hash || ''), rv: { salt: b.rv.salt, hash: b.rv.hash },
     req: { names: !!req.names, sign: !!req.sign, edit: !!req.edit, log: !!req.log },
-    people: (Array.isArray(b.people) ? b.people : []).map(p => ({ id: String(p.id || ''), name: String(p.name || ''), salt: String(p.salt || ''), hash: String(p.hash || ''), boss: !!p.boss })) };
+    people: (Array.isArray(b.people) ? b.people : []).map(p => ({ id: String(p.id || ''), name: String(p.name || ''), salt: String(p.salt || ''), hash: String(p.hash || ''), boss: !!p.boss })), app: app.getVersion() };
 }
 // ---- wrong-PIN limits ---------------------------------------------------------------------------------
 // Counted here and kept in the signed profile, so restarting the app does not reset them. Any correct PIN resets them.
@@ -128,7 +184,8 @@ const handlers = {
     if (!code && P.s === 'ok' && (P.body.fails || 0) >= PIN_MAX) code = 'E-4419';
     return { code, p: P.s, m: M.s, body: P.s === 'ok' ? P.body : null, marker: M.s === 'ok' ? M.body : null };
   },
-  profileSave: b => { const c = cleanProfile(b), L = pinLimits(); if (L.fails) c.fails = L.fails; if (L.until) c.until = L.until;   // the page cannot reset the PIN counter
+  profileSave: b => { const O = readSigned(profFile()); if (O.s === 'ok' && newer(O.body.app, app.getVersion())) throw new Error('This profile was saved by version ' + O.body.app + '. Update this app to change it.');
+    const c = cleanProfile(b), L = pinLimits(); if (L.fails) c.fails = L.fails; if (L.until) c.until = L.until;   // the page cannot reset the PIN counter
     writeSigned(profFile(), c); writeSigned(markFile(), { pid: c.pid, rv: c.rv }); return true; },
   recMake: async () => {
     let c = ''; for (let i = 0; i < 20; i++) c += ALPHA[crypto.randomInt(ALPHA.length)];
@@ -163,6 +220,14 @@ const handlers = {
     return f >= PIN_MAX ? { locked: 'E-4419', fails: f } : { fails: f, wait: until };
   },
   pinState: () => pinLimits(),
+  // updates
+  appVersion: () => app.getVersion(),
+  updGet: () => { const c = updCfg(), K = kind(), f = c.found && newer(c.found.version, app.getVersion()) ? c.found : null;
+    return { auto: c.auto, skip: c.skip, snooze: c.snooze, last: c.last, found: f, version: app.getVersion(), canInstall: !!(K && f && f.asset && (K.k === 'setup' || writable(path.dirname(K.file)))) }; },
+  updSet: p => { const c = updCfg(); p = p || {}; if ('auto' in p) c.auto = !!p.auto; if ('skip' in p) c.skip = String(p.skip || ''); if ('snooze' in p) c.snooze = +p.snooze || 0; cfg.upd = c; saveCfg(); return true; },
+  updCheck: force => { const c = updCfg(); return force || (c.auto && Date.now() - c.last > 20 * 3600000) ? checkUpdate() : null; },   // automatic checks at most about once a day
+  updDownload: () => downloadUpdate(),
+  updInstall: () => installUpdate(),
   // video
   videoPick: async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a video', properties: ['openFile'], filters: [{ name: 'Videos', extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'wmv', 'mpg', 'mpeg', '3gp'] }, { name: 'All files', extensions: ['*'] }] });
@@ -221,6 +286,11 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', (e, argv) => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); const f = argFile(argv); if (f) win.webContents.send('open-file', f); } });
   app.whenReady().then(createWindow);
+  // test hooks (tests/update-test.js, .github/workflows/update-test.yml): note which version started; update without the page
+  if (process.env.BCL_VERSION_MARK) try { fs.appendFileSync(process.env.BCL_VERSION_MARK, app.getVersion() + '\n'); } catch (e) {}
+  if (process.env.BCL_UPDATE_AUTO) app.whenReady().then(async () => { await new Promise(r => setTimeout(r, 3000)); const f = await checkUpdate().catch(() => null);
+    if (f && f.asset) { try { await downloadUpdate(); installUpdate(); return; } catch (e) { try { fs.appendFileSync(process.env.BCL_VERSION_MARK || path.join(TMP, 'update-error.txt'), 'error: ' + e.message + '\n'); } catch (x) {} } }
+    app.quit(); });
   app.on('window-all-closed', () => app.quit());
   app.on('quit', () => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });
 }
