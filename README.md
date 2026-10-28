@@ -33,28 +33,18 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - Not covered by the PIN switches: deleting a checklist from the main menu, and renaming the checklist file outside the app.
 
 ## Tamper detection and recovery
-- Creating the profile shows a recovery code once (also printable). Keep it off this computer. It is the only way back after a forgotten main PIN or damaged profile files.
-- The profile ID is stored in `Data/profile.json` and in the marker in `Saves/`, both signed with a key built into the app, and is stamped into every checklist when it is saved.
-- If the profile is missing or edited (E-4417), the profile and marker disagree or the marker is gone (E-4418), or a checklist was saved under a different profile (E-4420): a pop-up shows only the code. After closing it, viewing works, but checking boxes, sign-offs, Uncheck everything and unlocking edits show the error and do nothing. The Profile page lists the codes and offers recovery (recovery code + a new PIN). A new profile cannot be created while an error is active.
-- E-4420 can also be cleared with the main profile: Profile > Adopt this checklist (logged).
+- The profile has a random ID. It is stored in `Data/profile.json` and in a marker in `Saves/`, both signed with a key built into the app, and it is stamped into every checklist when saved.
+- Recovery code: shown once when the profile is created (and once after upgrading from an older version), printable. Keep it off this computer. It is the only way back after a forgotten main PIN or damaged profile files, and the only way out of an error. Entering it on the Profile page restores the same profile ID with a new username and PIN.
+- Error codes: the profile is missing, edited or replaced (E-4417); the profile and marker disagree or the marker is gone (E-4418); a checklist was saved under a different profile (E-4420). The app opens normally and shows a pop-up with only the code. After closing it, viewing works, but checking boxes, sign-offs, Uncheck everything and unlocking edits show the error and do nothing.
+- The Profile page lists the codes at the bottom (visible without a PIN), explains they mean tampering or moved files, and offers recovery. A new profile cannot be created while an error is active.
+- E-4420 can also be cleared with the main profile: after unlocking the Profile page with the main PIN, "Adopt this checklist" re-stamps it and records the event in the log.
+- To move to a new computer, copy `Data/` and `Saves/` (including the hidden-style `.profile-marker.json`) together. Copying only the checklists triggers E-4417 until the recovery code is entered.
 - This deters casual tampering. Someone who can edit the app's code, or who deletes the profile, marker and every stamped checklist, is not stopped. Windows folder permissions are the only real lock.
 
 ## Activity log
-- Menu > Activity log, Settings > Open the full activity log, or LOG on the main menu (works for any save file without opening it). Filter by name, event or item; Download CSV.
-- PIN-based entries record the user ID. If a name appears with a different ID than before (for example the profile was reset and the person re-added), a red "possible tampered" segment starts and everything after it is shown separately. Use "Set PIN" in the profile to change a PIN without changing the ID.
+- Every checklist keeps its own log: Menu > Activity log…, Settings > Open the full activity log, or the LOG button on a selected file in the main menu (no need to open it). Filter by name, event or item; Download CSV.
+- Entries made with a PIN record the user's ID. If the same name appears with a different ID (for example someone was removed and re-added, or the profile was reset), the log starts a red "POSSIBLE TAMPERED" segment, and everything after it stays visually separated. Errors and recoveries also start marked segments. Use "Set PIN" on the Profile page to change a PIN without changing the ID.
 - The log keeps the newest 5,000 entries (old step entries go first; sign-offs and markers are kept).
-
-## Tamper detection and recovery
-- The profile has a random ID. It is stored in `Data/profile.json` and in a marker in the save folder, both signed with a key built into the program, and it is stamped into every checklist when saved.
-- If the profile is missing, edited, replaced, or does not match the marker or a checklist's stamp, the app opens normally and shows a pop-up with only an error code (E-4417, E-4418 or E-4420). After closing it the app is view-only: checking boxes and sign-offs show the error again, and editing stays locked. The Profile page lists the codes at the bottom (visible without a PIN) and explains they mean tampering or moved files.
-- Recovery code: shown once when the profile is created (and once after upgrading from an older version), printable. Entering it on the Profile page restores the same profile ID with a new username and PIN. It is the only way out of an error, and a new profile cannot be created while an error is active.
-- E-4420 (one checklist saved under a different profile): after unlocking the Profile page with the current PIN, "Adopt this checklist" re-stamps it and records the event in the log.
-- To move to a new computer, copy `Data/` and `Saves/` (including the hidden-style `.profile-marker.json`) together. Copying only the checklists triggers E-4417 until the recovery code is entered.
-- This deters casual tampering. Someone who can modify the program itself can still bypass it; Windows folder permissions are the only real lock.
-
-## Activity log
-- Every checklist keeps its own log: Menu > Activity log… (or Settings), and the LOG button on a selected file in the main menu (no need to open it). It can be filtered and downloaded as CSV.
-- Entries made with a PIN record the user's ID. If the same name appears with a different ID (for example someone was removed and re-added, or the profile was reset), the log starts a red "POSSIBLE TAMPERED" segment, and everything after it stays visually separated. Use "Set PIN" on the Profile page to change a PIN without changing the ID. Errors and recoveries also start marked segments.
 
 ## Notes
 - Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. If the final save fails, closing asks whether to keep the app open.
