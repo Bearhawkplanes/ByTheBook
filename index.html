@@ -161,6 +161,17 @@ body.dragging{user-select:none;cursor:col-resize}
 #iw{z-index:61}.iwd{width:min(720px,94vw)}#iwv{display:block;width:100%;max-height:42vh;background:#000;border-radius:8px;margin-bottom:10px}#iwst{margin:4px 0 8px}
 #iw label.iwr{display:grid;grid-template-columns:auto 5.5em 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin:8px 0 0;cursor:pointer;color:var(--fg)}#iw .iwr input{width:auto;margin:0}#iw .iwr:has(input:checked){border-color:var(--acc)}.iwz{font-variant-numeric:tabular-nums;font-weight:700}
 #iwsl{margin-top:12px}
+#pk{z-index:61}.pkd{width:min(780px,94vw);height:86vh;display:flex;flex-direction:column;gap:8px}
+.pktabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);flex:none;scrollbar-width:thin}.pktabs .stab.on{box-shadow:inset 0 -3px 0 var(--acc);color:var(--fg)}
+#pklist{flex:1;min-height:0;overflow:auto;position:relative;padding-right:4px}
+.pksec{position:sticky;top:0;z-index:1;background:var(--panel);font-weight:700;font-size:13px;padding:10px 6px 6px;border-bottom:1px solid var(--line)}
+.pkr{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 34px;border-radius:6px;cursor:pointer;min-height:34px}
+.pkr.pkc{padding-left:8px;font-weight:600;margin-top:4px}.pkr.ctx{opacity:.55}.pkt mark{background:color-mix(in srgb,var(--acc) 40%,transparent);color:inherit;border-radius:2px}.pktabs .stab.none{opacity:.35}
+.pkr:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
+.pkr.on{background:color-mix(in srgb,var(--acc) 22%,transparent);box-shadow:inset 3px 0 0 var(--acc)}
+.pkn{color:var(--mut);font-size:12px;font-variant-numeric:tabular-nums;min-width:2.6em}.pkt{min-width:0;overflow-wrap:anywhere}.pkv{font-size:11px;white-space:nowrap}
+.pkgo{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700;padding:3px 12px;white-space:nowrap;flex:none}
+#pkcount{font-size:12px;flex:none}
 .vth{position:relative;cursor:pointer;width:100%;height:100%;min-height:150px;display:flex;align-items:center;justify-content:center;background:#000}
 .vth img{max-width:100%;max-height:100%;object-fit:contain}.vth video{width:100%;height:100%;object-fit:contain;background:#000}
 .vth .vpl{position:absolute;width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;pointer-events:none}
@@ -210,13 +221,13 @@ body.dragging{user-select:none;cursor:col-resize}
 <section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page names and words…" style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
 <div class="tb"><button id="pvprev">◀</button><input id="pvpg" type="number" min="1" placeholder="Page #" style="width:84px" title="Go to PDF page number"><button id="pvgo">Go</button><button id="pvnext">▶</button><button id="pvzo">−</button><button id="pvzi">+</button><input id="pvname" placeholder="Name this page" style="width:140px"><button id="pvmap">Name</button></div>
 <div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><canvas id="cv2"></canvas></div></section></div></div>
-<div id="vp" hidden><div id="vptop"><button id="vpBack">← Return</button><b id="vpt"></b><span id="vpfor"></span></div><div id="vpbody"><aside id="vpside"><div class="hh">Videos in this checklist</div><div id="vplist"></div><button id="vpadd">+ Add video…</button><p class="mut" style="margin-top:14px">Select Timestamps, then Assign to… puts that part of the video on the item selected in the checklist.</p></aside>
+<div id="vp" hidden><div id="vptop"><button id="vpBack">← Return</button><b id="vpt"></b><span id="vpfor"></span></div><div id="vpbody"><aside id="vpside"><div class="hh">Videos in this checklist</div><div id="vplist"></div><button id="vpadd">+ Add video…</button><p class="mut" style="margin-top:14px">Select Timestamps, then Assign to… to put that part of the video on a step.</p></aside>
 <section id="vpmain"><div id="vpbox"><video id="vpv" playsinline></video><div id="vpmsg" hidden></div></div>
 <div id="tl" title="Click to skip to that point"><div id="tlplay"></div><div id="tlsel"></div><div id="tlhead"></div><div class="hd" id="hA" title="Start of the selection: drag"></div><div class="hd" id="hB" title="End of the selection: drag"></div></div>
 <div class="tb"><button id="vpplay">▶ Play</button><button id="vpbk" title="Back 5 seconds">−5 s</button><button id="vpfw" title="Forward 5 seconds">+5 s</button><span id="vptime" class="vtnum">0:00.0 / 0:00.0</span><select id="vprate" title="Speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><span style="flex:1"></span><button id="vpsel">Select Timestamps</button></div>
 <div class="tb" id="vpselrow" hidden><label class="vtl">Start<input id="ta" class="vtnum" title="h:mm:ss.s, m:ss.s or seconds"></label><label class="vtl">End<input id="tb" class="vtnum" title="h:mm:ss.s, m:ss.s or seconds"></label><span id="tlen" class="mut vtnum"></span><button id="vppsel">▶ Play selection</button><span style="flex:1"></span><button id="vpas" class="pri">Assign to…</button></div>
 </section></div></div>
-<div id="iw" class="overlay" hidden></div>
+<div id="iw" class="overlay" hidden></div><div id="pk" class="overlay" hidden></div>
 <div id="modal" class="overlay" hidden></div><div id="toast" hidden></div>
 <script src="lib/pdf.min.js"></script>
 <script src="lib/pdf.worker.min.js"></script>
@@ -468,7 +479,7 @@ let PV3=false,CLIPPROG=null;const vv=()=>$('#vpv');
 if(FS&&FS.onClipProgress)FS.onClipProgress(f=>CLIPPROG&&CLIPPROG(f));
 function vpOpen(){if(!CUR)return toast('Open a checklist first');PV3=true;$('#vp').hidden=false;$('#vpt').textContent=S.name||'Unnamed';vpFor();vpList();if(!vp(VP.id)&&S.videos.length)vpShow(S.videos[0].id);else if(!S.videos.length)vpMsg('No videos yet: + Add video…')}
 function vpClose(){PV3=false;$('#vp').hidden=true;const v=vv();v.pause();v.removeAttribute('src');v.load();if(VP.own)URL.revokeObjectURL(VP.url);VP.url='';VP.own=false;VP.id=null;vidTrim()}
-const vpFor=()=>{$('#vpfor').textContent=SEL?'Assigning to: '+(SEL.text||'(untitled)'):'Select a checklist item to assign clips to it'};
+const vpFor=()=>{$('#vpfor').textContent=PKLAST?'Last assigned to: '+(PKLAST.text||'(untitled)'):''};
 const vpMsg=t=>{$('#vpmsg').textContent=t||'';$('#vpmsg').hidden=!t};
 function vpList(){$('#vplist').innerHTML=S.videos.map(v=>`<div class="frow${v.id===VP.id?' sel':''}" data-id="${v.id}"><span class="fn">${esc(v.name)}<small class="mut" style="display:block">${v.link?'linked':'in checklist'}${v.size?' · '+MB(v.size):''}</small></span><button data-a="rm" title="Remove from this checklist">✕</button></div>`).join('')||'<div class="mut">No videos yet.</div>'}
 async function vpShow(id){const v=vp(id);if(!v)return;const old={url:VP.url,own:VP.own};VP.id=id;VP.sel=false;VP.url='';VP.own=false;vpList();vpSelUI();
@@ -493,15 +504,50 @@ async function vpAdd(){if(isLocked())return toast('Editing is locked');const f=a
 function vpRemove(id){if(isLocked())return toast('Editing is locked');const v=vp(id);if(!v)return;let n=0;for(const s of S.sections)for(const c of s.cards)for(const x of [c,...c.steps])n+=x.media.filter(m=>m.kind==='vref'&&m.vid===id).length;
  ask(`Remove "${esc(v.name)}" from this checklist?${n?` ${n} linked clip${n>1?'s':''} on checklist items will stop playing. Installed clips are not affected.`:''}`,'Remove',()=>{S.videos=S.videos.filter(x=>x.id!==id);delete VIDS[id];if(VP.id===id){const x=vv();x.pause();x.removeAttribute('src');x.load();if(VP.own)URL.revokeObjectURL(VP.url);VP.id=null;VP.url='';VP.own=false;VP.sel=false;vpSelUI()}vpList();save();if(S.videos[0])vpShow(S.videos[0].id);else vpMsg('No videos yet: + Add video…')},1)}
 // ----- Assign to: link the selection, or install it as a clip -----
-function vpAssign(){const v=vp(VP.id),it=SEL;if(!v)return;if(!it)return toast('Select a checklist item first (close the player and click an item)');if(isLocked())return toast('Editing is locked');
+function vpAssign(){const v=vp(VP.id);if(!v)return;if(isLocked())return toast('Editing is locked');
  const a=VP.a,b=VP.b;if(!(b-a>=0.1))return toast('Select at least 0.1 seconds');
- dlg(`<div class="dh"><b>Assign ${fmtT(a)}–${fmtT(b)} (${fmtT(b-a)})</b></div><p class="mut">To: ${esc(it.text||'(untitled)')}</p>
+ dlg(`<div class="dh"><b>Assign ${fmtT(a)}–${fmtT(b)} (${fmtT(b-a)})</b></div><p class="mut">Choose how, then pick the step.</p>
  <button class="vopt" id="asIn"><b>Install selection</b><span>Copies just this part into the checklist, so it plays anywhere. This will increase the file size; you choose the quality next.</span></button>
  <button class="vopt" id="asRef"><b>Call to timestamps</b><span>${v.link?'Plays this part straight from the video file. Nothing is copied, but if the video file is moved or changed it won\'t function properly.':'Plays this part of the video already in this checklist. Nothing more is added to the file.'}</span></button>
  <div class="dbtn"><button data-d="x">Cancel</button></div>`);
  const thumb=()=>v.link?FS.videoThumb(v.link,a):thumbAt(VP.url,a);   // linked files: ffmpeg makes it (the page may not read their pixels)
- $('#asRef').onclick=async()=>{closeDlg();const th=await thumb();it.media.push({kind:'vref',vid:v.id,start:+a.toFixed(2),end:+b.toFixed(2),name:v.name,thumb:th});save();if(it===SEL)renderR();renderL();toast('Clip linked to the item')};
- $('#asIn').onclick=()=>{closeDlg();installWin(v,it,a,b,thumb)}}
+ $('#asRef').onclick=()=>{closeDlg();pickStep(`Call to timestamps ${fmtT(a)}–${fmtT(b)}`,async it=>{const th=await thumb();it.media.push({kind:'vref',vid:v.id,start:+a.toFixed(2),end:+b.toFixed(2),name:v.name,thumb:th});vpDone(it,'Clip linked to')})};
+ $('#asIn').onclick=()=>{closeDlg();pickStep(`Install selection ${fmtT(a)}–${fmtT(b)}`,it=>installWin(v,it,a,b,thumb))}}
+const vpDone=(it,msg)=>{PKLAST=it;save();if(it===SEL)renderR();renderL();vpFor();toast(msg+' "'+(it.text||'(untitled)')+'"')};
+// ----- step picker: hover highlights, a click keeps the highlight and puts a green Assign button right next to that row -----
+let PKLAST=null;
+function pickStep(title,go){const w=$('#pk');let on=null;
+ const items=[];S.sections.forEach((s,si)=>s.cards.forEach((c,ci)=>{items.push({it:c,si,ci,j:null});c.steps.forEach((x,j)=>items.push({it:x,si,ci,j}))}));
+ const vids=it=>it.media.filter(isVid).length;
+ w.innerHTML=`<div class="dlg pkd"><div class="dh"><b>${esc(title)}: pick the step</b><button data-pk="x" title="Close (Esc)">✕</button></div>
+ <input id="pkq" placeholder="Search steps…" autocomplete="off"><div class="pktabs">${S.sections.map((s,i)=>`<button class="stab" data-pks="${i}">${esc(s.title)||'Untitled'}</button>`).join('')}</div>
+ <div id="pklist">${S.sections.map((s,si)=>`<div class="pka" data-si="${si}"></div><div class="pksec" data-si="${si}">${esc(s.title)||'Untitled'}</div>`+items.map((x,k)=>x.si!==si?'':`<div class="pkr${x.j==null?' pkc':''}" data-k="${k}"><span class="pkn">${x.j==null?x.ci+1:(x.ci+1)+'.'+(x.j+1)}</span><span class="pkt">${esc(x.it.text||'(untitled)')}</span>${vids(x.it)?`<span class="mut pkv">${vids(x.it)} video${vids(x.it)>1?'s':''}</span>`:''}</div>`).join('')).join('')}</div>
+ <div id="pkcount" class="mut"></div></div>`;
+ w.hidden=false;const L2=$('#pklist'),rows=[...L2.querySelectorAll('.pkr')];
+ const setOn=r=>{if(on){on.classList.remove('on');const g=on.querySelector('.pkgo');if(g)g.remove()}on=r;if(r){r.classList.add('on');r.insertAdjacentHTML('beforeend','<button class="pkgo" data-pk="go">Assign here</button>')}};
+ const shown=()=>rows.filter(r=>!r.hidden);
+ const close=()=>{w.hidden=true;w.innerHTML='';document.removeEventListener('keydown',key,true)};
+ const pickIt=()=>{if(!on)return;const it=items[+on.dataset.k].it;close();go(it)};
+ // .pka: plain markers before each section header (the sticky headers' own positions move while scrolling)
+ const tabs=()=>{let act=0;L2.querySelectorAll('.pka').forEach(h=>{if(!h.nextElementSibling.hidden&&h.offsetTop<=L2.scrollTop+8)act=+h.dataset.si});w.querySelectorAll('[data-pks]').forEach(b=>b.classList.toggle('on',+b.dataset.pks===act))};
+ const filter=()=>{const q=$('#pkq').value.trim().toLowerCase();let n=0;
+  const hit=x=>!q||(x.it.text||'').toLowerCase().includes(q);
+  const mk=t=>{if(!q)return esc(t);const i=t.toLowerCase().indexOf(q);return i<0?esc(t):esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length))};
+  rows.forEach(r=>{const x=items[+r.dataset.k],h=hit(x);let show=h;if(!show&&x.j==null)show=x.it.steps.some(st=>hit({it:st}));   // a main item stays visible, dimmed, when one of its steps matches
+   r.hidden=!show;r.classList.toggle('ctx',show&&!h);r.querySelector('.pkt').innerHTML=mk(x.it.text||'(untitled)');if(show&&h)n++});
+  L2.querySelectorAll('.pksec').forEach(h=>{const si=+h.dataset.si;h.hidden=!!q&&!rows.some(r=>!r.hidden&&items[+r.dataset.k].si===si)});
+  w.querySelectorAll('[data-pks]').forEach(b=>b.classList.toggle('none',!!q&&L2.querySelector(`.pksec[data-si="${b.dataset.pks}"]`).hidden));if(q)L2.scrollTop=0;
+  $('#pkcount').textContent=q?n+' match'+(n===1?'':'es'):items.length+' items';if(on&&on.hidden)setOn(null);tabs()};
+ const key=e=>{if(w.hidden)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const l=shown();if(!l.length)return;let i=l.indexOf(on);i=e.key==='ArrowDown'?Math.min(l.length-1,i+1):Math.max(0,i<0?0:i-1);setOn(l[i]);on.scrollIntoView({block:'nearest'})}
+  else if(e.key==='Enter'&&on){e.preventDefault();pickIt()}};
+ document.addEventListener('keydown',key,true);
+ w.onclick=e=>{const t=e.target;if(t.closest('[data-pk=x]'))return close();if(t.closest('[data-pk=go]'))return pickIt();
+  const tb=t.closest('[data-pks]');if(tb){const h=L2.querySelector(`.pka[data-si="${tb.dataset.pks}"]`);if(h)L2.scrollTop=h.offsetTop;tabs();return}
+  const r=t.closest('.pkr');if(r)return setOn(r);setOn(null)};   // a click anywhere but a row clears the selection
+ L2.onscroll=tabs;$('#pkq').oninput=filter;filter();
+ const start=items.findIndex(x=>x.it===(PKLAST||SEL));if(start>=0){const r=rows[start];setOn(r);r.scrollIntoView({block:'center'})}
+ $('#pkq').focus()}
 async function installWin(v,it,a,b,thumbFn){vv().pause();const w=$('#iw');let job=null,done=false,q='medium';w.hidden=false;
  w.innerHTML=`<div class="dlg iwd"><div class="dh"><b>Install selection: ${fmtT(a)}–${fmtT(b)}</b><button data-iw="x">✕</button></div>
  <video id="iwv" muted playsinline></video><div id="iwst" class="mut">Making the three versions… 0%</div><div class="ldb"><i id="iwf"></i></div>
@@ -515,7 +561,7 @@ async function installWin(v,it,a,b,thumbFn){vv().pause();const w=$('#iw');let jo
  w.onclick=async e=>{const t=e.target.closest('[data-iw]');if(!t)return;if(t.dataset.iw==='x')return close();
   if(!job)return;t.disabled=true;try{const snd=job.audio&&$('#iwsnd').checked,bytes=await FS.clipRead(job.id,q,snd),thumb=await thumbFn(),mid=uid();
    MEDIA[mid]={blob:new Blob([bytes],{type:'video/mp4'}),name:v.name+' '+fmtT(a)+'.mp4',type:'video/mp4'};
-   it.media.push({kind:'file',id:mid,type:'video',name:v.name,thumb,clip:{start:+a.toFixed(2),end:+b.toFixed(2),q,sound:!!snd}});done=true;FS.clipDone(job.id);close();save();if(it===SEL)renderR();renderL();toast('Clip installed ('+MB(bytes.length)+')')}
+   it.media.push({kind:'file',id:mid,type:'video',name:v.name,thumb,clip:{start:+a.toFixed(2),end:+b.toFixed(2),q,sound:!!snd}});done=true;FS.clipDone(job.id);close();vpDone(it,'Clip installed ('+MB(bytes.length)+') on')}
   catch(x){t.disabled=false;toast('Could not install the clip')}};
  w.onchange=e=>{if(e.target.name==='iwq')q=e.target.value;if(job)sizes()};
  CLIPPROG=f=>{const i=$('#iwf');if(i&&!job){i.style.width=(f*100).toFixed(0)+'%';$('#iwst').textContent='Making the three versions… '+(f*100).toFixed(0)+'%'}};
@@ -542,7 +588,7 @@ $('#tl').addEventListener('pointermove',e=>{if(!VP.drag)return;const d=vpDur(),t
 for(const [id,k] of [['ta','a'],['tb','b']]){const i=$('#'+id);
  i.addEventListener('change',()=>{const t=parseT(i.value),d=vpDur();if(t!=null&&d){if(k==='a')VP.a=Math.max(0,Math.min(t,VP.b-0.1));else VP.b=Math.min(d,Math.max(t,VP.a+0.1))}i.blur();vpUI()});
  i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur()});i.addEventListener('blur',vpUI)}
-document.addEventListener('keydown',e=>{if(!PV3||!$('#modal').hidden||!$('#iw').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key===' '){e.preventDefault();$('#vpplay').click()}else if(e.key==='Escape')vpClose()});
+document.addEventListener('keydown',e=>{if(!PV3||!$('#modal').hidden||!$('#iw').hidden||!$('#pk').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key===' '){e.preventDefault();$('#vpplay').click()}else if(e.key==='Escape')vpClose()});
 // ---------- PDF (several per checklist, loaded only when needed) ----------
 let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
 try{pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'}catch(e){}

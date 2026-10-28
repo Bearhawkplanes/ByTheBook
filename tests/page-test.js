@@ -222,11 +222,11 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   // Assign > Call to timestamps
   await pg.evaluate(() => { $('#ta').value = '12'; $('#ta').dispatchEvent(new Event('change')); $('#tb').value = '15'; $('#tb').dispatchEvent(new Event('change')); $('#vpas').click(); });
   assert(/won't function properly/.test(await pg.evaluate(() => $('#modal').textContent)) && /increase the file size/.test(await pg.evaluate(() => $('#modal').textContent)), 'both warnings shown');
-  await pg.evaluate(() => $('#asRef').click()); await pg.waitForTimeout(1500);
+  await pg.evaluate(() => ($('#asRef').click(), document.querySelector('#pk .pkgo').click())); await pg.waitForTimeout(1500);
   const ref = await pg.evaluate(() => { const m = S.sections[1].cards[0].steps[0].media.at(-1); return { kind: m.kind, start: m.start, end: m.end, thumb: /^data:image\/jpeg/.test(m.thumb) }; });
   assert.deepStrictEqual(ref, { kind: 'vref', start: 12, end: 15, thumb: true }, 'linked clip with a thumbnail');
   // Assign > Install selection: three sizes, sound box, chosen quality installed into the checklist
-  await pg.evaluate(() => { $('#vpas').click(); $('#asIn').click(); }); await pg.waitForTimeout(800);
+  await pg.evaluate(() => { $('#vpas').click(); $('#asIn').click(); document.querySelector('#pk .pkgo').click(); }); await pg.waitForTimeout(800);
   assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#iw .iwz')].map(x => x.textContent)), ['2.3 MB', '879 KB', '303 KB'], 'exact sizes with sound');
   await pg.evaluate(() => { $('#iwsnd').click(); });
   assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#iw .iwz')].map(x => x.textContent)), ['2.1 MB', '781 KB', '234 KB'], 'sizes without sound');
@@ -254,6 +254,32 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const SV = JSON.parse(saved), clipM = SV.sections[1].cards[0].steps[0].media.find(m => m.kind === 'file' && m.type === 'video');
   assert(SV.files[clipM.id] && SV.files[clipM.id].data.startsWith('data:video/mp4;base64,'), 'installed clip saved inside the checklist');
   assert(SV.videos[0].link && !SV.videos[0].data, 'linked video not copied');
+  // step picker: preselects the current step, click selects with a green button beside it, a click elsewhere clears it, search, tabs, keys
+  await pg.evaluate(() => { select(S.sections[0].cards[0].steps[1]); PKLAST = null; $('#vidBtn').click(); }); await pg.waitForTimeout(800);
+  await pg.evaluate(() => { $('#vpsel').click(); $('#vpas').click(); $('#asRef').click(); });
+  const pk = () => pg.evaluate(() => { const on = document.querySelector('#pk .pkr.on'); return on ? { text: on.querySelector('.pkt').textContent, btn: !!on.querySelector('.pkgo'), buttons: document.querySelectorAll('#pk .pkgo').length } : null; });
+  assert.deepStrictEqual(await pk(), { text: await pg.evaluate(() => S.sections[0].cards[0].steps[1].text), btn: true, buttons: 1 }, 'current step preselected, Assign button on its row');
+  const rowText = (si, ci, j) => pg.evaluate(([si, ci, j]) => { const c = S.sections[si].cards[ci]; return j == null ? c.text : c.steps[j].text; }, [si, ci, j]);
+  const clickRow = t => pg.evaluate(t => [...document.querySelectorAll('#pk .pkr')].find(r => r.querySelector('.pkt').textContent === t).click(), t);
+  const t2 = await rowText(1, 0, 2); await clickRow(t2);
+  assert.deepStrictEqual(await pk(), { text: t2, btn: true, buttons: 1 }, 'clicking another row moves the selection and the button');
+  await pg.evaluate(() => document.querySelector('#pk .dh b').click());
+  assert.strictEqual(await pk(), null, 'a click outside the list clears the selection');
+  await pg.evaluate(() => { $('#pkq').value = 'sealant'; $('#pkq').dispatchEvent(new Event('input')); });
+  const found = await pg.evaluate(() => [...document.querySelectorAll('#pk .pkr:not([hidden]):not(.ctx) .pkt')].map(x => x.textContent));
+  assert(found.length >= 1 && found.every(t => /sealant/i.test(t)) && /match/.test(await pg.evaluate(() => $('#pkcount').textContent)), 'search shows only matching steps: ' + found);
+  await pg.evaluate(() => { $('#pkq').value = ''; $('#pkq').dispatchEvent(new Event('input')); document.querySelector('#pk [data-pks="1"]').click(); });
+  assert(await pg.evaluate(() => { const h = document.querySelector('#pk .pksec[data-si="1"]'), l = $('#pklist'); return Math.abs(h.getBoundingClientRect().top - l.getBoundingClientRect().top) < 4; }), 'section tab jumps to that section');
+  await pg.keyboard.press('ArrowDown'); await pg.keyboard.press('ArrowDown');
+  const viaKeys = (await pk()).text; await pg.keyboard.press('Enter'); await pg.waitForTimeout(400);
+  const target = await pg.evaluate(t => { for (const s of S.sections) for (const c of s.cards) for (const x of [c, ...c.steps]) if (x.text === t) return x.media.filter(m => m.kind === 'vref').length; }, viaKeys);
+  assert(target === 1 && await pg.evaluate(() => $('#pk').hidden && PV3), 'arrow keys and Enter assign it; the player stays open');
+  await pg.evaluate(() => { $('#vpas').click(); $('#asRef').click(); });
+  assert.strictEqual((await pk()).text, viaKeys, 'next time it starts on the step assigned last');
+  await pg.keyboard.press('Escape');
+  assert(await pg.evaluate(() => $('#pk').hidden && PV3), 'Esc closes the picker only');
+  await pg.evaluate(() => vpClose());
+
   // Import the entire video: copied into the file and playable after reopening
   pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), vstub);
   await open(pg, 'shop');
@@ -276,4 +302,4 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');
-})().catch(e => { console.error('FAILED:', e.message); process.exit(1); });
+})().catch(e => { console.error('FAILED:', e.message, (e.stack || '').split('\n').filter(l => l.includes('page-test.js')).slice(0, 2).join(' | ')); process.exit(1); });

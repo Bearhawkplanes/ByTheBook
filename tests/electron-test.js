@@ -18,10 +18,10 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
   await pg.evaluate(() => { select(S.sections[1].cards[0].steps[0]); $('#vidBtn').click(); $('#vpadd').click(); }); await pg.waitForTimeout(300);
   await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(1500);
   assert.strictEqual(await pg.evaluate(() => Math.round(vpDur())), 30, 'MP4 (H.264 + AAC) plays in the app');
-  await pg.evaluate(() => { $('#vpsel').click(); $('#ta').value = '0:12'; $('#ta').dispatchEvent(new Event('change')); $('#tb').value = '0:15'; $('#tb').dispatchEvent(new Event('change')); $('#vpas').click(); $('#asRef').click(); });
+  await pg.evaluate(() => { $('#vpsel').click(); $('#ta').value = '0:12'; $('#ta').dispatchEvent(new Event('change')); $('#tb').value = '0:15'; $('#tb').dispatchEvent(new Event('change')); $('#vpas').click(); $('#asRef').click(); document.querySelector('#pk .pkgo').click(); });
   await pg.waitForTimeout(2000);
   assert(await pg.evaluate(() => { const m = S.sections[1].cards[0].steps[0].media.at(-1); return m.kind === 'vref' && m.thumb.length > 2000; }), 'linked clip with an ffmpeg thumbnail');
-  await pg.evaluate(() => { $('#vpas').click(); $('#asIn').click(); });
+  await pg.evaluate(() => { $('#vpas').click(); $('#asIn').click(); document.querySelector('#pk .pkgo').click(); });
   await pg.waitForFunction(() => document.querySelectorAll('#iw .iwz').length === 3, null, { timeout: 120000 });
   const sizes = await pg.evaluate(() => [...document.querySelectorAll('#iw .iwz')].map(x => x.textContent));
   await pg.evaluate(() => { document.querySelector('#iw input[value=medium]').click(); document.querySelector('#iw [data-iw=ok]').click(); });
