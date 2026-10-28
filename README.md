@@ -85,7 +85,7 @@ For torque patterns, bolt numbering and the like.
 - Applied drawings are saved in the checklist as pen strokes, a few KB, not as a second copy of the image. They are included in Export for sharing.
 - Open the pencil again any time to add to the drawing, or trash + Apply to remove it.
 - Text: the T button next to the pencil turns on text mode for that image, right on the Images tab. Drawings and text are separate: the pencil only changes drawings, the T only changes text.
-  - A bar above the image: font (Arial, Segoe UI, Verdana, Tahoma, Trebuchet MS, Calibri), size, Bold, colour, and Done. They apply to the selected text and become the default for new text.
+  - A bar above the image: font (Inter, Roboto, Open Sans, Lato, Source Sans 3, Barlow: built into the app, so text looks the same on every computer), size, Bold, colour, and Done. They apply to the selected text and become the default for new text.
   - Three buttons on the left side of the image: Select text (click a text, then select and type in it as usual), Move text (cross-arrows cursor: drag any text), New text (text cursor: click anywhere on the image to start typing there).
   - Delete text (top right of the image) removes the selected text box.
   - Only the image changes while text mode is on: off the image the app works as normal. Text is saved as you type; Done, the T button, or clicking another step ends text mode, and empty text boxes are removed then.
@@ -102,4 +102,5 @@ For torque patterns, bolt numbering and the like.
 - Deleting sends the file to the Recycle Bin / Trash.
 - Unsigned build: Windows SmartScreen may warn on first run ("More info" > "Run anyway").
 - pdf.js (Apache 2.0) is bundled in lib/ (license: lib/PDFJS-LICENSE.txt).
+- The six text fonts (Inter, Roboto, Open Sans, Lato, Source Sans 3, Barlow; SIL Open Font License 1.1) are bundled in lib/fonts, cut down to Latin letters, digits and shop symbols (about 570 KB together). Licenses: lib/fonts/LICENSES.txt.
 - ffmpeg (GPL v3, via the ffmpeg-static package) is bundled to cut and convert video clips. It runs only while installing a clip or making a thumbnail. Its license and build notes are in resources/app.asar.unpacked/node_modules/ffmpeg-static/; source code is at https://ffmpeg.org.

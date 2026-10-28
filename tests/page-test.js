@@ -366,12 +366,13 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.mouse.click(L0.x + 100 * L0.k, L0.y + 100 * L0.k); await pg.keyboard.type('Bolt 1');
   await pg.keyboard.press('ArrowRight'); await pg.keyboard.press('ArrowLeft');
   assert.deepStrictEqual(await pg.evaluate(() => [TX.mid === S.sections[1].cards[0].steps[1].media.at(-1).id, document.activeElement.classList.contains('txb')]), [true, true], 'arrow keys move the caret, not to another image');
-  await pg.evaluate(() => { $('#txf').value = 'Verdana'; $('#txf').dispatchEvent(new Event('change', { bubbles: true })); $('#txs').value = '50'; $('#txs').dispatchEvent(new Event('change', { bubbles: true })); $('#txb').click(); document.querySelector('[data-tc="#1e88ff"]').click(); });
+  await pg.evaluate(() => { $('#txf').value = 'Barlow'; $('#txf').dispatchEvent(new Event('change', { bubbles: true })); $('#txs').value = '50'; $('#txs').dispatchEvent(new Event('change', { bubbles: true })); $('#txb').click(); document.querySelector('[data-tc="#1e88ff"]').click(); });
   let t0 = await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text[0]);
-  assert(t0.t === 'Bolt 1' && t0.f === 'Verdana' && t0.s === 40 && t0.b === true && t0.c === '#1e88ff', 'font, size, bold and colour apply to the selected text: ' + JSON.stringify(t0));
+  assert(t0.t === 'Bolt 1' && t0.f === 'Barlow' && t0.s === 40 && t0.b === true && t0.c === '#1e88ff', 'font, size, bold and colour apply to the selected text: ' + JSON.stringify(t0));
   await pg.mouse.click(L0.x + 400 * L0.k, L0.y + 400 * L0.k); await pg.keyboard.type('Bolt 2');
   await pg.mouse.click(L0.x + 600 * L0.k, L0.y + 100 * L0.k);   // a third box left empty
   assert.strictEqual(await pg.evaluate(() => S.sections[1].cards[0].steps[1].media.at(-1).text.length), 3);
+  assert.deepStrictEqual(await pg.evaluate(async () => { await Promise.all(TFONTS.flatMap(f => [400, 700].map(w => document.fonts.load(`${w} 20px "${f}"`)))); return TFONTS.filter(f => !document.fonts.check(`700 20px "${f}"`) || ![...document.fonts].some(ff => ff.family.replace(/"/g, '') === f && ff.status === 'loaded')); }), [], 'all six built-in fonts load from the app');
   // Select: click a text and type in it
   await pg.evaluate(() => document.querySelector('[data-tt=sel]').click());
   const b1 = await pg.evaluate(() => { const r = document.querySelector('#txl .txb[data-i="0"]').getBoundingClientRect(); return [r.right - 2, r.top + r.height / 2]; });
