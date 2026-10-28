@@ -7,9 +7,13 @@ module.exports = (getDir, trash) => {
   const bakOf = n => path.join(getDir(), 'Backups', path.basename(n) + '.bak');
   const uniq = base => { base = clean(base); let n = base, k = 2; while (fs.existsSync(path.join(getDir(), n + '.bcl'))) n = base + ' ' + k++; return n; };
   const put = async (base, text) => { const n = uniq(base); await fsp.writeFile(file(n + '.bcl'), text); return n; };
+  // files saved by this version start with {"app": and carry the stamp right after it, so no stamp in the first piece means none.
+  // the stamp sits at the start of files saved by this version; older files are scanned in pieces (never read whole: they can be hundreds of MB)
+  const scanStamp = async f => { const fh = await fsp.open(f, 'r'), buf = Buffer.alloc(1 << 22), re = /"stamp":\{"pid":"([0-9a-f]{32})"/; let pos = 0, tail = '';
+    try { for (;;) { const { bytesRead } = await fh.read(buf, 0, buf.length, pos); if (!bytesRead) return ''; const t = tail + buf.toString('latin1', 0, bytesRead), m = re.exec(t); if (m) return m[1]; if (!pos && t.startsWith('{"app":')) return ''; tail = t.slice(-60); pos += bytesRead; } } finally { await fh.close(); } };
   const stamps = new Map();   // file -> {mtime, pid}: each file is read again only after it changes
   const stampOf = async (f, mtime) => { const c = stamps.get(f); if (c && c.mtime === mtime) return c.pid; let pid = '';
-    try { const m = (await fsp.readFile(f, 'utf8')).match(/"stamp":\{"pid":"([0-9a-f]{32})"/); if (m) pid = m[1]; } catch (e) {}
+    try { pid = await scanStamp(f); } catch (e) {}
     stamps.set(f, { mtime, pid }); return pid; };
   const chains = new Map();
   const queue = (f, fn) => { const p = (chains.get(f) || Promise.resolve()).then(fn); chains.set(f, p.catch(() => {})); return p; };

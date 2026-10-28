@@ -435,7 +435,14 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.data
 const urls={};
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
  if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id],!!(TX&&TX.mid===id)):urls[id]}}if(TX)txMount()}
+// big photos are shrunk when added (Settings, on by default): a 4 MB 12-megapixel phone photo becomes about 0.5 MB and stays sharp
+async function shrinkImg(blob,type){if(AS.shrink===false||!/^image\/(jpeg|png|webp)$/.test(type))return{blob,type};let bm;try{bm=await createImageBitmap(blob)}catch(e){return{blob,type}}
+ const k=Math.min(1,2560/Math.max(bm.width,bm.height));if(k===1&&blob.size<1.5e6){bm.close();return{blob,type}}
+ const jpg=type!=='image/png'||blob.size>3e6,c=document.createElement('canvas'),g=c.getContext('2d');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);   // screenshots stay PNG (crisp text) unless huge
+ if(jpg){g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height)}g.drawImage(bm,0,0,c.width,c.height);bm.close();
+ const out=await new Promise(r=>c.toBlob(r,jpg?'image/jpeg':'image/png',.86));return out&&out.size<blob.size?{blob:out,type:jpg?'image/jpeg':'image/png'}:{blob,type}}
 async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.startsWith('video');if(vid&&blob.size>MAXCOPY)return toast('Videos over 300 MB are too big to copy into a checklist: use Video Player to link it');
+ if(!vid)({blob,type}=await shrinkImg(blob,type));
  const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
 function renderR(){
@@ -844,7 +851,8 @@ function openSettings(){
  dlg(`<div class="dh"><b>Settings</b><button data-d="x">✕</button></div>
  <div class="ds"><div class="dt">Themes <span class="mut">(saved in the app, not in the checklist)</span></div>
  <div class="seg">${[['default','Default (dark)'],['light','Light']].map(([k,n])=>`<button data-th="${k}" class="${AS.theme===k?'on':''}">${n}</button>`).join('')}</div>
- <div class="dt" style="margin:12px 0 6px">Selection color</div><div class="tb"><input type="range" id="hue" min="0" max="360" value="${AS.hue}" style="flex:1"><span class="sw"></span><button data-th="reset">Reset</button></div></div>
+ <div class="dt" style="margin:12px 0 6px">Selection color</div><div class="tb"><input type="range" id="hue" min="0" max="360" value="${AS.hue}" style="flex:1"><span class="sw"></span><button data-th="reset">Reset</button></div>
+ <label class="chk" style="margin-top:10px"><input type="checkbox" id="shrinkc" ${AS.shrink===false?'':'checked'}> Shrink big photos when adding them (to 2560 px; keeps checklists small and fast)</label></div>
  <div class="ds"><div class="dt">This checklist</div>
  <label class="chk"><input type="checkbox" id="lockc" ${S.locked?'checked':''}> Master file: lock editing (checking, initials and sign-offs still work)</label>
  <label>Manual / revision<input id="mrev" value="${esc(S.manual)}" ${isLocked()?'disabled':''}></label>
@@ -857,7 +865,7 @@ $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||
  else if(d.th){if(d.th==='reset')AS.hue=20;else AS.theme=d.th;saveApp();applyTheme();openSettings()}});
 $('#modal').addEventListener('input',e=>{if(e.target.id==='hue'){AS.hue=+e.target.value;saveApp();applyTheme()}});
 $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if(!t.checked&&S.locked&&pinOn('edit')){t.checked=true;askPin({title:'Turn off the master file lock',note:'Main profile or Boss PIN.',boss:true}).then(w=>{if(!w)return;S.locked=false;logEv('master lock off',{text:S.name||''},w.name,w.uid);save();renderL();renderR();openSettings()});return}
-  S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='mechc'){if(isLocked()){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
+  S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='shrinkc'){AS.shrink=t.checked;saveApp()}else if(t.id==='mechc'){if(isLocked()){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
 document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key==='Escape')closeDlg();else if(e.key==='Enter'){const b=$('#modal [data-d=ok]');if(b){e.preventDefault();b.click()}}});
 const menu=$('#menu');$('#menuBtn').onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
 menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
@@ -899,7 +907,8 @@ const b2d=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f
 const d2b=d=>{const i=d.indexOf(','),bin=atob(d.slice(i+1)),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);return new Blob([u],{type:d.slice(5,i).split(';')[0]||'application/octet-stream'})};
 // builds the file text; the big base64 blobs are cached and spliced in, so JSON.stringify never re-scans them
 async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.pid,rv:PR.rv};   // every saved checklist carries the profile ID
- const o=JSON.parse(JSON.stringify(S)),big={};o.files={};if(name!=null)o.name=name;if(strip)strip(o);
+ // version and stamp first: the menu list reads only the start of each file
+ const o=Object.assign({app:undefined,stamp:undefined},JSON.parse(JSON.stringify(S))),big={};o.files={};if(name!=null)o.name=name;if(strip)strip(o);
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r){const k='m:'+m.id;big[k]=r.data||(r.data=await b2d(r.blob));o.files[m.id]={name:r.name,type:r.type,data:'@@'+k+'@@'}}}
  for(const p of o.pdfs){const r=PDFS[p.id];if(r){const k='p:'+p.id;big[k]=r.data||(r.data=await b2d(new Blob([r.buf],{type:'application/pdf'})));p.data='@@'+k+'@@'}}
  for(const v of o.videos){const r=VIDS[v.id];if(r&&!v.link){const k='v:'+v.id;big[k]=r.data||(r.data=await b2d(r.blob));v.data='@@'+k+'@@'}}
@@ -1178,7 +1187,8 @@ function lsearch(step){LQ=$('#lsearch').value.trim().toLowerCase();
  if(LQ)S.sections.forEach(s=>s.cards.forEach(c=>{if(c.steps.some(hitIt))c.open=true}));
  renderL();const h=[...document.querySelectorAll('#L .row.hit')];if(h.length)LH=(LH+step+h.length)%h.length;else LH=0;
  $('#lcount').textContent=LQ?(h.length?`${LH+1}/${h.length}`:'0 found'):'';if(h[LH])h[LH].scrollIntoView({block:'center'})}
-$('#lsearch').oninput=()=>{LH=0;lsearch(0)};
+// search redraws once typing pauses: big checklists take a moment to draw
+$('#lsearch').oninput=()=>{LH=0;clearTimeout(lsearch.t);lsearch.t=setTimeout(()=>lsearch(0),200)};
 $('#lsearch').onkeydown=e=>{if(e.key==='Enter')lsearch(e.shiftKey?-1:1);else if(e.key==='Escape'){e.target.value='';LH=0;lsearch(0)}};
 // ---------- shortcuts ----------
 async function newCl(){if(!$('#modal').hidden)return;if(CUR&&DIRTY)await flush();ask('Your work is saved. Create new checklist?','Create new',()=>addEntry(norm(),'unnamed').then(openProject))}

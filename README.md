@@ -130,6 +130,10 @@ For torque patterns, bolt numbering and the like.
 - Entries made with a PIN record the user's ID. If the same name appears with a different ID (for example someone was removed and re-added, or the profile was reset), the log starts a red "POSSIBLE TAMPERED" segment, and everything after it stays visually separated. Errors and recoveries also start marked segments. Use "Set PIN" on the Profile page to change a PIN without changing the ID.
 - The log keeps the newest 5,000 entries (old step entries go first; sign-offs and markers are kept).
 
+## Size limits and speed
+- A checklist is saved as one file. It can hold roughly 350 MB of photos, PDFs and clips (for example about 450 shrunk photos plus a few manuals); beyond that the app can no longer save it. Photos are shrunk when added (Settings > Shrink big photos, on by default: phone photos go to 2560 px, about 0.4–0.7 MB each), and linking big videos instead of copying them keeps files small.
+- Measured on a deliberately huge checklist (3,900 rows, 300 photos, 60 clips, three PDFs incl. 400 pages, 341 MB file): menu 1.4 s, opening 6 s, the printable PDF (301 pages) 4–5 s. Every save rewrites the whole file, which takes several seconds at that size (in the background; the app stays usable).
+
 ## Notes
 - Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. If the final save fails, closing asks whether to keep the app open.
 - Deleting sends the file to the Recycle Bin / Trash.

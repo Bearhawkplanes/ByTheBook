@@ -61,6 +61,8 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   await call('write', 'b.bcl', JSON.stringify({ name: 'b', sections: [] }));
   const l = (await call('list')).sort((x, y) => x.name.localeCompare(y.name));
   assert.deepStrictEqual(l.map(x => [x.name, x.pid]), [['a', pid], ['b', '']]);
+  await call('write', 'big-old.bcl', '{"name":"x","files":{"f":"' + 'A'.repeat((1 << 22) - 30) + '"},"stamp":{"pid":"' + pid + '","rv":{}}}');   // older layout: stamp after 4 MB of data, across a read boundary
+  assert.strictEqual((await call('list')).find(x => x.name === 'big-old').pid, pid, 'stamp found in an older, big file without reading it whole');
 
   // video: linked paths, clips in three qualities with exact sizes, with and without a sound track
   const { execFileSync } = require('child_process'), ffbin = require('ffmpeg-static');

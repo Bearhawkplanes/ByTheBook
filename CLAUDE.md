@@ -53,6 +53,10 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - Left: `XKINDS` (fresh, pdf); add new export kinds there and in `xpShow`/`xpExport`. Export always goes through `FS.saveFile` (main: Save dialog + write).
 - Printable checklist: `print.html` (own file, packaged) does the layout in `render(data, opts)`; main `pdfMake` loads it in a hidden window and `printToPDF`s it (queued; the hidden window is destroyed when the main window closes). The page sends only `pdfData()` (text, page, qty, size, spec per item; no progress), options `PO()` remembered in `AS.pdf`. Preview = the real PDF drawn with pdf.js, lazily per page. Owner's decisions: blank copies only; each section starts a new page; header shows section, Page x of N and the page within the section; items are not split unless longer than a page.
 
+## Size and speed (measured with `tests/stress-gen.js` + `tests/stress-test.js` on the built app)
+- One checklist = one JSON text: hard ceiling ~512 MB of text (V8 string limit), i.e. ~350–380 MB of media. Every save sends and rewrites the whole file (~8 s at 341 MB); opening ~6 s. Fixing that needs media kept out of the big text (lazy media store / streamed save) - discussed with the owner, not built.
+- `pack()` puts `app` and `stamp` first; `storage.list()` reads only the start of new files (older ones are scanned in 4 MB pieces). Search redraws 200 ms after typing stops. `shrinkImg()` shrinks photos on attach (AS.shrink, default on, 2560 px JPEG 86%; PNG screenshots stay PNG unless > 3 MB).
+
 ## Releases
 - Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a release is published, and attached to it. Never commit built `.exe` files or `dist/` to the repo.
 - To release: bump `version` in `package.json` (and `package-lock.json`), commit and push; then the owner publishes a release on GitHub with tag `vX.Y.Z` (cloud sessions cannot push tags: HTTP 403). Ask the owner before preparing a release.

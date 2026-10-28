@@ -470,6 +470,16 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await open(pg, 'old');
   assert(await pg.evaluate(async () => { DIRTY = true; await flush(); return JSON.parse(await window.fsapi.read('old.bcl')).app === '0.5.0' && !errNow(); }), 'normal files are saved with this version');
 
+  // ---- big photos are shrunk when added (setting on by default) ----
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const shr = await pg.evaluate(async () => { const c = document.createElement('canvas'); c.width = 4000; c.height = 3000; const g = c.getContext('2d'), d = g.createImageData(4000, 3000); for (let i = 0; i < d.data.length; i += 4) { d.data[i] = (i * 7) % 255; d.data[i + 1] = Math.random() * 255; d.data[i + 2] = (i >> 9) % 255; d.data[i + 3] = 255; } g.putImageData(d, 0, 0);
+    const big = await new Promise(r => c.toBlob(r, 'image/jpeg', .95)); select(S.sections[0].cards[0].steps[0]); await attach(big, 'phone.jpg', 'image/jpeg');
+    const m = SEL.media.at(-1), r = MEDIA[m.id], bm = await createImageBitmap(r.blob); const res = { before: big.size, after: r.blob.size, w: bm.width, h: bm.height, type: r.type };
+    AS.shrink = false; await attach(big, 'phone2.jpg', 'image/jpeg'); res.off = MEDIA[SEL.media.at(-1).id].blob.size; return res; });
+  assert(shr.w === 2560 && shr.h === 1920 && shr.after < shr.before / 2 && shr.type === 'image/jpeg', 'a 4000x3000 photo is stored at 2560x1920 and much smaller: ' + JSON.stringify(shr));
+  assert.strictEqual(shr.off, shr.before, 'with the setting off the original is kept');
+
   // ---- Start a new job from this checklist ----
   pg = await page({ 'Engine.bcl': used }, prof('a'.repeat(32)));
   await open(pg, 'Engine');
