@@ -3,7 +3,7 @@
 Offline Electron desktop app for shop build checklists: sections > cards > steps, each with specs, images and links into a PDF manual, plus check-offs, initials, sign-offs, PIN-protected roles and an activity log. Used in a real shop by a foreman and employees. `README.md` is the user-facing manual; keep it in sync with behaviour changes.
 
 ## Working on this repo
-- The app is for any in-depth mechanical work, **not aircraft-specific** (owner's rule): keep every label, example, demo item, export and doc generic (no aircraft, wing, airframe… wording).
+- The app is for any in-depth mechanical work, **not aircraft-specific** (owner's rule): keep every label, example, demo item, export and doc generic (no aircraft, wing, airframe… wording). Mechanics words (technician, inspector, torque, spec) appear only when the checklist's `S.mech` switch is on (Settings > This checklist, off by default; demo on); otherwise use general words. The page reference is "Ref. page".
 - The owner (GitHub: Bearhawkplanes) is not a programmer. Explain changes in plain language, give them something concrete to try, and keep answers short.
 - Workflow: commit to `main` and push after each finished change (the owner pulls it on their work and home computers). One logical change per commit, with a clear message. Update `README.md` in the same commit when behaviour changes.
 - No build step. The only runtime dependency is `ffmpeg-static` (approved by the owner for video clips; unpacked from the asar via `asarUnpack`). Do not add frameworks or other npm packages without asking. `lib/` holds vendored pdf.js 3.11.174 (Apache 2.0) and `lib/fonts/` (six OFL sans fonts for text on images, subset to Latin + shop symbols as WOFF2, licenses in `lib/fonts/LICENSES.txt`); leave them alone.

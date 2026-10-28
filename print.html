@@ -35,7 +35,7 @@ tr.so td{height:.38in;border-bottom:1px solid #111;font-size:8.5pt;color:#333}
 </style></head><body><div id="out"></div>
 <script>
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
-// data: {name, manual, printed, version, sections:[{title, sign, cards:[{text,page,qty,size,spec,steps:[...]}]}]}
+// data: {name, manual, mech (mechanical wording), printed, version, sections:[{title, sign, cards:[{text,page,qty,size,spec,steps:[...]}]}]}
 // opts: {paper:'Letter'|'A4', contents, qty, spec, itemSign, secEnd}; returns the number of pages
 async function render(D,o){
  const A4=o.paper==='A4';document.getElementById('paper').textContent='@page{size:'+(A4?'A4':'Letter')+';margin:0}';
@@ -43,7 +43,7 @@ async function render(D,o){
  await document.fonts.load('400 10pt Inter');await document.fonts.load('700 10pt Inter');
  const out=document.getElementById('out');out.innerHTML='';
  const foot='<div class="ft"><span>'+esc(D.manual||'')+'</span><span>Printed '+esc(D.printed)+' · Build Checklist '+esc(D.version)+' · blank copy</span></div>';
- const cols='<th class="c-box">Done</th><th class="c-no">No.</th><th>Step</th>'+(o.qty?'<th class="c-q">Qty / size</th>':'')+(o.spec?'<th class="c-s">Spec</th>':'')+'<th class="c-p">Book pg</th><th class="c-i">Init.</th><th class="c-d">Date</th>',ncol=6+(o.qty?1:0)+(o.spec?1:0);
+ const cols='<th class="c-box">Done</th><th class="c-no">No.</th><th>Step</th>'+(o.qty?'<th class="c-q">Qty / size</th>':'')+(o.spec?'<th class="c-s">'+(D.mech?'Spec':'Values')+'</th>':'')+'<th class="c-p">Ref. page</th><th class="c-i">Init.</th><th class="c-d">Date</th>',ncol=6+(o.qty?1:0)+(o.spec?1:0);
  const head=t=>'<div class="hd"><div><div class="nm">'+esc(D.name)+'</div><h1>'+esc(t)+'</h1></div><div class="pg"><b class="tp"></b><span class="sp"></span></div></div>';
  const newPage=(title,table,si)=>{const p=document.createElement('div');p.className='page';p.dataset.sec=title;p.dataset.si=si;p.innerHTML=head(title)+'<div class="body">'+(table?'<table class="cl"><thead><tr>'+cols+'</tr></thead><tbody></tbody></table>':'')+'</div>'+foot;out.appendChild(p);return p};
  const fits=p=>{const b=p.querySelector('.body');return b.scrollHeight<=b.clientHeight+1};
@@ -51,7 +51,7 @@ async function render(D,o){
  const row=(x,no,cls,txt)=>'<tr class="'+(cls||'')+'"><td class="c-box"><span class="box"></span></td><td class="c-no">'+no+'</td><td>'+esc(txt||x.text||'(untitled)')+'</td>'+(o.qty?'<td class="c-q">'+esc(qs(x))+'</td>':'')+(o.spec?'<td class="c-s">'+esc(x.spec||'')+'</td>':'')+'<td class="c-p">'+esc(x.page||'')+'</td><td class="c-i"></td><td class="c-d"></td></tr>';
  const toRows=h=>{const t=document.createElement('tbody');t.innerHTML=h;return [...t.children]};
  let cover=null;
- if(o.contents){cover=document.createElement('div');cover.className='page cover';cover.innerHTML='<div class="hd"><div><div class="nm">Build Checklist</div><h1>Contents</h1></div><div class="pg"><b class="tp"></b><span></span></div></div><div class="body"><h1 class="ttl">'+esc(D.name)+'</h1><div class="sub">'+esc(D.manual||'')+'</div><div class="fields"><div>Project</div><div>Serial no.</div><div>Technician</div><div>Inspector</div><div>Started</div><div>Completed</div></div><table class="toc"><tbody></tbody></table><div class="legend"><b>How to fill in:</b> tick <span class="box"></span> each step when done and add your initials and the date. Grey rows are main items'+(o.itemSign?'; in sections marked for sign-off, each main item has a sign-off line for the inspector':'')+'. Book pg = page in the manual.</div></div>'+foot;out.appendChild(cover)}
+ if(o.contents){cover=document.createElement('div');cover.className='page cover';cover.innerHTML='<div class="hd"><div><div class="nm">Build Checklist</div><h1>Contents</h1></div><div class="pg"><b class="tp"></b><span></span></div></div><div class="body"><h1 class="ttl">'+esc(D.name)+'</h1><div class="sub">'+esc(D.manual||'')+'</div><div class="fields">'+(D.mech?['Project','Serial no.','Technician','Inspector','Started','Completed']:['Name','Started','Completed']).map(f=>'<div>'+f+'</div>').join('')+'</div><table class="toc"><tbody></tbody></table><div class="legend"><b>How to fill in:</b> tick <span class="box"></span> each step when done and add your initials and the date. Grey rows are main items'+(o.itemSign?'; in sections marked for sign-off, each main item has a sign-off line for '+(D.mech?'the inspector':'the person approving the work'):'')+'. Ref. page = page in the '+(D.mech?'manual':'reference document')+'.</div></div>'+foot;out.appendChild(cover)}
  D.sections.forEach((s,si)=>{let p=newPage(s.title,true,si);s.first=out.children.length;
   const put=rows=>{const tb=p.querySelector('tbody');rows.forEach(r=>tb.appendChild(r));if(fits(p))return true;rows.forEach(r=>r.remove());return false};
   s.cards.forEach((c,ci)=>{const no=ci+1,so=s.sign&&o.itemSign?'<tr class="so"><td></td><td colspan="'+(ncol-1)+'">Item '+no+' signed off by <span class="line"></span> Date <span class="line s"></span></td></tr>':'';
@@ -65,6 +65,6 @@ async function render(D,o){
    const b=p.querySelector('.body');b.insertAdjacentHTML('beforeend',end);if(!fits(p)){b.querySelector('.secend').remove();b.querySelector('.notes').remove();p=newPage(s.title,false,si);p.querySelector('.body').insertAdjacentHTML('beforeend',end)}}});
  const pages=[...out.children],N=pages.length;
  pages.forEach((p,i)=>{p.querySelector('.tp').textContent='Page '+(i+1)+' of '+N;if(p.dataset.si==null)return;const same=pages.filter(q=>q.dataset.si===p.dataset.si);p.querySelector('.sp').textContent=p.dataset.sec+': page '+(same.indexOf(p)+1)+' of '+same.length});
- if(cover)cover.querySelector('.toc tbody').innerHTML=D.sections.map((s,i)=>'<tr><td class="n">'+(i+1)+'</td><td>'+esc(s.title)+(s.sign&&o.itemSign?' <span class="tag">(inspector sign-off)</span>':'')+'</td><td class="pp">page '+s.first+'</td></tr>').join('');
+ if(cover)cover.querySelector('.toc tbody').innerHTML=D.sections.map((s,i)=>'<tr><td class="n">'+(i+1)+'</td><td>'+esc(s.title)+(s.sign&&o.itemSign?' <span class="tag">('+(D.mech?'inspector ':'')+'sign-off)</span>':'')+'</td><td class="pp">page '+s.first+'</td></tr>').join('');
  return N}
 </script></body></html>

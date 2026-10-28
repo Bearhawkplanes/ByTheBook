@@ -72,13 +72,24 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - To move to a new computer, copy `Data/` and `Saves/` (including the hidden-style `.profile-marker.json`) together. Copying only the checklists triggers E-4417 until the recovery code is entered.
 - This deters casual tampering. Someone who can edit the app's code, or who deletes the profile, marker and every stamped checklist, is not stopped. Windows folder permissions are the only real lock.
 
+## Mechanical wording (Settings > This checklist)
+Off by default, saved in each checklist (the demo has it on). The app is for any kind of checklist, so normally the wording is general; switch this on for mechanical work.
+
+| | Off (general) | On (mechanical) |
+|---|---|---|
+| Printed contents page fields | Name, Started, Completed | Project, Serial no., Technician, Inspector, Started, Completed |
+| Sign-off wording on the printout | "(sign-off)", "the person approving the work" | "(inspector sign-off)", "the inspector" |
+| The values field / printed column | Values / limits, "Values" | Torque / stretch / limits, "Spec" |
+
+The page reference is called "Ref. page" either way.
+
 ## Export (Menu > Export…)
 One window: the kinds of export on the left, their settings on the right, and Export… at the bottom, which opens the usual Save window so you choose where the file goes.
 - Fresh copy (.bcl): every section, step, image, PDF and installed clip, with nothing checked off and no profile link, for sharing or a new install. Optionally with the activity log.
 - Printable checklist (PDF): a blank checklist to print and fill in by hand. The right side shows the real PDF; scroll through the pages ("Page 3 of 9").
   - Each section starts on a new page. Every page shows the checklist name, the section, "Page x of N" and the page within that section ("Engine: page 2 of 3").
-  - Main items are grey rows with their steps numbered under them (1.1, 1.2…). Columns: Done tick box, No., Step, Qty / size, Spec, Book pg, Init., Date. A main item and its steps stay on one page; only an item longer than a page continues on the next, marked "(continued)".
-  - Options (remembered): paper size Letter or A4; Contents page (with project details to fill in and where each section starts); Qty / size column; Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
+  - Main items are grey rows with their steps numbered under them (1.1, 1.2…). Columns: Done tick box, No., Step, Qty / size, Values (Spec with mechanical wording), Ref. page, Init., Date. A main item and its steps stay on one page; only an item longer than a page continues on the next, marked "(continued)".
+  - Options (remembered): paper size Letter or A4; Contents page (fill-in fields and where each section starts); Qty / size column; Values / Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
   - No images, videos, PDFs, descriptions or progress: it is always a blank copy.
 
 ## Video Player

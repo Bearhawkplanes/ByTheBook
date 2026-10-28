@@ -501,25 +501,41 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.strictEqual(secs.filter(p => p.si === '0').reduce((a, p) => a + p.so, 0), 0, 'none in a section without sign-off');
   assert.deepStrictEqual([0, 1, 2, 3].map(si => secs.filter(p => p.si === String(si)).filter(p => p.end).length), [1, 1, 1, 1], 'one section-complete box per section, at its end');
   assert(secs.filter(p => p.si === '3').length === 1, 'empty section still gets its page');
-  assert.deepStrictEqual(L1.pages[1].cols, ['Done', 'No.', 'Step', 'Qty / size', 'Spec', 'Book pg', 'Init.', 'Date']);
+  assert.deepStrictEqual(L1.pages[1].cols, ['Done', 'No.', 'Step', 'Qty / size', 'Values', 'Ref. page', 'Init.', 'Date'], 'general wording by default');
+  const gen = await pp.evaluate(() => ({ fields: [...document.querySelectorAll('.fields div')].map(d => d.textContent), toc: document.querySelector('.toc').textContent, legend: document.querySelector('.legend').textContent }));
+  assert(gen.fields.join() === 'Name,Started,Completed' && !/inspector|technician/i.test(gen.toc + gen.legend), 'no mechanics words unless switched on: ' + JSON.stringify(gen));
+  const mech = await pp.evaluate(async D => { await render(Object.assign({}, D, { mech: true }), { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true }); return { fields: [...document.querySelectorAll('.fields div')].map(d => d.textContent), cols: [...document.querySelectorAll('.page:nth-child(2) thead th')].map(t => t.textContent), toc: document.querySelector('.toc').textContent }; }, PD);
+  assert(mech.fields.join() === 'Project,Serial no.,Technician,Inspector,Started,Completed' && mech.cols.includes('Spec') && /inspector sign-off/.test(mech.toc), 'mechanical wording when switched on');
   assert(/Left side\(inspector sign-off\)page 3/.test(L1.toc[1].replace(/\s+/g, '')) || /page 3/.test(L1.toc[1]), 'contents lists where sections start: ' + L1.toc[1]);
   assert.deepStrictEqual([L1.pages[1].w, L1.pages[1].h], [816, 1056], 'Letter is 8.5 x 11 in');
   const L2 = await lay({ paper: 'A4', contents: false, qty: false, spec: false, itemSign: false, secEnd: false });
   assert(L2.pages[0].sec === 'Prep' && L2.pages.every(p => !p.end && !p.so) && L2.pages.every(p => p.fits), 'options switch the extras off');
-  assert.deepStrictEqual(L2.pages[0].cols, ['Done', 'No.', 'Step', 'Book pg', 'Init.', 'Date'], 'columns switch off');
+  assert.deepStrictEqual(L2.pages[0].cols, ['Done', 'No.', 'Step', 'Ref. page', 'Init.', 'Date'], 'columns switch off');
   assert.deepStrictEqual([L2.pages[0].w, L2.pages[0].h], [794, 1123], 'A4 is 210 x 297 mm');
   // a real PDF of it, for the Export window test below
   await pp.evaluate(D => render(D, { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true }), PD);
   const PDF = await pp.pdf({ printBackground: true, preferCSSPageSize: true }); assert(PDF.slice(0, 4).toString() === '%PDF');
 
   // ---- the Export window ----
-  pg = await page({ 'shop.bcl': used }, prof('a'.repeat(32)), async pg => pg.addInitScript(([b, n]) => { window.__pdfBytes = b; window.__pdfPages = n; }, [Array.from(PDF), L1.n]));
+  pg = await page({ 'shop.bcl': JSON.stringify(Object.assign(JSON.parse(used), { mech: false })) }, prof('a'.repeat(32)), async pg => pg.addInitScript(([b, n]) => { window.__pdfBytes = b; window.__pdfPages = n; }, [Array.from(PDF), L1.n]));
   await open(pg, 'shop');
   await pg.evaluate(() => document.querySelector('[data-m="export"]').click());
   assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#xp .xpl button b')].map(b => b.textContent)), ['Fresh copy', 'Printable checklist'], 'export kinds listed on the left');
   await pg.evaluate(() => document.querySelector('#xp [data-xk=pdf]').click()); await pg.waitForTimeout(1500);
   const call1 = await pg.evaluate(() => window.__pdfCalls.at(-1));
   assert.deepStrictEqual(call1.o, { paper: 'Letter', contents: true, qty: true, spec: true, itemSign: true, secEnd: true }, 'default options');
+  assert.strictEqual(call1.d.mech, false, 'a checklist with the switch off prints general wording');
+  assert.strictEqual(await pg.evaluate(() => norm({}).mech), false, 'new and older checklists start with it off');
+  assert.strictEqual(await pg.evaluate(() => norm(demoData()).mech), true, 'the demo engine build has it on');
+  await pg.evaluate(() => { xpClose(); openSettings(); }); assert(await pg.evaluate(() => !$('#mechc').checked), 'Mechanical wording off by default');
+  await pg.evaluate(() => { select(S.sections[1].cards[0].steps[0]); setTab('desc'); });
+  assert(await pg.evaluate(() => /Values \/ limits/.test($('#p-desc').textContent) && /Ref\. page/.test($('#p-desc').textContent) && !/Torque|Book page/.test($('#p-desc').textContent)), 'general labels in the app');
+  await pg.evaluate(() => { const c = $('#mechc'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); closeDlg(); });
+  assert(await pg.evaluate(() => S.mech === true && /Torque \/ stretch \/ limits/.test($('#p-desc').textContent)), 'switch on: mechanical labels');
+  assert.strictEqual(JSON.parse(await pg.evaluate(() => pack())).mech, true, 'saved in the checklist');
+  await pg.evaluate(() => { document.querySelector('[data-m="export"]').click(); document.querySelector('#xp [data-xk=pdf]').click(); }); await pg.waitForTimeout(800);
+  assert(await pg.evaluate(() => window.__pdfCalls.at(-1).d.mech === true && /Spec column/.test($('#xp .xpopts').textContent)), 'and on the printout');
+  await pg.evaluate(() => { S.mech = false; xpShow('pdf'); }); await pg.waitForTimeout(800);
   const dItems = call1.d.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps]));
   assert(dItems.length > 10 && dItems.every(x => Object.keys(x).every(k => ['text', 'page', 'qty', 'size', 'spec', 'steps'].includes(k))), 'only the checklist goes to the PDF (no images, descriptions or progress)');
   assert(await pg.evaluate(n => document.querySelectorAll('#xppages .xppg').length === n && document.querySelectorAll('#xppages canvas').length >= 1, L1.n), 'preview shows the real PDF pages');
