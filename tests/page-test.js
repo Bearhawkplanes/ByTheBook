@@ -423,6 +423,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   let ub = await bar();
   assert(ub.shown && /Version 0\.6\.0 is available \(you have 0\.5\.0\) What's new\?/.test(ub.text) && /Install Dismiss Skip this version/.test(ub.text), 'bar on the menu page: ' + ub.text);
   assert(await pg.evaluate(() => { const r = $('#updbar').getBoundingClientRect(); return Math.abs(r.bottom - innerHeight) < 2 && r.width >= innerWidth - 2; }), 'full width along the bottom');
+  assert.strictEqual(await pg.evaluate(() => Math.round($('#hleft').getBoundingClientRect().width)), 300, 'the Saved checklists panel keeps its width');
   await pg.evaluate(() => document.querySelector('[data-u=new]').click());
   assert.deepStrictEqual(await pg.evaluate(() => window.__opened), [relF.url], "What's new? opens the release page");
   await pg.evaluate(() => document.querySelector('[data-u=later]').click()); await pg.waitForTimeout(50);
