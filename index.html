@@ -72,7 +72,7 @@ header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10
 #menu{position:absolute;top:calc(100% + 8px);left:0;z-index:40;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 #menu button{display:flex;justify-content:space-between;gap:12px;width:100%;text-align:left;border:0;background:none;border-radius:6px;padding:7px 10px;color:var(--fg)}
 #menu button:hover:not(:disabled){background:color-mix(in srgb,var(--acc) 14%,transparent)}
-#menu button:disabled{color:var(--mut);cursor:default}#menu i{font-size:11px}#menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}#menu .warnb{color:var(--warn)}
+#menu button:disabled{color:var(--mut);cursor:default}#menu button:disabled,#hdelb:disabled{pointer-events:none}#menu i{font-size:11px}#menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}#menu .warnb{color:var(--warn)}
 button:disabled{opacity:.3;cursor:not-allowed}
 body.locked .ed{display:none!important}
 .row span.t{flex:1;min-width:70px;padding:5px 9px;overflow-wrap:anywhere}
@@ -881,20 +881,24 @@ $('#modal').addEventListener('input',e=>{if(e.target.id==='hue'){AS.hue=+e.targe
 $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if(!t.checked&&S.locked&&pinOn('edit')){t.checked=true;askPin({title:'Turn off the master file lock',note:'Main profile or Boss PIN.',boss:true}).then(w=>{if(!w)return;S.locked=false;logEv('master lock off',{text:S.name||''},w.name,w.uid);save();renderL();renderR();openSettings()});return}
   S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='shrinkc'){AS.shrink=t.checked;saveApp()}else if(t.id==='mechc'){if(isLocked()){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
 document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key==='Escape')closeDlg();else if(e.key==='Enter'){const b=$('#modal [data-d=ok]');if(b){e.preventDefault();b.click()}}});
-const menu=$('#menu');$('#menuBtn').onclick=e=>{e.stopPropagation();menu.hidden=!menu.hidden};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
+const menu=$('#menu');
+// a master file (or worker mode) cannot be deleted: the menu item is greyed out, and the home list's Delete too (noDel)
+const noDel=e=>e&&(e.id===CUR&&S?!!(S.locked||S.worker):!!(e.locked||e.worker));
+const menuOpen=()=>{menu.querySelector('[data-m=delete]').disabled=!!(S.locked||S.worker);menu.hidden=false};
+$('#menuBtn').onclick=e=>{e.stopPropagation();if(!menu.hidden){menu.hidden=true;return}menuOpen()};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
 menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
  if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
  else if(m==='newjob')newJob();
  else if(m==='restore')restoreBackup();
  else if(m==='log')viewLogOf(CUR);
- else if(m==='delete')ask(`Delete "${esc(S.name||'unnamed')}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',async()=>{await deleteProject(CUR);openHome()},1);
+ else if(m==='delete'&&!(S.locked||S.worker))ask(`Delete "${esc(S.name||'unnamed')}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',async()=>{await deleteProject(CUR);openHome()},1);
  else if(m==='pdf'){if(isLocked())toast('Editing is locked');else $('#file').click()}
  else if(m==='demo')(async()=>{const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));openProject(await addEntry(o,'Demo engine build'))})()
  else if(m==='uncheck')ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
 // ---------- file library / main menu ----------
 function uniqueName(base,self){base=(base||'').trim().replace(/[\\/:*?"<>|]+/g,'_')||'unnamed';const used=new Set(LIB.filter(x=>x.id!==self).map(x=>x.name.toLowerCase()));let n=base,k=2;while(used.has(n.toLowerCase()))n=base+' '+k++;return n}
-async function refreshLib(){let rec={};try{rec=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}const l=await FS.list();LIB=l.map(f=>({id:f.name,name:f.name,saved:f.mtime,opened:rec[f.name]||0,pid:f.pid||''}))}
+async function refreshLib(){let rec={};try{rec=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}const l=await FS.list();LIB=l.map(f=>({id:f.name,name:f.name,saved:f.mtime,opened:rec[f.name]||0,pid:f.pid||'',locked:!!f.locked,worker:!!f.worker}))}
 function markOpened(id,to){let r={};try{r=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}if(to){r[to]=r[id]||0;delete r[id]}else r[id]=Date.now();try{localStorage.setItem('ewf-recent',JSON.stringify(r))}catch(e){}}
 let FLP=Promise.resolve();   // saves run one at a time, in order
 function flush(){return FLP=FLP.then(flushNow,flushNow)}
@@ -918,13 +922,13 @@ async function openProject(id){let r;
  renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();afterOpen()}
 async function deleteProject(id){clearTimeout(save.t);if(CUR===id)DIRTY=false;try{await FS.remove(id+'.bcl')}catch(e){toast('Could not delete the file');return}
  LIB=LIB.filter(x=>x.id!==id);if(CUR===id){CUR=null;S=norm();SEL=null;pdf=null}if(HS===id)HS=null;renderHome()}
-const askDelete=id=>{const e=LIB.find(x=>x.id===id);if(e)ask(`Delete "${esc(e.name)}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',()=>deleteProject(id),1)};
+const askDelete=id=>{const e=LIB.find(x=>x.id===id);if(noDel(e))return toast('This is a master file. Turn off the master file lock in its Settings to delete it.');if(e)ask(`Delete "${esc(e.name)}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',()=>deleteProject(id),1)};
 const b2d=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
 const d2b=d=>{const i=d.indexOf(','),bin=atob(d.slice(i+1)),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);return new Blob([u],{type:d.slice(5,i).split(';')[0]||'application/octet-stream'})};
 // builds the file text; the big base64 blobs are cached and spliced in, so JSON.stringify never re-scans them
 async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.pid,rv:PR.rv};   // every saved checklist carries the profile ID
  // version and stamp first: the menu list reads only the start of each file
- const o=Object.assign({app:undefined,stamp:undefined},JSON.parse(JSON.stringify(S))),big={},fresh=pack.fresh=[];o.files={};if(name!=null)o.name=name;if(strip)strip(o);
+ const o=Object.assign({app:undefined,stamp:undefined,locked:undefined,worker:undefined},JSON.parse(JSON.stringify(S))),big={},fresh=pack.fresh=[];o.files={};if(name!=null)o.name=name;if(strip)strip(o);
  // media already in the checklist file go in as references (nothing to send); new ones as data, listed in pack.fresh for flushNow
  const put=async(k,r,mk)=>{if(r.ref)return REFP+r.ref;big[k]=r.data||(r.data=await b2d(await mk()));fresh.push([r,k]);return '@@'+k+'@@'};
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r)o.files[m.id]={name:r.name,type:r.type,data:await put('m:'+m.id,r,()=>r.blob)}}
@@ -998,7 +1002,7 @@ function renderHome(){const rec=LIB.filter(x=>x.opened).sort((a,b)=>b.opened-a.o
  const row=(e,sub)=>{const ad=needAdopt(e);return `<div class="frow${HS===e.id?' sel':''}${ad?' adopt':''}" data-id="${e.id}"><span class="fn">${esc(e.name)}${ad?'<button class="adq" data-a="adopt" title="Saved under a different profile (E-4420)">adopt?</button>':''}</span>${sub?`<span class="mut">${esc(sub)}</span>`:''}${HS===e.id?'<button data-a="logv">LOG</button><button class="open" data-a="open">OPEN</button>':''}</div>`};
  $('#flist').innerHTML=sortedLib().map(e=>row(e,'')).join('')||'<div class="mut">Nothing saved yet.</div>';
  $('#rlist').innerHTML=rec.map(e=>row(e,rel(e.opened))).join('')||'<div class="mut" style="text-align:left">Nothing opened yet.</div>';
- $('#hdel').hidden=!HS||PV;$('#hBack').hidden=!CUR}
+ $('#hdel').hidden=!HS||PV;$('#hdelb').disabled=noDel(LIB.find(x=>x.id===HS));$('#hBack').hidden=!CUR}
 // a checklist stamped by another profile (E-4420) can be adopted straight from the list, with the main profile or a Boss PIN
 const needAdopt=e=>!TAMPER&&(e.id===CUR&&S?!!CLT:!!e.pid&&e.pid!==PR.pid);
 function adoptAsk(id){

@@ -16,17 +16,19 @@ module.exports = (getDir, trash) => {
   // the stamp sits at the start of files saved by this version; older files are scanned in pieces (never read whole: they can be hundreds of MB)
   const scanStamp = async f => { const fh = await fsp.open(f, 'r'), buf = Buffer.alloc(1 << 22), re = /"stamp":\{"pid":"([0-9a-f]{32})"/; let pos = 0, tail = '';
     try { for (;;) { const { bytesRead } = await fh.read(buf, 0, buf.length, pos); if (!bytesRead) return ''; const t = tail + buf.toString('latin1', 0, bytesRead), m = re.exec(t); if (m) return m[1]; if (!pos && t.startsWith('{"app":')) return ''; tail = t.slice(-60); pos += bytesRead; } } finally { await fh.close(); } };
-  const stamps = new Map();   // file -> {mtime, pid}: each file is read again only after it changes
-  const stampOf = async (f, mtime) => { const c = stamps.get(f); if (c && c.mtime === mtime) return c.pid; let pid = '';
-    try { if (await B.isContainer(f)) { const m = /"stamp":\{"pid":"([0-9a-f]{32})"/.exec((await B.openIndex(f)).skel.toString('latin1', 0, 4096)); pid = m ? m[1] : ''; } else pid = await scanStamp(f); } catch (e) {}
-    stamps.set(f, { mtime, pid }); return pid; };
+  const stamps = new Map();   // file -> {mtime, pid, locked, worker}: each file is read again only after it changes
+  // pack() writes app, stamp, locked, worker first, so the master lock and worker mode are read from the head too
+  const LOCKED = /^\{(?:"app":"[^"]*",)?(?:"stamp":\{(?:[^{}]|\{[^{}]*\})*\},)?"locked":true/, WORKER = /^\{(?:"app":"[^"]*",)?(?:"stamp":\{(?:[^{}]|\{[^{}]*\})*\},)?(?:"locked":(?:true|false),)?"worker":true/;
+  const stampOf = async (f, mtime) => { const c = stamps.get(f); if (c && c.mtime === mtime) return c; const r = { mtime, pid: '', locked: false, worker: false };
+    try { if (await B.isContainer(f)) { const h = (await B.openIndex(f)).skel.toString('latin1', 0, 4096), m = /"stamp":\{"pid":"([0-9a-f]{32})"/.exec(h); r.pid = m ? m[1] : ''; r.locked = LOCKED.test(h); r.worker = WORKER.test(h); } else r.pid = await scanStamp(f); } catch (e) {}
+    stamps.set(f, r); return r; };
   const chains = new Map();
   const queue = (f, fn) => { const p = (chains.get(f) || Promise.resolve()).then(fn); chains.set(f, p.catch(() => {})); return p; };
   return {
     list: async () => {   // pid: the profile stamp, so the list can flag checklists from another profile
       let names; try { names = fs.readdirSync(getDir()).filter(f => /\.bcl$/i.test(f)); } catch (e) { return []; }
       const out = [];
-      for (const f of names) { try { const p = path.join(getDir(), f), mtime = fs.statSync(p).mtimeMs; out.push({ name: f.replace(/\.bcl$/i, ''), mtime, pid: await stampOf(p, mtime) }); } catch (e) {} }   // one file at a time: they can be large
+      for (const f of names) { try { const p = path.join(getDir(), f), mtime = fs.statSync(p).mtimeMs; const s = await stampOf(p, mtime); out.push({ name: f.replace(/\.bcl$/i, ''), mtime, pid: s.pid, locked: s.locked, worker: s.worker }); } catch (e) {} }   // one file at a time: they can be large
       return out;
     },
     read: async n => { await ready(file(n)); return B.read(file(n)); },   // the checklist itself; photos, PDFs and videos come one by one from media()

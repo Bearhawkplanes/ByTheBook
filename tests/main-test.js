@@ -61,6 +61,11 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   await call('write', 'b.bcl', JSON.stringify({ name: 'b', sections: [] }));
   const l = (await call('list')).sort((x, y) => x.name.localeCompare(y.name));
   assert.deepStrictEqual(l.map(x => [x.name, x.pid]), [['a', pid], ['b', '']]);
+  // master lock and worker mode are read from the start of the file (pack() puts them first)
+  await call('write', 'c.bcl', JSON.stringify({ app: '0.5.0', stamp: { pid, rv: rec.rv }, locked: true, worker: false, name: 'c', sections: [{ title: 'x', locked: false }] }));
+  await call('write', 'd.bcl', JSON.stringify({ app: '0.5.0', locked: false, worker: true, name: 'd', sections: [] }));
+  const l2 = await call('list'), fl = n => { const x = l2.find(y => y.name === n); return [x.locked, x.worker]; };
+  assert.deepStrictEqual([fl('a'), fl('c'), fl('d')], [[false, false], [true, false], [false, true]], 'list reports master lock and worker mode');
   fs.writeFileSync(path.join(await call('dir'), 'big-old.bcl'), '{"name":"x","files":{"f":"' + 'A'.repeat((1 << 22) - 30) + '"},"stamp":{"pid":"' + pid + '","rv":{}}}');   // older layout: stamp after 4 MB of data, across a read boundary
   assert.strictEqual((await call('list')).find(x => x.name === 'big-old').pid, pid, 'stamp found in an older, big file without reading it whole');
 

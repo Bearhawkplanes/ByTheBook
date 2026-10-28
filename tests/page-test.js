@@ -10,7 +10,7 @@ const TAMPERED = { code: 'E-4417', p: 'bad', m: 'ok', body: null, marker: { pid:
 // PINs 1234 and 24680 are correct for the first entry checked (the main profile), 1357 for employee p1; wrong PINs are counted like main.js does (window.__L), and recovery code GOOD clears them
 const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I = ${JSON.stringify(integ)}, ok = v => Promise.resolve(v), L = window.__L = { fails: 0, until: 0 };
  const pidOf = t => { const m = /"stamp":\\{"pid":"([0-9a-f]{32})"/.exec(t); return m ? m[1] : ''; };
- window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now(), pid: pidOf(F[f]) }))),
+ window.fsapi = { dir: () => ok('/saves'), list: () => ok(Object.keys(F).map(f => ({ name: f.replace(/\\.bcl$/, ''), mtime: Date.now(), pid: pidOf(F[f]), locked: /"locked":true/.test(F[f].slice(0, 400)) }))),
   read: n => ok(F[n]), write: (n, t) => { F[n] = t; return ok(true); }, writeNew: (n, t) => { F[n + '.bcl'] = t; return ok(n); },
   rename: () => ok(true), remove: n => { delete F[n]; return ok(true); }, importPath: () => ok(null), choose: () => ok(null), resetDir: () => ok('/saves'),
   openDir: () => ok(), reveal: () => ok(), pending: () => ok(null), backup: () => ok(null), restore: () => ok(null),
@@ -594,6 +594,14 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(await pg.evaluate(() => $('#xp').hidden), 'window closes after saving');
   await pg.evaluate(() => { document.querySelector('[data-m="export"]').click(); }); await pg.keyboard.press('Escape');
   assert(await pg.evaluate(() => $('#xp').hidden), 'Esc closes it');
+
+  // ---- a master file cannot be deleted: menu item and the home list's Delete are greyed out ----
+  pg = await page({ 'shop.bcl': shared, 'other.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const md = await pg.evaluate(async () => { $('#menuBtn').click(); const free = $('[data-m=delete]').disabled; $('#menuBtn').click(); S.locked = true; $('#menuBtn').click(); const b = $('[data-m=delete]'); const r = { free, locked: b.disabled, ptr: getComputedStyle(b).pointerEvents }; b.click(); r.modal = !$('#modal').hidden; DIRTY = true; await flush(); return r; });
+  assert(!md.free && md.locked && md.ptr === 'none' && !md.modal, 'master file: Delete checklist is greyed out and does nothing: ' + JSON.stringify(md));
+  const hd = await pg.evaluate(async () => { await openHome(); HS = 'shop'; renderHome(); const r = { locked: $('#hdelb').disabled }; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })); r.modal = !$('#modal').hidden; HS = 'other'; renderHome(); r.other = $('#hdelb').disabled; return r; });
+  assert(hd.locked && !hd.modal && !hd.other, 'home list: a master file cannot be deleted, other checklists can: ' + JSON.stringify(hd));
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
