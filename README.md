@@ -41,6 +41,9 @@ Install Node.js LTS once, then in this folder:
 Settings > Save file location lets you move the Saves folder, e.g. to an external drive.
 If the app sits somewhere it cannot write (Program Files, a Mac /Applications), it falls back to Documents/Build Checklist.
 
+## Starting a new job
+Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "<name> - new job"), then makes a fresh copy inside the app with every section, step, image, PDF and video and nothing checked off, and opens it. Its activity log starts with "New job started, from the checklist …". The original keeps its progress. A master file lock carries over to the job.
+
 ## Opening files
 - Menu > Import, or drag a `.bcl` onto the app / use "Open with": the file is copied into Saves and opened.
 - Double-clicking a `.bcl` in Explorer works only with the installer build (portable apps cannot register file types).

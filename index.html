@@ -232,7 +232,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </style></head><body>
 <header>
 <div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click, show</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="auto">Auto (images, else PDF)</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option></select></label><div id="menu" hidden>
-<button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="delete">Delete checklist</button>
+<button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button><button data-m="delete">Delete checklist</button>
 <button data-m="loc">Open file location</button><button data-m="export">Export…</button>
 <button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><hr>
 <button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
@@ -863,6 +863,7 @@ const menu=$('#menu');$('#menuBtn').onclick=e=>{e.stopPropagation();menu.hidden=
 menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
  if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
+ else if(m==='newjob')newJob();
  else if(m==='restore')restoreBackup();
  else if(m==='log')viewLogOf(CUR);
  else if(m==='delete')ask(`Delete "${esc(S.name||'unnamed')}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',async()=>{await deleteProject(CUR);openHome()},1);
@@ -912,6 +913,12 @@ function unpack(o){const files=o.files||{};delete o.files;
 async function dlCopy(){toast('Preparing copy…');const t=await pack(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+'.bcl';a.click();toast('Copy downloaded')}
 // a shareable copy: same content, images and PDFs, but no profile stamp, no progress and no log, so it opens cleanly on any computer
 // keepLog: the old entries stay readable, under a marked segment, so the checks can be re-entered from them
+// the same checklist for the next job: everything except progress, the log and the profile link; saved here and opened
+function newJob(){if(!CUR)return;const from=S.name||CUR;dlg(`<div class="dh"><b>Start a new job</b></div><p>Makes a fresh copy of "${esc(from)}" with every section, step, image, PDF and video, and nothing checked off. This checklist stays as it is.</p><label>Name of the new checklist<input id="njn" value="${esc(uniqueName(from+' - new job'))}"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Start job</button></div>`);
+ setTimeout(()=>{const i=$('#njn');if(i){i.focus();i.select()}},0);
+ DLGOK=async()=>{const nm=uniqueName(($('#njn').value||'').trim()||from+' - new job');if(CUR&&DIRTY)await flush();toast('Preparing the new job…');
+  try{await FS.write(nm+'.bcl',await pack(nm,o=>{blankCopy(false)(o);o.log=[{at:now(),ev:'New job started',item:'From the checklist "'+from+'"',by:'',uid:''}]}));LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});await openProject(nm);toast('New job: '+nm)}
+  catch(e){toast('Could not start the new job')}}}
 const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
  if(keepLog)segOn(o,'recovery','Exported as a fresh copy','Entries above come from the original file');
  else{delete o.segs;delete o.seg;o.log=[]}

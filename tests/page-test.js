@@ -470,6 +470,19 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await open(pg, 'old');
   assert(await pg.evaluate(async () => { DIRTY = true; await flush(); return JSON.parse(await window.fsapi.read('old.bcl')).app === '0.5.0' && !errNow(); }), 'normal files are saved with this version');
 
+  // ---- Start a new job from this checklist ----
+  pg = await page({ 'Engine.bcl': used }, prof('a'.repeat(32)));
+  await open(pg, 'Engine');
+  await pg.evaluate(() => { S.locked = true; document.querySelector('[data-m="newjob"]').click(); });
+  assert.strictEqual(await pg.evaluate(() => $('#njn').value), 'Engine - new job', 'suggests a name');
+  await pg.evaluate(() => { $('#njn').value = 'Engine SN 1042'; document.querySelector('#modal [data-d=ok]').click(); }); await pg.waitForTimeout(1200);
+  const job = await pg.evaluate(async () => ({ cur: CUR, j: JSON.parse(await window.fsapi.read('Engine SN 1042.bcl')), orig: JSON.parse(await window.fsapi.read('Engine.bcl')) }));
+  assert.strictEqual(job.cur, 'Engine SN 1042', 'the new job opens');
+  assert(!items(job.j).some(x => x.done || x.init || x.sig) && items(job.orig).some(x => x.done), 'nothing checked in the job; the original keeps its progress');
+  assert.deepStrictEqual(job.j.files, job.orig.files, 'same images'); assert.strictEqual(job.j.pdfs[0].data, job.orig.pdfs[0].data, 'same PDFs');
+  assert(job.j.log.length === 1 && /New job started/.test(job.j.log[0].ev) && /Engine/.test(job.j.log[0].item) && job.j.locked === true, 'log starts fresh with where it came from; a master lock stays');
+  assert(await pg.evaluate(() => LIB.some(x => x.id === 'Engine SN 1042')), 'listed in Saved checklists');
+
   // ---- printable checklist: the layout rules (print.html) ----
   const pp = await (await b.newContext()).newPage(); pp.on('pageerror', e => errors.push('print.html: ' + e.message));
   await pp.goto('file://' + path.join(__dirname, '..', 'print.html'));
