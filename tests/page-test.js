@@ -26,8 +26,8 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
 
 (async () => {
   const b = await chromium.launch(), errors = [];
-  const page = async (files, integ) => { const ctx = await b.newContext({ acceptDownloads: true }), pg = await ctx.newPage();
-    pg.on('pageerror', e => errors.push(e.message)); await pg.addInitScript(stub(files, integ)); await pg.goto(url); await pg.waitForTimeout(800); return pg; };
+  const page = async (files, integ, extra) => { const ctx = await b.newContext({ acceptDownloads: true }), pg = await ctx.newPage();
+    pg.on('pageerror', e => errors.push(e.message)); await pg.addInitScript(stub(files, integ)); if (extra) await extra(pg); await pg.goto(url); await pg.waitForTimeout(800); return pg; };
   const open = (pg, n) => pg.evaluate(async n => { await openProject(n); await new Promise(r => setTimeout(r, 300)); return { tamper: TAMPER, clt: CLT }; }, n);
   const exportFile = async (pg, keepLog) => { const [dl] = await Promise.all([pg.waitForEvent('download'), pg.evaluate(k => {
     document.querySelector('[data-m="export"]').click(); document.querySelector('#exlog').checked = k; document.querySelector('[data-d="ok"]').click(); }, keepLog)]);
@@ -184,6 +184,94 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.strictEqual(ao.stamp.pid, 'a'.repeat(32)); assert(/adopted by "A"/.test(ao.log.at(-1).ev) && ao.log.at(-1).by === 'A', 'log records who adopted it');
   assert.deepStrictEqual(ao.files, U.files); assert.strictEqual(ao.pdfs[0].data, U.pdfs[0].data);
   assert.deepStrictEqual(await open(pg, 'theirs'), { tamper: null, clt: null }, 'opens without E-4420 afterwards');
+
+  // ---- video ----
+  // the test browser has no H.264, so a WebM stands in for the user's video and for ffmpeg's clips
+  const os = require('os'), { execFileSync } = require('child_process'), vdir = fs.mkdtempSync(path.join(os.tmpdir(), 'bcl-vid-')), VIDF = path.join(vdir, 'walk.webm'), CLIPF = path.join(vdir, 'clip.webm');
+  execFileSync(require('ffmpeg-static'), ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=320x180:rate=25:duration=30', '-f', 'lavfi', '-i', 'sine=duration=30', '-c:v', 'libvpx', '-b:v', '200k', '-deadline', 'realtime', '-c:a', 'libopus', '-shortest', VIDF]);
+  execFileSync(require('ffmpeg-static'), ['-y', '-v', 'error', '-ss', '12', '-i', VIDF, '-t', '3', '-c', 'copy', CLIPF]);
+  const vidBytes = [...fs.readFileSync(VIDF)], clipBytes = [...fs.readFileSync(CLIPF)];
+  const vstub = async pg => { await pg.clock.install(); await pg.addInitScript(([V, vb, cb]) => { const f = window.fsapi; window.__calls = [];
+    f.videoPick = async () => ({ path: V, rel: '', name: 'Engine walkaround', size: vb.length, mtime: 1, maxCopy: 300 * 1048576 });
+    f.videoInfo = async v => ({ exists: v.path === V, url: 'file://' + V, size: vb.length, mtime: 1 });
+    f.videoRead = async () => new Uint8Array(vb);
+    f.videoTemp = async () => ({ path: '/tmp/copy.bin' });
+    f.videoThumb = async () => 'data:image/jpeg;base64,/9j/thumb';
+    f.clipMake = async (src, a, b) => { window.__calls.push(['clipMake', src, a, b]); return { id: 'abcdef0123456789', audio: true, sizes: { native: { with: 2400000, without: 2200000 }, medium: { with: 900000, without: 800000 }, low: { with: 310000, without: 240000 } } }; };
+    f.clipRead = async (id, q, snd) => { window.__calls.push(['clipRead', q, snd]); return new Uint8Array(cb); };
+    f.clipDone = async id => { window.__calls.push(['clipDone', id]); return true; }; f.clipCancel = async () => true; }, [VIDF, vidBytes, clipBytes]); };
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), vstub);
+  await open(pg, 'shop');
+  await pg.evaluate(() => { select(S.sections[1].cards[0].steps[0]); $('#vidBtn').click(); $('#vpadd').click(); });
+  await pg.waitForTimeout(100); await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(800);
+  assert.deepStrictEqual(await pg.evaluate(() => ({ n: S.videos.length, link: !!S.videos[0].link, dur: Math.round(vpDur()) })), { n: 1, link: true, dur: 30 }, 'linked video added and playing in the player');
+  // Select Timestamps: handles at the ends; clicking the bar seeks but never moves them; typed times move them
+  assert(await pg.evaluate(() => $('#vpselrow').hidden && getComputedStyle($('#hA')).display === 'none'), 'selection hidden until toggled');
+  await pg.evaluate(() => $('#vpsel').click());
+  assert.deepStrictEqual(await pg.evaluate(() => [VP.a, Math.round(VP.b), getComputedStyle($('#hA')).display !== 'none']), [0, 30, true], 'handles appear at the ends');
+  const tlBox = await pg.evaluate(() => { const r = $('#tl').getBoundingClientRect(); return { x: r.left, y: r.top + r.height / 2, w: r.width }; });
+  await pg.mouse.click(tlBox.x + tlBox.w * 0.5, tlBox.y); await pg.waitForTimeout(100);
+  assert.deepStrictEqual(await pg.evaluate(() => [Math.round(vv().currentTime), VP.a, Math.round(VP.b)]), [15, 0, 30], 'click on the bar skips there, handles stay');
+  await pg.evaluate(() => { $('#ta').value = '0:12'; $('#ta').dispatchEvent(new Event('change')); $('#tb').value = '15.5'; $('#tb').dispatchEvent(new Event('change')); });
+  assert.deepStrictEqual(await pg.evaluate(() => [VP.a, VP.b, $('#ta').value, $('#tb').value]), [12, 15.5, '0:12.0', '0:15.5'], 'typed times move the handles and show in the boxes');
+  const hB = await pg.evaluate(() => { const r = $('#hB').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await pg.mouse.move(hB.x, hB.y); await pg.mouse.down(); await pg.mouse.move(tlBox.x + tlBox.w * 0.6, hB.y, { steps: 4 }); await pg.mouse.up();
+  assert.strictEqual(await pg.evaluate(() => Math.round(VP.b)), 18, 'dragging the end handle moves it');
+  assert.strictEqual(await pg.evaluate(() => $('#tb').value), '0:18.0', 'box shows the dragged time');
+  assert.strictEqual(await pg.evaluate(() => Math.round(vv().currentTime)), 15, 'dragging a handle does not move the playhead');
+  // Assign > Call to timestamps
+  await pg.evaluate(() => { $('#ta').value = '12'; $('#ta').dispatchEvent(new Event('change')); $('#tb').value = '15'; $('#tb').dispatchEvent(new Event('change')); $('#vpas').click(); });
+  assert(/won't function properly/.test(await pg.evaluate(() => $('#modal').textContent)) && /increase the file size/.test(await pg.evaluate(() => $('#modal').textContent)), 'both warnings shown');
+  await pg.evaluate(() => $('#asRef').click()); await pg.waitForTimeout(1500);
+  const ref = await pg.evaluate(() => { const m = S.sections[1].cards[0].steps[0].media.at(-1); return { kind: m.kind, start: m.start, end: m.end, thumb: /^data:image\/jpeg/.test(m.thumb) }; });
+  assert.deepStrictEqual(ref, { kind: 'vref', start: 12, end: 15, thumb: true }, 'linked clip with a thumbnail');
+  // Assign > Install selection: three sizes, sound box, chosen quality installed into the checklist
+  await pg.evaluate(() => { $('#vpas').click(); $('#asIn').click(); }); await pg.waitForTimeout(800);
+  assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#iw .iwz')].map(x => x.textContent)), ['2.3 MB', '879 KB', '303 KB'], 'exact sizes with sound');
+  await pg.evaluate(() => { $('#iwsnd').click(); });
+  assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#iw .iwz')].map(x => x.textContent)), ['2.1 MB', '781 KB', '234 KB'], 'sizes without sound');
+  await pg.evaluate(() => { document.querySelector('#iw input[value=low]').click(); document.querySelector('#iw [data-iw=ok]').click(); }); await pg.waitForTimeout(1500);
+  const inst = await pg.evaluate(() => { const m = S.sections[1].cards[0].steps[0].media.at(-1); return { kind: m.kind, type: m.type, clip: m.clip, inMedia: !!MEDIA[m.id], calls: window.__calls.map(c => c[0] + ':' + (c[1] && c[1].path ? 'src' : c[1]) + ':' + (c[2] ?? '') + (c[3] != null ? ':' + c[3] : '')) }; });
+  assert.deepStrictEqual(inst, { kind: 'file', type: 'video', clip: { start: 12, end: 15, q: 'low', sound: false }, inMedia: true, calls: ['clipMake:src:12:15', 'clipRead:low:false', 'clipDone:abcdef0123456789:'] }, 'installed clip at Low without sound');
+  assert(await pg.evaluate(() => $('#iw').hidden), 'install window closed');
+  // Images tab: thumbnails only until clicked; stays loaded while on the item and for a minute after
+  await pg.evaluate(() => { vpClose(); setTab('img'); IM.mode = 'stack'; renderR(); });
+  assert.deepStrictEqual(await pg.evaluate(() => [document.querySelectorAll('#p-img .vth').length, document.querySelectorAll('#p-img video').length, document.querySelectorAll('#p-img .vth img').length]), [2, 0, 2], 'two clips shown as thumbnails, no video loaded');
+  await pg.evaluate(() => document.querySelectorAll('#p-img .vth')[0].click()); await pg.waitForTimeout(800);
+  const ld = await pg.evaluate(() => [document.querySelectorAll('#p-img video').length, Object.keys(VEL).length, document.querySelector('#p-img video').currentTime]);
+  assert(ld[0] === 1 && ld[1] === 1 && ld[2] >= 12 && ld[2] <= 15, 'clicked clip loads and plays inside 12-15 s: ' + ld);
+  await pg.evaluate(() => { renderR(); });
+  assert.strictEqual(await pg.evaluate(() => document.querySelectorAll('#p-img video').length), 1, 'still loaded after the pane redraws');
+  await pg.evaluate(() => select(S.sections[1].cards[0].steps[1]));
+  assert(await pg.evaluate(() => Object.values(VEL)[0].el.paused && Object.keys(VEL).length === 1), 'paused but kept after clicking off');
+  await pg.clock.fastForward(30000);
+  await pg.evaluate(() => select(S.sections[1].cards[0].steps[0]));
+  assert.strictEqual(await pg.evaluate(() => document.querySelectorAll('#p-img video').length), 1, 'back within a minute: still loaded');
+  await pg.evaluate(() => select(S.sections[1].cards[0].steps[1])); await pg.clock.fastForward(61000); await pg.waitForTimeout(50);
+  assert.strictEqual(await pg.evaluate(() => Object.keys(VEL).length), 0, 'released a minute after leaving the item');
+  // saved and reopened: the installed clip travels in the file, the linked one keeps its link
+  const saved = await pg.evaluate(() => pack());
+  const SV = JSON.parse(saved), clipM = SV.sections[1].cards[0].steps[0].media.find(m => m.kind === 'file' && m.type === 'video');
+  assert(SV.files[clipM.id] && SV.files[clipM.id].data.startsWith('data:video/mp4;base64,'), 'installed clip saved inside the checklist');
+  assert(SV.videos[0].link && !SV.videos[0].data, 'linked video not copied');
+  // Import the entire video: copied into the file and playable after reopening
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), vstub);
+  await open(pg, 'shop');
+  await pg.evaluate(() => { $('#vidBtn').click(); $('#vpadd').click(); }); await pg.waitForTimeout(100); await pg.evaluate(() => $('#vaCopy').click()); await pg.waitForTimeout(1200);
+  const copied = await pg.evaluate(async () => { const t = await pack(); return { t, dur: Math.round(vpDur()) }; });
+  const CV = JSON.parse(copied.t);
+  assert(copied.dur === 30 && !CV.videos[0].link && CV.videos[0].data.length > 100000, 'whole video copied into the checklist');
+  pg = await page({ 'copy.bcl': copied.t }, prof('a'.repeat(32)), vstub);
+  await open(pg, 'copy');
+  assert(await pg.evaluate(() => VIDS[S.videos[0].id] && !VIDS[S.videos[0].id].blob), 'not decoded when the checklist opens');
+  await pg.evaluate(() => $('#vidBtn').click()); await pg.waitForTimeout(1200);
+  assert.strictEqual(await pg.evaluate(() => Math.round(vpDur())), 30, 'copied video plays after reopening');
+  await pg.evaluate(() => vpClose());
+  assert(await pg.evaluate(() => !VIDS[S.videos[0].id].blob), 'decoded copy dropped when the player closes');
+  // a video added on the Images tab: copied in whole, with a thumbnail made from the file
+  await pg.evaluate(async vb => { select(S.sections[0].cards[0].steps[0]); await attach(new Blob([new Uint8Array(vb)], { type: 'video/webm' }), 'walk.webm', 'video/webm'); await new Promise(r => setTimeout(r, 1500)); }, clipBytes);
+  assert(await pg.evaluate(() => { const m = S.sections[0].cards[0].steps[0].media.at(-1); return m.type === 'video' && /^data:image\/jpeg/.test(m.thumb) && !!MEDIA[m.id]; }), 'attached video gets a thumbnail');
+  fs.rmSync(vdir, { recursive: true, force: true });
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

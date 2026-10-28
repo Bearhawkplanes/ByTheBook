@@ -142,6 +142,31 @@ body.dragging{user-select:none;cursor:col-resize}
 #pvbody{flex:1;min-height:0;display:flex}#pvside{width:300px;max-width:40%;border-right:1px solid var(--line);background:var(--panel);padding:14px;overflow:auto}
 #pvmain{flex:1;min-width:0;padding:12px 16px;display:flex;flex-direction:column}#pvbox{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 #pvres .frow{padding:6px 8px;font-size:12px}#pvlist .frow button{padding:0 6px}#pvadd{margin-top:8px}
+#vp{position:fixed;inset:0;z-index:32;display:flex;flex-direction:column;background:var(--bg)}
+#vptop{display:flex;gap:14px;align-items:center;padding:10px 16px;background:var(--hbg);color:var(--hfg)}#vpfor{margin-left:auto;opacity:.8;font-size:13px}
+#vpbody{flex:1;min-height:0;display:flex}#vpside{width:300px;max-width:40%;border-right:1px solid var(--line);background:var(--panel);padding:14px;overflow:auto}#vpadd{margin-top:8px}
+#vpmain{flex:1;min-width:0;padding:12px 16px;display:flex;flex-direction:column;gap:4px}
+#vpbox{flex:1;min-height:0;position:relative;background:#000;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}#vpv{max-width:100%;max-height:100%}
+#vpmsg{position:absolute;inset:auto 16px;color:#fff;text-align:center}
+#tl{position:relative;height:28px;margin:8px 8px 2px;cursor:pointer;touch-action:none;user-select:none}
+#tl::before{content:'';position:absolute;left:0;right:0;top:11px;height:6px;border-radius:3px;background:var(--line)}
+#tlplay{position:absolute;left:0;top:11px;height:6px;border-radius:3px;background:var(--acc);pointer-events:none}
+#tlsel{position:absolute;top:10px;height:8px;background:var(--ok);pointer-events:none}
+#tlhead{position:absolute;top:4px;width:4px;height:20px;margin-left:-2px;border-radius:2px;background:var(--fg);pointer-events:none}
+#tl .hd{position:absolute;top:0;width:12px;height:28px;margin-left:-6px;border-radius:3px;background:var(--ok);border:2px solid var(--panel);cursor:ew-resize}
+#tl:not(.sel) #tlsel,#tl:not(.sel) .hd{display:none}
+#vpsel.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.vtl{display:flex;gap:6px;align-items:center;margin:0}.vtl input{width:110px}.vtnum{font-variant-numeric:tabular-nums}
+.vopt{display:grid;gap:4px;width:100%;text-align:left;padding:12px 14px;margin-top:10px;border-radius:10px}.vopt span{font-size:12px;opacity:.8;font-weight:400}.vopt:disabled{opacity:.5}
+#iw{z-index:61}.iwd{width:min(720px,94vw)}#iwv{display:block;width:100%;max-height:42vh;background:#000;border-radius:8px;margin-bottom:10px}#iwst{margin:4px 0 8px}
+#iw label.iwr{display:grid;grid-template-columns:auto 5.5em 1fr auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:8px;margin:8px 0 0;cursor:pointer;color:var(--fg)}#iw .iwr input{width:auto;margin:0}#iw .iwr:has(input:checked){border-color:var(--acc)}.iwz{font-variant-numeric:tabular-nums;font-weight:700}
+#iwsl{margin-top:12px}
+.vth{position:relative;cursor:pointer;width:100%;height:100%;min-height:150px;display:flex;align-items:center;justify-content:center;background:#000}
+.vth img{max-width:100%;max-height:100%;object-fit:contain}.vth video{width:100%;height:100%;object-fit:contain;background:#000}
+.vth .vpl{position:absolute;width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.vth .vcap{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;padding:2px 7px;border-radius:4px;pointer-events:none}
+.vth.on>img,.vth.on .vpl,.vth.on .vcap{display:none}
+.g3 .vth{aspect-ratio:4/3;min-height:0}
 #menu button i{font-style:normal;color:var(--mut)}
 </style></head><body>
 <header>
@@ -152,7 +177,7 @@ body.dragging{user-select:none;cursor:col-resize}
 <button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button></div></div>
 <div class="hc"><div class="tline"><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span></div><div id="prog"></div></div>
-<div class="hr" style="gap:8px"><button id="lockBtn" hidden></button><button id="pdfBtn" title="PDF viewer">📄 PDFs</button><button id="cog" title="Settings">⚙</button></div>
+<div class="hr" style="gap:8px"><button id="lockBtn" hidden></button><button id="pdfBtn" title="PDF viewer">PDF Viewer</button><button id="vidBtn" title="Video player">Video Player</button><button id="cog" title="Settings">⚙</button></div>
 <input id="file" type="file" accept="application/pdf" multiple hidden><input id="jfile" type="file" accept=".bcl,.json,application/json" hidden>
 </header>
 <main>
@@ -185,6 +210,13 @@ body.dragging{user-select:none;cursor:col-resize}
 <section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page names and words…" style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
 <div class="tb"><button id="pvprev">◀</button><input id="pvpg" type="number" min="1" placeholder="Page #" style="width:84px" title="Go to PDF page number"><button id="pvgo">Go</button><button id="pvnext">▶</button><button id="pvzo">−</button><button id="pvzi">+</button><input id="pvname" placeholder="Name this page" style="width:140px"><button id="pvmap">Name</button></div>
 <div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><canvas id="cv2"></canvas></div></section></div></div>
+<div id="vp" hidden><div id="vptop"><button id="vpBack">← Return</button><b id="vpt"></b><span id="vpfor"></span></div><div id="vpbody"><aside id="vpside"><div class="hh">Videos in this checklist</div><div id="vplist"></div><button id="vpadd">+ Add video…</button><p class="mut" style="margin-top:14px">Select Timestamps, then Assign to… puts that part of the video on the item selected in the checklist.</p></aside>
+<section id="vpmain"><div id="vpbox"><video id="vpv" playsinline></video><div id="vpmsg" hidden></div></div>
+<div id="tl" title="Click to skip to that point"><div id="tlplay"></div><div id="tlsel"></div><div id="tlhead"></div><div class="hd" id="hA" title="Start of the selection: drag"></div><div class="hd" id="hB" title="End of the selection: drag"></div></div>
+<div class="tb"><button id="vpplay">▶ Play</button><button id="vpbk" title="Back 5 seconds">−5 s</button><button id="vpfw" title="Forward 5 seconds">+5 s</button><span id="vptime" class="vtnum">0:00.0 / 0:00.0</span><select id="vprate" title="Speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select><span style="flex:1"></span><button id="vpsel">Select Timestamps</button></div>
+<div class="tb" id="vpselrow" hidden><label class="vtl">Start<input id="ta" class="vtnum" title="h:mm:ss.s, m:ss.s or seconds"></label><label class="vtl">End<input id="tb" class="vtnum" title="h:mm:ss.s, m:ss.s or seconds"></label><span id="tlen" class="mut vtnum"></span><button id="vppsel">▶ Play selection</button><span style="flex:1"></span><button id="vpas" class="pri">Assign to…</button></div>
+</section></div></div>
+<div id="iw" class="overlay" hidden></div>
 <div id="modal" class="overlay" hidden></div><div id="toast" hidden></div>
 <script src="lib/pdf.min.js"></script>
 <script src="lib/pdf.worker.min.js"></script>
@@ -197,7 +229,7 @@ const fmt=t=>new Date(t).toLocaleString([],{dateStyle:'short',timeStyle:'short'}
 // ---------- data ----------
 const mk=o=>Object.assign({text:'',qty:'',size:'',spec:'',desc:'',page:'',pdf:'',media:[],done:false,ver:false,src:'manual',sig:null,sigDraft:'',hist:[]},o);
 function fix(o){o=mk(o);if(typeof o.media==='string')o.media=o.media?[{kind:'link',url:o.media}]:[];if(!Array.isArray(o.media))o.media=[];if(!Array.isArray(o.hist))o.hist=[];return o}
-function norm(d){d=d||{};d.name=d.name||'';d.manual=d.manual||'';d.pdfs=(d.pdfs||[]).map(p=>({id:p.id||uid(),name:p.name||'PDF',offset:+p.offset||0,map:p.map||{}}));d.locked=!!d.locked;d.log=d.log||[];
+function norm(d){d=d||{};d.name=d.name||'';d.manual=d.manual||'';d.videos=(d.videos||[]).map(v=>({id:v.id||uid(),name:v.name||'Video',size:+v.size||0,link:v.link||null}));d.pdfs=(d.pdfs||[]).map(p=>({id:p.id||uid(),name:p.name||'PDF',offset:+p.offset||0,map:p.map||{}}));d.locked=!!d.locked;d.log=d.log||[];
  if(!d.sections){const P=d.prep||{};
   d.sections=[{title:'Prep',sign:false,cards:[['tools','Required tools'],['parts','Required parts (exact counts and sizes)'],['pre','Pre-work (clean, paint, stage)']].map(([k,t])=>({text:t,open:true,steps:P[k]||[]}))},{title:'Main checklist',sign:true,cards:d.tasks||[]}]}
  delete d.prep;delete d.tasks;
@@ -342,8 +374,9 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.data
 const urls={};
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
  if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id])el.src=urls[id]}}
-async function attach(blob,name,type){if(!SEL||isLocked())return;const id=uid();await idbPut('m',id,{blob,name,type});
- SEL.media.push({kind:'file',id,type:type.startsWith('video')?'video':'image',name});IM.i=SEL.media.length-1;save();renderR();renderL()}
+async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.startsWith('video');if(vid&&blob.size>MAXCOPY)return toast('Videos over 300 MB are too big to copy into a checklist: use Video Player to link it');
+ const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
+ if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
 function renderR(){
  const it=SEL;$('#sel').textContent=it?(it.text||'(untitled)'):'Select a checklist item on the left';
  if(!it){$('#p-img').innerHTML=$('#p-desc').innerHTML='<div class="mut">Nothing selected.</div>';return}
@@ -355,10 +388,11 @@ function renderR(){
  <div class="tb"><label style="margin:0">Source <select data-f="src"><option value="manual" ${it.src==='manual'?'selected':''}>from manual</option><option value="custom" ${it.src==='custom'?'selected':''}>custom</option></select></label>
  <label style="margin:0"><input type="checkbox" data-f="ver" ${it.ver?'checked':''} style="width:auto"> Verified</label></div>`;
  if(isLocked())document.querySelectorAll('#p-desc [data-f]').forEach(x=>x.disabled=true);
- hydrate();
+ hydrate();vidMount();
 }
 let IM={mode:'fit',i:0};
-const mediaEl=m=>{if(m.kind==='file')return m.type==='video'?`<video data-mid="${m.id}" controls></video>`:`<img data-mid="${m.id}" alt="${esc(m.name)}">`;
+const mediaEl=m=>{if(isVid(m))return `<div class="vth" data-vk="${esc(vkey(m))}" title="Click to play">${m.thumb?`<img src="${m.thumb}" alt="">`:''}<span class="vpl">▶</span><span class="vcap">${vlabel(m)}</span></div>`;   // only the thumbnail until clicked
+ if(m.kind==='file')return `<img data-mid="${m.id}" alt="${esc(m.name)}">`;
  if(/\.(mp4|webm|mov)(\?|$)/i.test(m.url))return `<video src="${esc(m.url)}" controls></video>`;
  if(/^data:image|\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(m.url))return `<img src="${esc(m.url)}">`;
  return `<a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.url)}</a>`};
@@ -376,6 +410,7 @@ R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
  if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL()}
  if(t.id==='mfile')for(const fl of t.files)attach(fl,fl.name,fl.type)});
 R.addEventListener('click',e=>{
+ const vt=e.target.closest('.vth');if(vt){if(!vt.classList.contains('on'))vidPlay(vt.dataset.vk);return}
  if(e.target.matches('.tile img')){IM.mode='fit';IM.i=+e.target.closest('.tile').dataset.k;renderR();return}
  const b=e.target.closest('button');if(!b)return;
  if(isLocked()&&(b.id==='mpick'||b.dataset.a==='maddurl'||b.dataset.a==='mdel'))return;
@@ -387,6 +422,127 @@ R.addEventListener('click',e=>{
  else if(b.dataset.a==='go')goPage()});
 document.addEventListener('paste',e=>{if(!SEL)return;const fl=[...(e.clipboardData?e.clipboardData.files:[])].filter(f=>f.type.startsWith('image/'));
  if(fl.length){e.preventDefault();fl.forEach((f,i)=>attach(f,f.name||'pasted-'+Date.now()+'.png',f.type))}});
+// ---------- video: a player with a time selection. A selection becomes a clip on an item, either linked to the video (vref) or installed into the checklist ----------
+// Nothing heavy is decoded until a video is clicked; an item's loaded videos stay ready for a minute after leaving it.
+const VIDS={},VEL={};   // VIDS: videos copied into the checklist {data|blob}; VEL: loaded item videos by key
+let VP={id:null,sel:false,a:0,b:0,url:'',drag:null};
+const vp=id=>S.videos.find(v=>v.id===id);
+const fmtT=t=>{t=Math.max(0,+t||0);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=(t%60).toFixed(1).padStart(4,'0');return h?h+':'+String(m).padStart(2,'0')+':'+s:m+':'+s};
+const parseT=x=>{const p=String(x).trim().split(':');if(!p[0]||p.length>3)return null;const n=p.map(Number);return n.some(v=>!isFinite(v)||v<0)?null:n.reduce((a,v)=>a*60+v,0)};
+const MB=n=>n>=1048576?(n/1048576).toFixed(n>=104857600?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+const MAXCOPY=300*1048576;
+const isVid=m=>m.kind==='vref'||(m.kind==='file'&&m.type==='video');
+const vkey=m=>m.kind==='vref'?'r:'+m.vid+':'+m.start+':'+m.end:'m:'+m.id;
+const vlabel=m=>m.kind==='vref'?`${fmtT(m.start)}–${fmtT(m.end)} · linked`:m.clip?`${fmtT(m.clip.start)}–${fmtT(m.clip.end)} · in checklist`:esc(m.name||'Video');
+const blobOf=async r=>r.blob||(r.blob=await(await fetch(r.data)).blob());   // fetch, not atob: copied videos can be hundreds of MB
+// a playable URL for a library video; own: the caller made it and must revoke it
+async function vidSrc(v){if(v.link){const i=await FS.videoInfo(v.link);if(!i.exists)return{err:'Video file not found: '+(v.link.rel||v.link.path)+'. It may have been moved or renamed.'};
+  return{url:i.url,changed:!!((v.link.size&&i.size!==v.link.size)||(v.link.mtime&&Math.abs(i.mtime-v.link.mtime)>2000))}}
+ const r=VIDS[v.id];if(!r)return{err:'This video is missing from the checklist file.'};return{url:URL.createObjectURL(await blobOf(r)),own:true}}
+// drop decoded copies nobody is showing (the text copy in the checklist stays, so it can be decoded again)
+function vidTrim(){const used=new Set(Object.values(VEL).map(E=>E.vid).concat(VP.id&&PV3?[VP.id]:[]));for(const id in VIDS)if(!used.has(id)&&VIDS[id].data)delete VIDS[id].blob}
+function thumbAt(url,t){return new Promise(res=>{const v=document.createElement('video');let ok=false;v.muted=true;v.preload='auto';
+ const done=x=>{if(ok)return;ok=true;v.removeAttribute('src');v.load();res(x)};
+ v.onloadedmetadata=()=>{v.currentTime=Math.min(Math.max(0,t||0),Math.max(0,v.duration-0.05))};
+ v.onseeked=()=>{try{const w=320,h=Math.round(w*v.videoHeight/v.videoWidth)||180,c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(v,0,0,w,h);done(c.toDataURL('image/jpeg',.72))}catch(e){done('')}};
+ v.onerror=()=>done('');setTimeout(()=>done(''),8000);v.src=url})}
+// ----- videos on items (Images tab): thumbnail until clicked -----
+async function vidPlay(k){const m=SEL&&SEL.media.find(x=>isVid(x)&&vkey(x)===k);if(!m)return;let E=VEL[k];
+ if(!E){let url='',own=false,err='',vid=null;
+  if(m.kind==='file'){const r=MEDIA[m.id];if(!r)err='This video is missing from the checklist file.';else{url=URL.createObjectURL(await blobOf(r));own=true}}
+  else{const v=vp(m.vid);if(!v)err='The video this clip came from was removed from the checklist.';else{const s=await vidSrc(v);err=s.err||'';url=s.url;own=!!s.own;vid=v.id;if(s.changed)toast('The video file has changed since it was linked; the timestamps may be off')}}
+  if(err){toast(err);return}
+  const el=document.createElement('video');el.controls=true;el.playsInline=true;
+  if(m.kind==='vref'){el.addEventListener('loadedmetadata',()=>{el.currentTime=m.start});el.addEventListener('timeupdate',()=>{if(el.currentTime>=m.end||el.currentTime<m.start-0.3)el.currentTime=m.start})}   // only the chosen part plays, on a loop
+  el.onerror=()=>toast('This video cannot be played here (unsupported format)');el.src=url;
+  E=VEL[k]={el,url,own,vid,mid:m.kind==='file'?m.id:null,item:SEL,timer:0}}
+ E.item=SEL;vidMount();E.el.play().catch(()=>{})}
+function vidRelease(k){const E=VEL[k];if(!E)return;clearTimeout(E.timer);E.el.pause();E.el.removeAttribute('src');E.el.load();E.el.remove();if(E.own)URL.revokeObjectURL(E.url);
+ if(E.mid&&MEDIA[E.mid]&&MEDIA[E.mid].data)delete MEDIA[E.mid].blob;delete VEL[k];vidTrim()}
+// after every render: put loaded videos back in place; videos of other items pause and are released after a minute
+function vidMount(){for(const k in VEL){const E=VEL[k];
+ if(E.item===SEL){clearTimeout(E.timer);E.timer=0;const ph=[...document.querySelectorAll('#p-img .vth')].find(x=>x.dataset.vk===k);if(ph&&E.el.parentNode!==ph){ph.appendChild(E.el);ph.classList.add('on')}}
+ else if(!E.timer){E.el.pause();E.timer=setTimeout(()=>vidRelease(k),60000)}}}
+// ----- the Video Player -----
+let PV3=false,CLIPPROG=null;const vv=()=>$('#vpv');
+if(FS&&FS.onClipProgress)FS.onClipProgress(f=>CLIPPROG&&CLIPPROG(f));
+function vpOpen(){if(!CUR)return toast('Open a checklist first');PV3=true;$('#vp').hidden=false;$('#vpt').textContent=S.name||'Unnamed';vpFor();vpList();if(!vp(VP.id)&&S.videos.length)vpShow(S.videos[0].id);else if(!S.videos.length)vpMsg('No videos yet: + Add video…')}
+function vpClose(){PV3=false;$('#vp').hidden=true;const v=vv();v.pause();v.removeAttribute('src');v.load();if(VP.own)URL.revokeObjectURL(VP.url);VP.url='';VP.own=false;VP.id=null;vidTrim()}
+const vpFor=()=>{$('#vpfor').textContent=SEL?'Assigning to: '+(SEL.text||'(untitled)'):'Select a checklist item to assign clips to it'};
+const vpMsg=t=>{$('#vpmsg').textContent=t||'';$('#vpmsg').hidden=!t};
+function vpList(){$('#vplist').innerHTML=S.videos.map(v=>`<div class="frow${v.id===VP.id?' sel':''}" data-id="${v.id}"><span class="fn">${esc(v.name)}<small class="mut" style="display:block">${v.link?'linked':'in checklist'}${v.size?' · '+MB(v.size):''}</small></span><button data-a="rm" title="Remove from this checklist">✕</button></div>`).join('')||'<div class="mut">No videos yet.</div>'}
+async function vpShow(id){const v=vp(id);if(!v)return;const old={url:VP.url,own:VP.own};VP.id=id;VP.sel=false;VP.url='';VP.own=false;vpList();vpSelUI();
+ const x=vv();x.pause();vpMsg('Loading…');const s=await vidSrc(v);if(old.own)URL.revokeObjectURL(old.url);if(VP.id!==id)return;
+ if(s.err){x.removeAttribute('src');x.load();return vpMsg(s.err)}VP.url=s.url;VP.own=!!s.own;if(s.changed)toast('This video file has changed since it was linked; clips may show the wrong part');
+ x.onerror=()=>vpMsg('This video cannot be played here (unsupported format). Try converting it to MP4.');x.onloadedmetadata=()=>{vpMsg('');VP.a=0;VP.b=x.duration;vpUI()};x.src=s.url;vidTrim()}
+const vpDur=()=>vv().duration||0;
+function vpUI(){const x=vv(),d=vpDur(),p=t=>d?(t/d*100)+'%':'0%';$('#tlhead').style.left=$('#tlplay').style.width=p(x.currentTime);
+ $('#vptime').textContent=fmtT(x.currentTime)+' / '+fmtT(d);$('#vpplay').textContent=x.paused?'▶ Play':'❚❚ Pause';
+ $('#hA').style.left=p(VP.a);$('#hB').style.left=p(VP.b);$('#tlsel').style.left=p(VP.a);$('#tlsel').style.width=d?((VP.b-VP.a)/d*100)+'%':'0';
+ for(const [id,t] of [['ta',VP.a],['tb',VP.b]]){const i=$('#'+id);if(document.activeElement!==i)i.value=fmtT(t)}$('#tlen').textContent='Length '+fmtT(VP.b-VP.a)}
+function vpSelUI(){$('#tl').classList.toggle('sel',VP.sel);$('#vpsel').classList.toggle('on',VP.sel);$('#vpselrow').hidden=!VP.sel;vpUI()}
+const vpFrac=e=>{const r=$('#tl').getBoundingClientRect();return Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))};
+async function vpAdd(){if(isLocked())return toast('Editing is locked');const f=await FS.videoPick();if(!f)return;
+ const big=f.size>f.maxCopy;dlg(`<div class="dh"><b>Add "${esc(f.name)}" (${MB(f.size)})</b></div>
+ <button class="vopt" id="vaCopy" ${big?'disabled':''}><b>Import the entire video</b><span>Copies the whole video into this checklist file, so it works on any computer. Adds ${MB(f.size)} to the file.${big?' Not possible: videos over 300 MB are too big to copy into a checklist. Link it, then install just the parts you need.':''}</span></button>
+ <button class="vopt" id="vaLink"><b>Call to the existing file</b><span>The checklist only remembers where the video is. Nothing is added to the file, but if the video is moved, renamed or changed it will not play properly.${f.rel?' It is inside the save folder, so it keeps working if that folder (or USB drive) moves.':''}</span></button>
+ <div class="dbtn"><button data-d="x">Cancel</button></div>`);
+ $('#vaLink').onclick=()=>{closeDlg();const id=uid();S.videos.push({id,name:f.name,size:f.size,link:{path:f.path,rel:f.rel,size:f.size,mtime:f.mtime}});save();vpShow(id)};
+ $('#vaCopy').onclick=async()=>{closeDlg();const r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=await FS.videoRead({path:f.path});await step(1);return b}).catch(()=>null);
+  if(!r||r==='cancelled')return toast('Could not import that video');const id=uid();VIDS[id]={blob:new Blob([r],{type:/\.webm$/i.test(f.path)?'video/webm':'video/mp4'})};S.videos.push({id,name:f.name,size:f.size,link:null});save();vpShow(id)}}
+function vpRemove(id){if(isLocked())return toast('Editing is locked');const v=vp(id);if(!v)return;let n=0;for(const s of S.sections)for(const c of s.cards)for(const x of [c,...c.steps])n+=x.media.filter(m=>m.kind==='vref'&&m.vid===id).length;
+ ask(`Remove "${esc(v.name)}" from this checklist?${n?` ${n} linked clip${n>1?'s':''} on checklist items will stop playing. Installed clips are not affected.`:''}`,'Remove',()=>{S.videos=S.videos.filter(x=>x.id!==id);delete VIDS[id];if(VP.id===id){const x=vv();x.pause();x.removeAttribute('src');x.load();if(VP.own)URL.revokeObjectURL(VP.url);VP.id=null;VP.url='';VP.own=false;VP.sel=false;vpSelUI()}vpList();save();if(S.videos[0])vpShow(S.videos[0].id);else vpMsg('No videos yet: + Add video…')},1)}
+// ----- Assign to: link the selection, or install it as a clip -----
+function vpAssign(){const v=vp(VP.id),it=SEL;if(!v)return;if(!it)return toast('Select a checklist item first (close the player and click an item)');if(isLocked())return toast('Editing is locked');
+ const a=VP.a,b=VP.b;if(!(b-a>=0.1))return toast('Select at least 0.1 seconds');
+ dlg(`<div class="dh"><b>Assign ${fmtT(a)}–${fmtT(b)} (${fmtT(b-a)})</b></div><p class="mut">To: ${esc(it.text||'(untitled)')}</p>
+ <button class="vopt" id="asIn"><b>Install selection</b><span>Copies just this part into the checklist, so it plays anywhere. This will increase the file size; you choose the quality next.</span></button>
+ <button class="vopt" id="asRef"><b>Call to timestamps</b><span>${v.link?'Plays this part straight from the video file. Nothing is copied, but if the video file is moved or changed it won\'t function properly.':'Plays this part of the video already in this checklist. Nothing more is added to the file.'}</span></button>
+ <div class="dbtn"><button data-d="x">Cancel</button></div>`);
+ const thumb=()=>v.link?FS.videoThumb(v.link,a):thumbAt(VP.url,a);   // linked files: ffmpeg makes it (the page may not read their pixels)
+ $('#asRef').onclick=async()=>{closeDlg();const th=await thumb();it.media.push({kind:'vref',vid:v.id,start:+a.toFixed(2),end:+b.toFixed(2),name:v.name,thumb:th});save();if(it===SEL)renderR();renderL();toast('Clip linked to the item')};
+ $('#asIn').onclick=()=>{closeDlg();installWin(v,it,a,b,thumb)}}
+async function installWin(v,it,a,b,thumbFn){vv().pause();const w=$('#iw');let job=null,done=false,q='medium';w.hidden=false;
+ w.innerHTML=`<div class="dlg iwd"><div class="dh"><b>Install selection: ${fmtT(a)}–${fmtT(b)}</b><button data-iw="x">✕</button></div>
+ <video id="iwv" muted playsinline></video><div id="iwst" class="mut">Making the three versions… 0%</div><div class="ldb"><i id="iwf"></i></div>
+ <div id="iwq"></div><label class="chk" id="iwsl" hidden><input type="checkbox" id="iwsnd" checked> Include sound</label>
+ <div class="dbtn"><button data-iw="x">Cancel</button><button data-iw="ok" class="pri" disabled>Install</button></div></div>`;
+ const pv=$('#iwv');pv.src=VP.url;pv.onloadedmetadata=()=>{pv.currentTime=a;pv.play().catch(()=>{})};pv.ontimeupdate=()=>{if(pv.currentTime>=b)pv.currentTime=a};
+ const close=()=>{CLIPPROG=null;w.hidden=true;pv.removeAttribute('src');pv.load();w.innerHTML='';if(job&&!done)FS.clipDone(job.id);else if(!job)FS.clipCancel()};
+ const sizes=()=>{const snd=job.audio&&$('#iwsnd').checked,h=pv.videoHeight||0,res=x=>x&&h>x?x+'p':(h?h+'p':'');
+  $('#iwq').innerHTML=[['native','Native','original quality'],['medium','Medium','good for most steps'],['low','Low','smallest file']].map(([k,t,d])=>{const z=job.sizes[k][snd?'with':'without'],r=k==='native'?(h?h+'p':''):res(k==='medium'?720:480);
+   return `<label class="iwr"><input type="radio" name="iwq" value="${k}" ${q===k?'checked':''}><b>${t}</b><span class="mut">${r} · ${d}</span><span class="iwz">${MB(z)}</span></label>`}).join('')};
+ w.onclick=async e=>{const t=e.target.closest('[data-iw]');if(!t)return;if(t.dataset.iw==='x')return close();
+  if(!job)return;t.disabled=true;try{const snd=job.audio&&$('#iwsnd').checked,bytes=await FS.clipRead(job.id,q,snd),thumb=await thumbFn(),mid=uid();
+   MEDIA[mid]={blob:new Blob([bytes],{type:'video/mp4'}),name:v.name+' '+fmtT(a)+'.mp4',type:'video/mp4'};
+   it.media.push({kind:'file',id:mid,type:'video',name:v.name,thumb,clip:{start:+a.toFixed(2),end:+b.toFixed(2),q,sound:!!snd}});done=true;FS.clipDone(job.id);close();save();if(it===SEL)renderR();renderL();toast('Clip installed ('+MB(bytes.length)+')')}
+  catch(x){t.disabled=false;toast('Could not install the clip')}};
+ w.onchange=e=>{if(e.target.name==='iwq')q=e.target.value;if(job)sizes()};
+ CLIPPROG=f=>{const i=$('#iwf');if(i&&!job){i.style.width=(f*100).toFixed(0)+'%';$('#iwst').textContent='Making the three versions… '+(f*100).toFixed(0)+'%'}};
+ try{let src=v.link;if(!src){const r=VIDS[v.id];src=await FS.videoTemp(v.id,new Uint8Array(await(await blobOf(r)).arrayBuffer()))}
+  job=await FS.clipMake(src,a,b)}
+ catch(x){if(!w.hidden){$('#iwst').textContent=/cancel/.test(x.message)?'Cancelled':'Could not make the clip: '+((x&&x.message)||x)}return}
+ if(w.hidden){FS.clipDone(job.id);return}
+ $('#iwst').textContent='Pick a quality. The sizes are exact.';$('.iwd .ldb').hidden=true;$('#iwsl').hidden=!job.audio;sizes();$('[data-iw=ok]').disabled=false}
+$('#vidBtn').onclick=vpOpen;$('#vpBack').onclick=vpClose;$('#vpadd').onclick=vpAdd;$('#vpas').onclick=vpAssign;
+$('#vplist').onclick=e=>{const r=e.target.closest('[data-id]');if(!r)return;if(e.target.closest('[data-a=rm]'))vpRemove(r.dataset.id);else if(r.dataset.id!==VP.id)vpShow(r.dataset.id)};
+$('#vpplay').onclick=()=>{const x=vv();if(!x.currentSrc)return;x.paused?x.play().catch(()=>{}):x.pause()};
+$('#vpbk').onclick=()=>{vv().currentTime=Math.max(0,vv().currentTime-5)};$('#vpfw').onclick=()=>{vv().currentTime=Math.min(vpDur(),vv().currentTime+5)};
+$('#vprate').onchange=e=>{vv().playbackRate=+e.target.value};
+['timeupdate','play','pause','seeked','durationchange'].forEach(ev=>vv().addEventListener(ev,vpUI));
+vv().addEventListener('timeupdate',()=>{if(VP.stopAt&&vv().currentTime>=VP.stopAt){vv().pause();VP.stopAt=0}});
+$('#vppsel').onclick=()=>{const x=vv();VP.stopAt=VP.b;x.currentTime=VP.a;x.play().catch(()=>{})};
+$('#vpsel').onclick=()=>{if(!vpDur())return;VP.sel=!VP.sel;vpSelUI()};
+// the time bar: a click or drag skips there; the selection bars move only by dragging them or typing in the boxes
+$('#tl').addEventListener('pointerdown',e=>{const d=vpDur();if(!d)return;const h=e.target.closest('.hd');e.preventDefault();
+ if(h){VP.drag=h.id;h.setPointerCapture(e.pointerId);return}vv().currentTime=vpFrac(e)*d;VP.drag='seek';$('#tl').setPointerCapture(e.pointerId)});
+$('#tl').addEventListener('pointermove',e=>{if(!VP.drag)return;const d=vpDur(),t=vpFrac(e)*d;
+ if(VP.drag==='seek')vv().currentTime=t;else if(VP.drag==='hA')VP.a=Math.max(0,Math.min(t,VP.b-0.1));else VP.b=Math.min(d,Math.max(t,VP.a+0.1));vpUI()});
+['pointerup','pointercancel'].forEach(ev=>$('#tl').addEventListener(ev,()=>{VP.drag=null}));
+for(const [id,k] of [['ta','a'],['tb','b']]){const i=$('#'+id);
+ i.addEventListener('change',()=>{const t=parseT(i.value),d=vpDur();if(t!=null&&d){if(k==='a')VP.a=Math.max(0,Math.min(t,VP.b-0.1));else VP.b=Math.min(d,Math.max(t,VP.a+0.1))}i.blur();vpUI()});
+ i.addEventListener('keydown',e=>{if(e.key==='Enter')i.blur()});i.addEventListener('blur',vpUI)}
+document.addEventListener('keydown',e=>{if(!PV3||!$('#modal').hidden||!$('#iw').hidden||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key===' '){e.preventDefault();$('#vpplay').click()}else if(e.key==='Escape')vpClose()});
 // ---------- PDF (several per checklist, loaded only when needed) ----------
 let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
 try{pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'}catch(e){}
@@ -521,7 +677,7 @@ async function openProject(id){let r;
  if(!r||r==='cancelled')return;
  CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;stampCheck();LQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
- for(const m of [MEDIA,PDFS,PIDX])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);
+ for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
  renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();afterOpen()}
 async function deleteProject(id){clearTimeout(save.t);if(CUR===id)DIRTY=false;try{await FS.remove(id+'.bcl')}catch(e){toast('Could not delete the file');return}
@@ -534,11 +690,13 @@ async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.p
  const o=JSON.parse(JSON.stringify(S)),big={};o.files={};if(name!=null)o.name=name;if(strip)strip(o);
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r){const k='m:'+m.id;big[k]=r.data||(r.data=await b2d(r.blob));o.files[m.id]={name:r.name,type:r.type,data:'@@'+k+'@@'}}}
  for(const p of o.pdfs){const r=PDFS[p.id];if(r){const k='p:'+p.id;big[k]=r.data||(r.data=await b2d(new Blob([r.buf],{type:'application/pdf'})));p.data='@@'+k+'@@'}}
- const t=JSON.stringify(o).split(/"@@([mp]:[a-z0-9]+)@@"/);let out=t[0];for(let i=1;i<t.length;i+=2)out+=big[t[i]]!==undefined?'"'+big[t[i]]+'"'+t[i+1]:'"@@'+t[i]+'@@"'+t[i+1];return out}
+ for(const v of o.videos){const r=VIDS[v.id];if(r&&!v.link){const k='v:'+v.id;big[k]=r.data||(r.data=await b2d(r.blob));v.data='@@'+k+'@@'}}
+ const t=JSON.stringify(o).split(/"@@([mpv]:[a-z0-9]+)@@"/);let out=t[0];for(let i=1;i<t.length;i+=2)out+=big[t[i]]!==undefined?'"'+big[t[i]]+'"'+t[i+1]:'"@@'+t[i]+'@@"'+t[i+1];return out}
 // nothing heavy is decoded here: images and PDFs stay as text until they are first shown
 function unpack(o){const files=o.files||{};delete o.files;
  if(o.pdf&&!(o.pdfs&&o.pdfs.length))o.pdfs=[{name:o.manual||'Manual',offset:o.offset,map:o.map,data:o.pdf}];delete o.pdf;
- const P={};(o.pdfs||[]).forEach(p=>{p.id=p.id||uid();if(p.data){P[p.id]={data:p.data};delete p.data}});return{o:norm(o),files,P}}
+ const P={};(o.pdfs||[]).forEach(p=>{p.id=p.id||uid();if(p.data){P[p.id]={data:p.data};delete p.data}});
+ const V={};(o.videos||[]).forEach(v=>{v.id=v.id||uid();if(v.data){V[v.id]={data:v.data};delete v.data}});return{o:norm(o),files,P,V}}
 async function dlCopy(){toast('Preparing copy…');const t=await pack(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+'.bcl';a.click();toast('Copy downloaded')}
 // a shareable copy: same content, images and PDFs, but no profile stamp, no progress and no log, so it opens cleanly on any computer
 // keepLog: the old entries stay readable, under a marked segment, so the checks can be re-entered from them
@@ -546,7 +704,7 @@ const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
  if(keepLog)segOn(o,'recovery','Exported as a fresh copy','Entries above come from the original file');
  else{delete o.segs;delete o.seg;o.log=[]}
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps]){x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft='';x.hist=[]}};
-function exportDlg(){dlg(`<div class="dh"><b>Export for sharing</b></div><p>Saves a fresh copy with every section, step, image and PDF. Nothing is checked off, and sign-offs and the profile link are left out, so it opens on any computer or a new install. This checklist is not changed.</p><label class="chk"><input type="checkbox" id="exlog"> Include the activity log (read-only history, e.g. to re-enter checks after moving to a new install)</label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Export</button></div>`);
+function exportDlg(){dlg(`<div class="dh"><b>Export for sharing</b></div><p>Saves a fresh copy with every section, step, image and PDF. Nothing is checked off, and sign-offs and the profile link are left out, so it opens on any computer or a new install. This checklist is not changed.</p>${S.videos.some(v=>v.link)?`<p class="warn">${S.videos.filter(v=>v.link).length} linked video(s) are not copied, so their clips only play on computers that have the same video files. Install the clips (Video Player &gt; Assign to… &gt; Install selection) to include them.</p>`:''}<label class="chk"><input type="checkbox" id="exlog"> Include the activity log (read-only history, e.g. to re-enter checks after moving to a new install)</label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Export</button></div>`);
  DLGOK=()=>exportShare($('#exlog').checked)}
 async function exportShare(keepLog){toast('Preparing export…');const t=await pack(null,blankCopy(keepLog)),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+' (shared).bcl';a.click();toast('Export downloaded')}
 $('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;

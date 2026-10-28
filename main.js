@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
-const path = require('path'), fs = require('fs'), crypto = require('crypto');
+const path = require('path'), fs = require('fs'), fsp = fs.promises, crypto = require('crypto');
 
 // Everything lives next to the app by default: <app folder>/Saves and <app folder>/Data
 const baseDir = app.isPackaged
@@ -15,6 +15,53 @@ const saveCfg = () => { try { fs.writeFileSync(cfgPath, JSON.stringify(cfg, null
 const defSaves = path.join(path.dirname(dataDir), 'Saves');
 const savesDir = () => { let d = cfg.savesDir || defSaves; try { fs.mkdirSync(d, { recursive: true }); fs.accessSync(d, fs.constants.W_OK); } catch (e) { d = defSaves; fs.mkdirSync(d, { recursive: true }); } return d; };
 const st = require('./storage')(savesDir, f => shell.trashItem(f));
+
+// ---- video --------------------------------------------------------------------------------------------
+// A video is either linked (stays where it is; the path is kept relative to the save folder when it is inside it, so a
+// USB stick works under any drive letter) or copied into the checklist. "Install selection" cuts a clip with ffmpeg
+// (ffmpeg-static, unpacked from the asar) in three qualities, so the exact sizes can be shown before choosing.
+const os = require('os'), { spawn } = require('child_process'), { pathToFileURL } = require('url');
+const FFMPEG = (() => { try { return require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked'); } catch (e) { return null; } })();
+const MAX_COPY = 300 * 1024 * 1024;   // a whole video copied into a checklist; a .bcl is read whole when opened
+const QUALITY = { native: { crf: 20, h: 0 }, medium: { crf: 26, h: 720 }, low: { crf: 30, h: 480 } };
+const TMP = path.join(os.tmpdir(), 'build-checklist-video');
+try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}   // leftovers from a crash
+const relToSaves = p => { const r = path.relative(savesDir(), p); return r && !r.startsWith('..') && !path.isAbsolute(r) ? r : ''; };
+const vidPath = v => !v ? '' : v.rel ? path.join(savesDir(), v.rel) : String(v.path || '');
+let clip = null;   // the clip being made: {id, dir, proc, cancelled}
+const ff = (args, dur, onProgress) => new Promise((res, rej) => {   // runs ffmpeg at low priority so the app stays responsive on slow computers
+  if (!FFMPEG) return rej(new Error('The video tool (ffmpeg) is missing from this copy of the app'));
+  const p = spawn(FFMPEG, ['-hide_banner', '-nostdin', '-y', ...args], { windowsHide: true }); let err = '';
+  try { os.setPriority(p.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch (e) {}
+  if (clip) clip.proc = p;
+  p.stderr.on('data', d => { err = (err + d).slice(-4000); const m = /time=(\d+):(\d+):([\d.]+)/.exec(String(d)); if (m && onProgress && dur) onProgress(Math.min(1, (+m[1] * 3600 + +m[2] * 60 + +m[3]) / dur)); });
+  p.on('error', rej); p.on('close', c => c === 0 ? res() : rej(new Error(clip && clip.cancelled ? 'cancelled' : 'ffmpeg failed: ' + err.split('\n').filter(Boolean).slice(-1)[0])));
+});
+async function makeClip(src, start, end) {
+  if (clip) { clip.cancelled = true; try { clip.proc && clip.proc.kill(); } catch (e) {} }
+  const id = crypto.randomBytes(8).toString('hex'), dir = path.join(TMP, id), dur = end - start; fs.mkdirSync(dir, { recursive: true });
+  const me = clip = { id, dir, proc: null, cancelled: false }, steps = 4; let done = 0;
+  const tell = f => { if (win && clip === me) win.webContents.send('clip-progress', (done + f) / steps); };
+  const cut = ['-ss', String(start), '-i', src, '-t', String(dur)];
+  try {
+    const sizes = {};
+    for (const [q, o] of Object.entries(QUALITY)) {
+      const scale = o.h ? `scale=-2:'min(${o.h},ih)'` : 'scale=trunc(iw/2)*2:trunc(ih/2)*2';
+      await ff([...cut, '-map', '0:v:0', '-an', '-vf', scale, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', String(o.crf), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', path.join(dir, q + '.mp4')], dur, tell);
+      done++; sizes[q] = { without: fs.statSync(path.join(dir, q + '.mp4')).size };
+    }
+    let audio = true;
+    try { await ff([...cut, '-map', '0:a:0', '-vn', '-c:a', 'aac', '-b:a', '128k', path.join(dir, 'a.m4a')], dur, tell); } catch (e) { if (me.cancelled) throw e; audio = false; }   // no sound track
+    done++;
+    if (audio) for (const q of Object.keys(QUALITY)) {
+      await ff(['-i', path.join(dir, q + '.mp4'), '-i', path.join(dir, 'a.m4a'), '-map', '0:v', '-map', '1:a', '-c', 'copy', '-movflags', '+faststart', path.join(dir, q + '+a.mp4')]);
+      sizes[q].with = fs.statSync(path.join(dir, q + '+a.mp4')).size;
+    }
+    tell(0);
+    return { id, audio, sizes };
+  } catch (e) { fs.rmSync(dir, { recursive: true, force: true }); throw e; }
+  finally { if (clip === me) clip.proc = null; }
+}
 
 // PINs are only ever stored as salted PBKDF2 hashes; hashing happens here, not in the page. Main PIN 5-8 digits, others 4 (the page enforces which).
 const pbk = (pin, salt) => new Promise((res, rej) => crypto.pbkdf2(String(pin), Buffer.from(salt, 'hex'), 150000, 32, 'sha256', (e, k) => e ? rej(e) : res(k)));
@@ -115,7 +162,29 @@ const handlers = {
     setLimits(f, until);
     return f >= PIN_MAX ? { locked: 'E-4419', fails: f } : { fails: f, wait: until };
   },
-  pinState: () => pinLimits()
+  pinState: () => pinLimits(),
+  // video
+  videoPick: async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Choose a video', properties: ['openFile'], filters: [{ name: 'Videos', extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'wmv', 'mpg', 'mpeg', '3gp'] }, { name: 'All files', extensions: ['*'] }] });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const p = r.filePaths[0], s = fs.statSync(p);
+    return { path: p, rel: relToSaves(p), name: path.basename(p).replace(/\.[^.]+$/, ''), size: s.size, mtime: s.mtimeMs, maxCopy: MAX_COPY };
+  },
+  // where a linked video is now; size and mtime let the page warn when the file was changed
+  videoInfo: v => { const p = vidPath(v); try { const s = fs.statSync(p); return { exists: s.isFile(), url: pathToFileURL(p).href, size: s.size, mtime: s.mtimeMs }; } catch (e) { return { exists: false }; } },
+  videoRead: async v => { const p = vidPath(v); if (fs.statSync(p).size > MAX_COPY) throw new Error('Too big to copy into a checklist'); return fsp.readFile(p); },
+  // a video copied into the checklist is written out once so ffmpeg can cut it
+  videoTemp: async (key, bytes) => { const f = path.join(TMP, 'src-' + String(key).replace(/[^\w-]/g, '') + '.bin'); if (!fs.existsSync(f)) { await fsp.mkdir(TMP, { recursive: true }); await fsp.writeFile(f, Buffer.from(bytes)); } return { path: f }; },
+  // a small JPEG of one frame of a linked video (the page cannot read pixels from a file outside the app)
+  videoThumb: (v, t) => new Promise(res => {
+    if (!FFMPEG) return res('');
+    const p = spawn(FFMPEG, ['-hide_banner', '-nostdin', '-ss', String(Math.max(0, +t || 0)), '-i', vidPath(v), '-frames:v', '1', '-vf', 'scale=320:-2', '-q:v', '5', '-f', 'image2', '-c:v', 'mjpeg', 'pipe:1'], { windowsHide: true }), out = [];
+    p.stdout.on('data', d => out.push(d)); p.on('error', () => res('')); p.on('close', c => res(c === 0 && out.length ? 'data:image/jpeg;base64,' + Buffer.concat(out).toString('base64') : ''));
+  }),
+  clipMake: (v, start, end) => { start = Math.max(0, +start || 0); end = +end || 0; if (!(end > start)) throw new Error('The end must be after the start'); return makeClip(vidPath(v), start, end); },
+  clipRead: (id, q, withAudio) => { if (!/^[0-9a-f]{16}$/.test(id) || !QUALITY[q]) throw new Error('Bad clip'); return fsp.readFile(path.join(TMP, id, q + (withAudio ? '+a' : '') + '.mp4')); },
+  clipDone: id => { if (/^[0-9a-f]{16}$/.test(id)) fs.rmSync(path.join(TMP, id), { recursive: true, force: true }); if (clip && clip.id === id) clip = null; return true; },
+  clipCancel: () => { if (clip) { clip.cancelled = true; try { clip.proc && clip.proc.kill(); } catch (e) {} fs.rmSync(clip.dir, { recursive: true, force: true }); clip = null; } return true; }
 };
 ipcMain.handle('fs', (e, op, ...a) => {
   if (!win || e.sender !== win.webContents || !Object.prototype.hasOwnProperty.call(handlers, op)) throw new Error('Not allowed');
@@ -154,4 +223,5 @@ else {
   app.on('second-instance', (e, argv) => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); const f = argFile(argv); if (f) win.webContents.send('open-file', f); } });
   app.whenReady().then(createWindow);
   app.on('window-all-closed', () => app.quit());
+  app.on('quit', () => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });
 }

@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('fsapi', {
   openDir: () => call('openDir'), reveal: n => call('reveal', n), pending: () => call('pending'),
   backup: n => call('backup', n), restore: n => call('restore', n),
   newSalt: () => call('newSalt'), newPid: () => call('newPid'), integrity: () => call('integrity'), profileSave: b => call('profileSave', b), recMake: () => call('recMake'), recCheck: (c, l) => call('recCheck', c, l), hash: (pin, salt) => call('hash', pin, salt), matchPin: (pin, list) => call('matchPin', pin, list), pinTry: (pin, list) => call('pinTry', pin, list), pinState: () => call('pinState'),
+  videoPick: () => call('videoPick'), videoInfo: v => call('videoInfo', v), videoRead: v => call('videoRead', v), videoTemp: (k, b) => call('videoTemp', k, b), videoThumb: (v, t) => call('videoThumb', v, t),
+  clipMake: (v, a, b) => call('clipMake', v, a, b), clipRead: (id, q, au) => call('clipRead', id, q, au), clipDone: id => call('clipDone', id), clipCancel: () => call('clipCancel'),
+  onClipProgress: cb => ipcRenderer.on('clip-progress', (e, f) => cb(f)),
   // the main process waits for this to report back before closing; false means the save failed
   onFlush: cb => ipcRenderer.on('flush', async () => { let ok = true; try { ok = (await cb()) !== false; } catch (e) { ok = false; } ipcRenderer.send('flushed', ok); }),
   onOpen: cb => ipcRenderer.on('open-file', (e, p) => cb(p))

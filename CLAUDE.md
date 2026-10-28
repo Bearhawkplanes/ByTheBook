@@ -5,7 +5,7 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 ## Working on this repo
 - The owner (GitHub: Bearhawkplanes) is not a programmer. Explain changes in plain language, give them something concrete to try, and keep answers short.
 - Workflow: commit to `main` and push after each finished change (the owner pulls it on their work and home computers). One logical change per commit, with a clear message. Update `README.md` in the same commit when behaviour changes.
-- No build step and no runtime dependencies. Do not add frameworks or npm packages without asking. `lib/` holds vendored pdf.js 3.11.174 (Apache 2.0); leave it alone.
+- No build step. The only runtime dependency is `ffmpeg-static` (approved by the owner for video clips; unpacked from the asar via `asarUnpack`). Do not add frameworks or other npm packages without asking. `lib/` holds vendored pdf.js 3.11.174 (Apache 2.0); leave it alone.
 - `index.html` is written in a dense style: compact one-line functions, short global names (`S`, `PR`, `CUR`), few comments that explain *why*. Match it; do not reformat or "prettify" existing code.
 - Test: `node tests/main-test.js` runs the real `main.js` and `storage.js` against a fake Electron in a temp folder (PIN limits, E-4419, stamps). `node tests/page-test.js` loads the real `index.html` in headless Chromium with an in-memory stub for `window.fsapi` (Playwright and Chromium are preinstalled in Claude cloud sessions). Add a case there for new behaviour. It cannot test `main.js`/Electron itself; say so when reporting, and ask the owner to try `npm start`.
 
@@ -14,12 +14,13 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - `preload.js`: exposes those handlers to the page as `window.fsapi` (also the close-time `flush` handshake and `open-file`).
 - `storage.js`: plain Node `.bcl` file I/O in the save folder: queued atomic writes, one `.bak` per file in `Saves/Backups/` (refreshed at most every 5 min), import, restore as a new file.
 - `index.html`: the entire UI and app logic in one inline `<script>`.
-- `tests/main-test.js`, `tests/page-test.js`: see above.
+- `tests/main-test.js`, `tests/page-test.js`: see above. `tests/electron-test.js` drives the real built app (needs `npx electron-builder --linux dir --publish never`, then `xvfb-run -a node tests/electron-test.js`): MP4 playback, ffmpeg clips and thumbnails. Run it after video changes.
 
 ## Data model (`.bcl` = JSON)
 - Open checklist in memory: `S` = `{name, manual, pdfs[], sections[{title, sign, cards[{...item, steps[item]}]}], locked, log[], seg, segs{}, ids{}, stamp}`.
 - Item fields (`mk()`): `text qty size spec desc page pdf media[] ver src` (content) and `done init doneAt sig sigDraft hist[]` (progress).
 - `pack()` serialises `S` and inlines image (`files{}`) and PDF (`pdfs[].data`) data URLs; `unpack()`/`norm()` read and migrate older formats. Images live in `MEDIA`, PDFs in `PDFS` while open.
+- Videos: `S.videos[{id, name, size, link}]`; `link` = `{path, rel, size, mtime}` (rel = relative to the save folder when inside it, so a USB drive works under any drive letter), or no link = copied in (data in `VIDS`, packed as `videos[].data`, max 300 MB). Item media for video: `{kind:'file', type:'video', id, thumb, clip:{start,end,q,sound}}` (installed clip, data in `MEDIA`/`files`) or `{kind:'vref', vid, start, end, thumb}` (plays part of a library video, looped). Videos show only `thumb` until clicked (`vidPlay`); `VEL` keeps loaded item videos, `vidMount()` (end of `renderR`) re-attaches them and releases other items' after 60 s. Big data URLs are decoded with `fetch()`, not `atob`. main.js: `videoPick/Info/Read/Temp/Thumb`, `clipMake` (ffmpeg, three qualities + optional sound, exact sizes, temp files under os.tmpdir), `clipRead/Done/Cancel`. Linked-file thumbnails come from ffmpeg (the page cannot read pixels of file:// videos).
 - Autosave: `save()` debounces 3 s, `flush()` writes; also every minute and when the window closes.
 
 ## Profile, PINs and tamper detection (the sensitive part)

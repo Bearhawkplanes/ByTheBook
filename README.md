@@ -20,7 +20,7 @@ Install Node.js LTS once, then in this folder:
     npm run dist:linux      # Linux: AppImage (build on Linux)
     npm run dist:mac        # macOS: dmg (must be built on a Mac)
 
-`npm start` runs it without building.
+`npm start` runs it without building. `npm install` also downloads ffmpeg for the computer it runs on.
 
 ## Where things live (all next to the app by default)
 - `Saves/`  your checklists, one `.bcl` file each (PDF and images are inside the file)
@@ -62,6 +62,20 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - To move to a new computer, copy `Data/` and `Saves/` (including the hidden-style `.profile-marker.json`) together. Copying only the checklists triggers E-4417 until the recovery code is entered.
 - This deters casual tampering. Someone who can edit the app's code, or who deletes the profile, marker and every stamped checklist, is not stopped. Windows folder permissions are the only real lock.
 
+## Video Player
+Top bar > Video Player (next to PDF Viewer). The player shows the videos of the open checklist.
+- + Add video… asks how to add it:
+  - Import the entire video: copied into the checklist file, so it works on any computer. Only for videos up to 300 MB (a checklist is one file that is read whole when opened).
+  - Call to the existing file: the checklist only remembers where the video is. Nothing is added to the file, but if the video is moved, renamed or changed it will not play properly. A video kept inside the save folder (for example on the same USB drive) keeps working when that folder moves.
+- Play, ±5 s, speed, and a time bar you can click or drag to skip around.
+- Select Timestamps: two green bars appear at the ends of the time bar, with the part between them green. Drag them, or type a time in the Start / End boxes (h:mm:ss.s, m:ss or seconds); the boxes always show where the bars are. Clicking the time bar still skips around and never moves the bars. ▶ Play selection plays just that part.
+- Assign to… puts the selection on the item selected in the checklist (select the item before opening the player):
+  - Install selection: copies just that part into the checklist (the file gets bigger). A window shows the clip and makes Native, Medium (720p) and Low (480p) versions, with the exact size of each, and an Include sound box. Pick one and Install. Making the versions takes a few seconds per minute of clip.
+  - Call to timestamps: the item plays that part straight from the video. Nothing is copied, but if a linked video file is moved or changed it won't function properly.
+- On an item's Images tab a video shows only a thumbnail until it is clicked. A clip plays just its part, on a loop. A loaded video stays loaded while you are on that item and for one minute after you click away, then it is unloaded.
+- Videos added through "+ Add image / video files" on the Images tab are copied into the checklist whole (up to 300 MB).
+- Export for sharing keeps copied videos and installed clips. Linked videos are not copied, and the export window says so.
+
 ## Activity log
 - Every checklist keeps its own log: Menu > Activity log…, Settings > Open the full activity log, or the LOG button on a selected file in the main menu (no need to open it). Filter by name, event or item; Download CSV.
 - Entries made with a PIN record the user's ID. If the same name appears with a different ID (for example someone was removed and re-added, or the profile was reset), the log starts a red "POSSIBLE TAMPERED" segment, and everything after it stays visually separated. Errors and recoveries also start marked segments. Use "Set PIN" on the Profile page to change a PIN without changing the ID.
@@ -72,3 +86,4 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - Deleting sends the file to the Recycle Bin / Trash.
 - Unsigned build: Windows SmartScreen may warn on first run ("More info" > "Run anyway").
 - pdf.js (Apache 2.0) is bundled in lib/ (license: lib/PDFJS-LICENSE.txt).
+- ffmpeg (GPL v3, via the ffmpeg-static package) is bundled to cut and convert video clips. It runs only while installing a clip or making a thumbnail. Its license and build notes are in resources/app.asar.unpacked/node_modules/ffmpeg-static/; source code is at https://ffmpeg.org.

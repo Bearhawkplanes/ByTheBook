@@ -3,6 +3,7 @@
 const fs = require('fs'), os = require('os'), path = require('path'), assert = require('assert'), Module = require('module');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bcl-main-'));
 for (const f of ['main.js', 'storage.js']) fs.copyFileSync(path.join(__dirname, '..', f), path.join(dir, f));   // main.js keeps Data/ and Saves/ next to itself
+fs.symlinkSync(path.join(__dirname, '..', 'node_modules'), path.join(dir, 'node_modules'), 'junction');   // for ffmpeg-static
 let handle, win;
 const electron = {
   app: { isPackaged: false, getPath: () => dir, setPath() {}, requestSingleInstanceLock: () => true, on() {}, quit() {}, whenReady: () => Promise.resolve() },
@@ -55,6 +56,35 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   await call('write', 'b.bcl', JSON.stringify({ name: 'b', sections: [] }));
   const l = (await call('list')).sort((x, y) => x.name.localeCompare(y.name));
   assert.deepStrictEqual(l.map(x => [x.name, x.pid]), [['a', pid], ['b', '']]);
+
+  // video: linked paths, clips in three qualities with exact sizes, with and without a sound track
+  const { execFileSync } = require('child_process'), ffbin = require('ffmpeg-static');
+  const saves = await call('dir'), vid = path.join(saves, 'videos', 'walkaround.mp4'), mute = path.join(dir, 'mute.mp4'); fs.mkdirSync(path.dirname(vid), { recursive: true });
+  execFileSync(ffbin, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:duration=10', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=10', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', vid]);
+  execFileSync(ffbin, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=25:duration=4', '-c:v', 'libx264', '-preset', 'ultrafast', mute]);
+  const info = await call('videoInfo', { rel: 'videos/walkaround.mp4' });
+  assert(info.exists && info.url.startsWith('file://') && info.size > 0, 'linked video inside the save folder found by its relative path');
+  assert.strictEqual((await call('videoInfo', { path: path.join(dir, 'gone.mp4') })).exists, false);
+  const progress = []; win.webContents.send = (ch, f) => ch === 'clip-progress' && progress.push(f);
+  const c = await call('clipMake', { rel: 'videos/walkaround.mp4' }, 2, 5);
+  assert(c.audio && /^[0-9a-f]{16}$/.test(c.id), 'clip made with sound');
+  for (const q of ['native', 'medium', 'low']) assert(c.sizes[q].with > c.sizes[q].without && c.sizes[q].without > 1000, q + ' sizes');
+  assert(c.sizes.low.without < c.sizes.medium.without && c.sizes.medium.without < c.sizes.native.without, 'lower quality is smaller');
+  assert(progress.length > 3 && Math.max(...progress) <= 1, 'progress reported');
+  const bytes = await call('clipRead', c.id, 'medium', true), outF = path.join(dir, 'out.mp4'); fs.writeFileSync(outF, bytes);
+  assert.strictEqual(bytes.length, c.sizes.medium.with, 'the size shown is the size you get');
+  const meta = (() => { try { execFileSync(ffbin, ['-i', outF], { stdio: 'pipe' }); } catch (e) { return String(e.stderr); } })();
+  assert(/Video: h264.*1280x720/.test(meta) && /Audio: aac/.test(meta), 'medium keeps 720p and sound');
+  assert(/Duration: 00:00:0(2\.9|3\.0)/.test(meta), 'clip is 3 seconds: ' + (/Duration: [^,]*/.exec(meta) || [])[0]);
+  const lowMeta = (() => { fs.writeFileSync(outF, Buffer.from(fs.readFileSync(path.join(os.tmpdir(), 'build-checklist-video', c.id, 'low.mp4')))); try { execFileSync(ffbin, ['-i', outF], { stdio: 'pipe' }); } catch (e) { return String(e.stderr); } })();
+  assert(/x480/.test(lowMeta) && !/Audio:/.test(lowMeta), 'low is 480p, and without sound when asked');
+  const th = await call('videoThumb', { rel: 'videos/walkaround.mp4' }, 3);
+  assert(th.startsWith('data:image/jpeg;base64,/9j/') && th.length > 2000, 'thumbnail of a linked video');
+  assert.strictEqual(await call('videoThumb', { path: path.join(dir, 'gone.mp4') }, 1), '', 'no thumbnail for a missing file');
+  await call('clipDone', c.id); assert(!fs.existsSync(path.join(os.tmpdir(), 'build-checklist-video', c.id)), 'temp files removed');
+  const m = await call('clipMake', { path: mute }, 0, 1.5);
+  assert(!m.audio && !m.sizes.native.with, 'video without sound: no sound option'); await call('clipDone', m.id);
+  await assert.rejects(async () => call('clipMake', { path: mute }, 3, 2), /after the start/);
 
   console.log('All main tests passed');
   fs.rmSync(dir, { recursive: true, force: true });
