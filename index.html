@@ -486,7 +486,7 @@ function openSettings(){
  <div class="ds"><div class="dt">Activity log</div><button data-d="log">Open the full activity log</button></div>`)}
 $('#cog').onclick=openSettings;
 $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||e.target===$('#modal'))closeDlg();else if(d.d==='ok'){const f=DLGOK;closeDlg();f&&f()}
- else if(d.d==='log'){closeDlg();showLog(S.name||CUR,S.log,S.segs)}
+ else if(d.d==='log'){closeDlg();viewLogOf(CUR)}
  else if(d.th){if(d.th==='reset')AS.hue=20;else AS.theme=d.th;saveApp();applyTheme();openSettings()}});
 $('#modal').addEventListener('input',e=>{if(e.target.id==='hue'){AS.hue=+e.target.value;saveApp();applyTheme()}});
 $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if(!t.checked&&S.locked&&pinOn('edit')){t.checked=true;askPin({title:'Turn off the master file lock',note:'Main profile or Boss PIN.',boss:true}).then(w=>{if(!w)return;S.locked=false;logEv('master lock off',{text:S.name||''},w.name,w.uid);save();renderL();renderR();openSettings()});return}
@@ -497,7 +497,7 @@ menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(
  if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
  else if(m==='restore')restoreBackup();
- else if(m==='log')showLog(S.name||CUR,S.log,S.segs);
+ else if(m==='log')viewLogOf(CUR);
  else if(m==='delete')ask(`Delete "${esc(S.name||'unnamed')}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',async()=>{await deleteProject(CUR);openHome()},1);
  else if(m==='pdf'){if(isLocked())toast('Editing is locked');else $('#file').click()}
  else if(m==='demo')(async()=>{const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));openProject(await addEntry(o,'Demo engine build'))})()
@@ -582,7 +582,7 @@ document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.repeat||$('#hom
  else if(e.key==='ArrowDown'||e.key==='ArrowUp'){const l=sortedLib();if(!l.length)return;let i=l.findIndex(x=>x.id===HS);i=e.key==='ArrowDown'?Math.min(l.length-1,i+1):Math.max(0,i<0?0:i-1);HS=l[i].id;renderHome();e.preventDefault()}});
 // ---------- profile and PINs ----------
 let PV=false,PU=false,FORGOT=false,NEWPIN=false,TAMPER=null,CLT=null,PRX=null,EDITOK=null,FAILS=0,LOCKUNTIL=0,RECUNTIL=0;
-const PR0=()=>({pid:'',user:'',salt:'',hash:'',rv:null,req:{names:false,sign:false,edit:false},people:[]});
+const PR0=()=>({pid:'',user:'',salt:'',hash:'',rv:null,req:{names:false,sign:false,edit:false,log:false},people:[]});
 let PR=PR0();
 const errNow=()=>TAMPER||CLT;   // while an error is active the app is view-only: no checking, no sign-offs
 const savePR=()=>(TAMPER||!PR.pid)?Promise.resolve():FS.profileSave(JSON.parse(JSON.stringify(PR))).catch(()=>{});
@@ -595,7 +595,7 @@ async function initProfile(){let r=await FS.integrity(),MIG=null;
    for(const p of old.people){if(!p.id)p.id=uid();if(p.pin){if(!p.hash){p.salt=await FS.newSalt();p.hash=await FS.hash(p.pin,p.salt)}delete p.pin}}
    const rec=await FS.recMake();old.pid=await FS.newPid();old.rv=rec.rv;
    try{if(await FS.profileSave(old)){localStorage.removeItem('ewf-profile');MIG=rec.code;r=await FS.integrity()}}catch(e){}}}
- PR=Object.assign(PR0(),r.body||{});PR.req=Object.assign({names:false,sign:false,edit:false},PR.req);if(!Array.isArray(PR.people))PR.people=[];
+ PR=Object.assign(PR0(),r.body||{});PR.req=Object.assign({names:false,sign:false,edit:false,log:false},PR.req);if(!Array.isArray(PR.people))PR.people=[];
  PR.people.forEach(p=>{if(!p.id)p.id=uid()});
  TAMPER=r.code||null;PRX={body:r.body||null,profile:r.body?{pid:r.body.pid,rv:r.body.rv}:null,marker:r.marker||null};return MIG}
 const pinOn=k=>!!(PR.hash&&PR.req[k]);
@@ -638,7 +638,8 @@ $('#lockBtn').onclick=()=>EDITOK?lockEdit():unlockEdit();
 const FEATS=[
  ['names','Assign PINs to names',['Each PIN below belongs to one name, and two people cannot share a PIN','Step Init. box: filled with the name tied to the PIN that was entered','Main item sign-off: the main profile and anyone marked Boss are accepted. Boss PINs only count while this switch is on; with it off, only the main profile PIN works','Activity log shows who the PIN belongs to','Takes effect together with "Require a PIN for sign-offs"']],
  ['sign','Require a PIN for sign-offs',['Checking or unchecking a step: a PIN is asked, and the Init. box fills with the name tied to it (typing initials is switched off)','Signing off a main item: a PIN is asked, and only the main profile or a Boss is accepted (typing a name is switched off)','Unchecking a signed main item, and Uncheck everything: same rule','Activity log entries record the name tied to the PIN']],
- ['edit','Require a PIN to turn editing on',['Master file lock: turning it off asks for a PIN from the main profile or a Boss','Add, move, rename and delete buttons, descriptions, images and PDF changes stay locked until that PIN is entered (Unlock button in the top bar)']]];
+ ['edit','Require a PIN to turn editing on',['Master file lock: turning it off asks for a PIN from the main profile or a Boss','Add, move, rename and delete buttons, descriptions, images and PDF changes stay locked until that PIN is entered (Unlock button in the top bar)']],
+ ['log','Require a PIN to view the activity log',['Menu > Activity log, Settings > Open the full activity log, and the LOG button in the main menu ask for a PIN from the main profile or a Boss','Not asked again while editing is unlocked with such a PIN','While an error (E-4417, E-4418, E-4419) is active no PIN can be checked, so the log stays viewable']]];
 // the main PIN is 5-8 digits, everyone else's exactly 4; entry boxes take up to 8 and never say which, so the main PIN's length is not given away
 const MAINPIN=/^\d{5,8}$/,EMPPIN=/^\d{4}$/,ANYPIN=/^\d{4,8}$/;
 const PINF='type="password" inputmode="numeric" maxlength="8" autocomplete="off"',EPINF='type="password" inputmode="numeric" maxlength="4" autocomplete="off"';
@@ -686,7 +687,7 @@ $('#hprof').addEventListener('click',async e=>{const b=e.target.closest('[data-p
   const src=TAMPER?recSources():[{pid:PR.pid,rv:PR.rv}],i=await FS.recCheck(v('rc'),src);   // without an error this is "Forgot PIN": only this profile's code
   if(i<0){if(++FAILS>=5){FAILS=0;RECUNTIL=Date.now()+30000}return err('perr','That recovery code does not match.')}
   FAILS=0;const s=src[i],old=!TAMPER?PR:PRX&&PRX.body&&PRX.body.pid===s.pid?PRX.body:null;   // keep the roster and switches only if the profile file itself is intact
-  PR=Object.assign(PR0(),old||{},{pid:s.pid,rv:s.rv,user:u});PR.req=Object.assign({names:false,sign:false,edit:false},PR.req);if(!Array.isArray(PR.people))PR.people=[];
+  PR=Object.assign(PR0(),old||{},{pid:s.pid,rv:s.rv,user:u});PR.req=Object.assign({names:false,sign:false,edit:false,log:false},PR.req);if(!Array.isArray(PR.people))PR.people=[];
   if(!keep){PR.salt=await FS.newSalt();PR.hash=await FS.hash(pn,PR.salt)}const was=TAMPER;TAMPER=null;PRX=null;await savePR();   // recCheck in main.js has already cleared the wrong-PIN wait and count
   if(CUR){stampCheck();newSeg('recovery',was?'Profile recovered with the recovery code ('+was+')':keep?'Recovery code used on the Profile page':'Main PIN reset with the recovery code','');save()}
   FORGOT=false;PU=true;renderProfile();if(CUR)refreshAll();renderHome();toast(was?'Profile recovered':keep?'Unlocked with the recovery code':'New main PIN saved')}
@@ -733,7 +734,9 @@ function showLog(title,log,segs){document.querySelectorAll('.logov').forEach(x=>
  ov.addEventListener('click',e=>{const k=e.target.dataset.k;if(k==='x'||e.target===ov)ov.remove();else if(k==='csv')csv()});
  ov.addEventListener('input',e=>{if(e.target.id==='lgq')draw()});ov.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();ov.remove()}});
  draw();ov.querySelector('#lgq').focus()}
-async function viewLogOf(id){if(id===CUR){showLog(id,S.log,S.segs);return}
+// with the 'log' switch on, the main profile or a Boss must enter a PIN first; during an error no PIN can be checked, so the log stays open
+async function logOk(){if(!pinOn('log')||TAMPER||EDITOK)return true;return !!await askPin({title:'View the activity log',note:'Main profile or Boss PIN.',boss:true})}
+async function viewLogOf(id){if(!await logOk())return;if(id===CUR){showLog(S.name||id,S.log,S.segs);return}
  const r=await load('Reading log of '+id,async step=>{await step(.1,'Reading file…');const t=await FS.read(id+'.bcl');await step(.6,'Reading log…');const o=JSON.parse(t);await step(1);return{log:o.log||[],segs:o.segs||{}}});
  if(r&&r!=='cancelled')showLog(id,r.log,r.segs)}
 // a checklist stamped with a profile ID that does not match the current profile is flagged when it opens

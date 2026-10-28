@@ -47,6 +47,8 @@ If the app sits somewhere it cannot write (Program Files, a Mac /Applications), 
 - Assign PINs to names: a roster of people, each with a unique PIN; mark people as Boss. Boss PINs only count while this is on.
 - Require a PIN for sign-offs: checking or unchecking a step asks for a PIN and the Init. box fills with the name (typing initials is switched off). Signing off a main item, unchecking a signed item and Uncheck everything accept only the main profile or a Boss. The activity log records the names.
 - Require a PIN to turn editing on: editing controls stay locked until a main-profile or Boss PIN is entered (Unlock button in the top bar). Turning the master file lock off needs that PIN too (Settings > This checklist is always open). Leaving to the main menu or opening another checklist locks editing again.
+- Require a PIN to view the activity log: Menu > Activity log, Settings > Open the full activity log and the LOG button in the main menu ask for the main profile or a Boss PIN (not again while editing is unlocked with one). While an error is active no PIN can be checked, so the log stays viewable.
+- Boss vs main profile: a Boss can do everything the main profile can in the checklists (unlock editing, sign off items, remove sign-offs, Uncheck everything, turn off the master file lock, adopt from the list, view the log). Only the main profile can open the Profile page (names, PINs, switches) and use the recovery code. Boss PINs only count while "Assign PINs to names" is on.
 - Not covered by the PIN switches: deleting a checklist from the main menu, and renaming the checklist file outside the app.
 
 ## Tamper detection and recovery

@@ -158,6 +158,18 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.strictEqual(await prompt(() => { const c = $('#lockc'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); }, '24680'), 'Turn off the master file lock');
   assert(await pg.evaluate(() => !S.locked), 'master lock off with the 5-digit main PIN');
 
+  // activity log behind a main/Boss PIN when the switch is on; a plain employee PIN is refused
+  await pg.evaluate(async () => { EDITOK = null; PR.req.log = true; PR.people[0].boss = false; document.querySelector('[data-m="log"]').click(); await new Promise(r => setTimeout(r, 80)); });
+  assert(!(await pg.evaluate(() => !!document.querySelector('.logov'))), 'log hidden until a PIN is entered');
+  assert(/Only the main profile or a Boss/.test(await tryPin('1357')), 'employee PIN refused');
+  await tryPin('24680'); await pg.waitForTimeout(100);
+  assert(await pg.evaluate(() => !!document.querySelector('.logov')), 'log shown after a Boss/main PIN');
+  await pg.evaluate(async () => { document.querySelectorAll('.logov').forEach(x => x.remove()); PR.people[0].boss = true; document.querySelector('[data-m="log"]').click(); await new Promise(r => setTimeout(r, 80)); });
+  await tryPin('1357'); await pg.waitForTimeout(100);
+  assert(await pg.evaluate(() => !!document.querySelector('.logov')), 'a Boss employee can view the log');
+  await pg.evaluate(async () => { document.querySelectorAll('.logov').forEach(x => x.remove()); await openHome(); HS = 'shop'; renderHome(); document.querySelector('button[data-a=logv]').click(); await new Promise(r => setTimeout(r, 80)); });
+  assert(await pg.evaluate(() => !document.querySelector('.logov') && !!document.querySelector('.overlay input.pin')), 'main menu LOG button asks too');
+
   // adopt from the saved list: flagged row, explanation, Boss PIN, stamp + log written, images and PDFs kept
   pg = await page({ 'mine.bcl': used, 'theirs.bcl': used.replace(/"stamp":\{"pid":"a{32}"/, '"stamp":{"pid":"' + 'b'.repeat(32) + '"'), 'shared.bcl': shared }, prof('a'.repeat(32)));
   await pg.evaluate(() => openHome()); await pg.waitForTimeout(200);

@@ -41,7 +41,7 @@ function cleanProfile(b) {   // only known fields are ever written
   if (!b || !/^[0-9a-f]{32}$/.test(b.pid) || !okRv(b.rv)) throw new Error('Bad profile');
   const req = b.req || {};
   return { pid: b.pid, user: String(b.user || ''), salt: String(b.salt || ''), hash: String(b.hash || ''), rv: { salt: b.rv.salt, hash: b.rv.hash },
-    req: { names: !!req.names, sign: !!req.sign, edit: !!req.edit },
+    req: { names: !!req.names, sign: !!req.sign, edit: !!req.edit, log: !!req.log },
     people: (Array.isArray(b.people) ? b.people : []).map(p => ({ id: String(p.id || ''), name: String(p.name || ''), salt: String(p.salt || ''), hash: String(p.hash || ''), boss: !!p.boss })) };
 }
 // ---- wrong-PIN limits ---------------------------------------------------------------------------------
