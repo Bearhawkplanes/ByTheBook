@@ -55,8 +55,23 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
   assert(pdfFile.slice(0, 5).toString() === '%PDF-' && pdfInfo.pages >= 4 && pdfInfo.shown === pdfInfo.pages && (pdfFile.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length === pdfInfo.pages, 'printable PDF made and saved: ' + JSON.stringify(pdfInfo));
   // saved to disk with the clip inside
   await pg.evaluate(async () => { DIRTY = true; await flush(); });
-  const saved = JSON.parse(fs.readFileSync(path.join(app, 'Saves', (await pg.evaluate(() => CUR)) + '.bcl'), 'utf8'));
-  assert(Object.values(saved.files).some(f => f.type === 'video/mp4' && f.data.length > 10000) && saved.videos[0].link, 'clip saved inside the file, video linked');
+  const B = require('../bcl'), curF = path.join(app, 'Saves', (await pg.evaluate(() => CUR)) + '.bcl');
+  const saved = JSON.parse(await B.read(curF)), clipKey = Object.keys(saved.files).find(k => saved.files[k].type === 'video/mp4');
+  assert(clipKey && saved.files[clipKey].data === 'bcl-media:m:' + clipKey && (await B.readMedia(curF, 'm:' + clipKey)).length > 10000 && saved.videos[0].link, 'clip stored once in the file as raw data, the checklist refers to it; video linked');
+  // a tick only appends the checklist; the clip and PDF are not written again
+  const before = fs.statSync(curF).size; await pg.evaluate(async () => { const st = S.sections[0].cards[0].steps[0]; st.done = true; st.init = 'TK'; DIRTY = true; await flush(); });
+  assert(fs.statSync(curF).size - before < 200000, 'a tick adds only the checklist: +' + (fs.statSync(curF).size - before) + ' bytes');
+  // reopened: photos, the PDF and the clip load from the file when shown
+  await pg.evaluate(async n => { await openProject('Demo engine build'); await openProject(n); }, await pg.evaluate(() => CUR));
+  const lazy = await pg.evaluate(async () => { const r = MEDIA[Object.keys(MEDIA).find(k => MEDIA[k].type === 'video/mp4')]; const before = !!(r.ref && !r.data && !r.blob); const b = await mBlob(r); return { before, size: b.size }; });
+  assert(lazy.before && lazy.size > 10000, 'after reopening media are references until shown, then load: ' + JSON.stringify(lazy));
+  assert(await pg.evaluate(async () => { await openP(S.pdfs[0].id, 1); return !!pdf && pdf.numPages >= 1; }), 'the PDF opens from the file');
+  // a new job made from it carries the media
+  await pg.evaluate(async () => { newJob(); await new Promise(r => setTimeout(r, 50)); $('#njn').value = 'Job copy'; document.querySelector('#modal [data-d=ok]').click(); });
+  await pg.waitForFunction(() => CUR === 'Job copy', null, { timeout: 30000 });
+  const jobF = path.join(app, 'Saves', 'Job copy.bcl'), jk = Object.keys((await B.openIndex(jobF)).media);
+  assert(jk.some(k => k.startsWith('m:')) && jk.some(k => k.startsWith('p:')) && !JSON.parse(await B.read(jobF)).sections[0].cards[0].steps[0].done, 'new job file has its own copy of the media, nothing ticked');
+
   await ea.close();
   fs.rmSync(work, { recursive: true, force: true });
   assert.deepStrictEqual(errors, [], 'no page errors');

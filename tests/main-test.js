@@ -2,7 +2,7 @@
 // Run: node tests/main-test.js
 const fs = require('fs'), os = require('os'), path = require('path'), assert = require('assert'), Module = require('module'), crypto = require('crypto');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bcl-main-'));
-for (const f of ['main.js', 'storage.js']) fs.copyFileSync(path.join(__dirname, '..', f), path.join(dir, f));   // main.js keeps Data/ and Saves/ next to itself
+for (const f of ['main.js', 'storage.js', 'bcl.js']) fs.copyFileSync(path.join(__dirname, '..', f), path.join(dir, f));   // main.js keeps Data/ and Saves/ next to itself
 fs.symlinkSync(path.join(__dirname, '..', 'node_modules'), path.join(dir, 'node_modules'), 'junction');   // for ffmpeg-static
 let handle, win, quits = 0;
 process.env.APPIMAGE = path.join(dir, 'BuildChecklist.AppImage'); fs.writeFileSync(process.env.APPIMAGE, '#!/bin/sh\necho old\n');
@@ -61,7 +61,7 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   await call('write', 'b.bcl', JSON.stringify({ name: 'b', sections: [] }));
   const l = (await call('list')).sort((x, y) => x.name.localeCompare(y.name));
   assert.deepStrictEqual(l.map(x => [x.name, x.pid]), [['a', pid], ['b', '']]);
-  await call('write', 'big-old.bcl', '{"name":"x","files":{"f":"' + 'A'.repeat((1 << 22) - 30) + '"},"stamp":{"pid":"' + pid + '","rv":{}}}');   // older layout: stamp after 4 MB of data, across a read boundary
+  fs.writeFileSync(path.join(await call('dir'), 'big-old.bcl'), '{"name":"x","files":{"f":"' + 'A'.repeat((1 << 22) - 30) + '"},"stamp":{"pid":"' + pid + '","rv":{}}}');   // older layout: stamp after 4 MB of data, across a read boundary
   assert.strictEqual((await call('list')).find(x => x.name === 'big-old').pid, pid, 'stamp found in an older, big file without reading it whole');
 
   // video: linked paths, clips in three qualities with exact sizes, with and without a sound track
@@ -92,6 +92,46 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   const m = await call('clipMake', { path: mute }, 0, 1.5);
   assert(!m.audio && !m.sizes.native.with, 'video without sound: no sound option'); await call('clipDone', m.id);
   await assert.rejects(async () => call('clipMake', { path: mute }, 3, 2), /after the start/);
+
+  // checklist files: media stored once, ticks only append, media copied between files, old files converted
+  const SV = await call('dir'), fsz = n => fs.statSync(path.join(SV, n)).size, B = require(path.join(dir, 'bcl.js'));
+  const photo = Buffer.alloc(2 * 1048576, 3), pdfB = Buffer.from('%PDF-1.4 sample');
+  const ck = { app: '0.5.0', name: 'job', sections: [{ title: 'A', cards: [{ text: 'Item', steps: [{ text: 'Step', done: false }] }] }], log: [],
+    files: { im1: { name: 'p.jpg', type: 'image/jpeg', data: 'data:image/jpeg;base64,' + photo.toString('base64') } }, pdfs: [{ id: 'pd1', name: 'Manual', data: 'data:application/pdf;base64,' + pdfB.toString('base64') }], videos: [] };
+  assert.deepStrictEqual(await call('write', 'job.bcl', JSON.stringify(ck)), { container: true });
+  let sk = JSON.parse(await call('read', 'job.bcl'));
+  assert(sk.files.im1.data === 'bcl-media:m:im1' && sk.pdfs[0].data === 'bcl-media:p:pd1', 'the checklist holds references, not the media');
+  assert(Buffer.from(await call('media', 'job.bcl', 'm:im1')).equals(photo) && Buffer.from(await call('media', 'job.bcl', 'p:pd1')).equals(pdfB), 'media come back byte for byte');
+  assert(fsz('job.bcl') < photo.length + 4096, 'stored as raw bytes (smaller than text)');
+  const s0 = fsz('job.bcl'); sk.sections[0].cards[0].steps[0].done = true; await call('write', 'job.bcl', JSON.stringify(sk));
+  assert(fsz('job.bcl') - s0 < 2048, 'a tick adds only the checklist, not the photo: +' + (fsz('job.bcl') - s0) + ' bytes');
+  assert.strictEqual(JSON.parse(await call('read', 'job.bcl')).sections[0].cards[0].steps[0].done, true);
+  // a power cut in the middle of a save: the previous save is used
+  fs.appendFileSync(path.join(SV, 'job.bcl'), Buffer.concat([Buffer.alloc(5000, 1), Buffer.from('BCLT'), Buffer.alloc(20)]));
+  assert.strictEqual(JSON.parse(await call('read', 'job.bcl')).sections[0].cards[0].steps[0].done, true, 'last complete save recovered');
+  await call('write', 'job.bcl', await call('read', 'job.bcl')); assert(fsz('job.bcl') < s0 + 4096, 'the cut-off part is dropped on the next save');
+  // a new job / Save as: references into another checklist, plus a new photo
+  sk = JSON.parse(await call('read', 'job.bcl')); sk.files.im2 = { name: 'n.png', type: 'image/png', data: 'data:image/png;base64,' + Buffer.from('new').toString('base64') };
+  await call('write', 'job 2.bcl', JSON.stringify(sk), 'job.bcl');
+  assert(Buffer.from(await call('media', 'job 2.bcl', 'm:im1')).equals(photo) && Buffer.from(await call('media', 'job 2.bcl', 'm:im2')).toString() === 'new', 'media copied into the new checklist');
+  await assert.rejects(async () => call('write', 'job 3.bcl', JSON.stringify(sk)), /missing/i, 'a reference without its media is refused, nothing half-written');
+  assert(!fs.existsSync(path.join(SV, 'job 3.bcl')));
+  // an export through the Save dialog: a complete file elsewhere
+  const exp = path.join(dir, 'exported.bcl'); electron.dialog.showSaveDialog = async () => ({ canceled: false, filePath: exp });
+  assert.strictEqual(await call('saveFile', { name: 'x.bcl', from: 'job.bcl' }, await call('read', 'job.bcl')), exp);
+  assert(Buffer.from(await B.readMedia(exp, 'm:im1')).equals(photo), 'exported file carries its media');
+  assert(/^\d/.test(await call('importPath', exp)) || await call('importPath', exp), 'an exported file can be imported again');
+  // dead space from many saves is cleared
+  for (let i = 0; i < 5; i++) { sk.sections[0].title = 'save ' + i; delete sk.files.im2; await call('write', 'job.bcl', JSON.stringify(sk)); }
+  let inf = await call('info', 'job.bcl'); assert(inf.file > inf.used, 'older saves are dead space');
+  await call('tidy', 'job.bcl'); inf = await call('info', 'job.bcl'); assert(inf.file - inf.used < 8 * 1048576 && inf.media === photo.length + pdfB.length, 'tidy keeps only what is in use: ' + JSON.stringify(inf));
+  // a file from before this format: converted when first read, original kept as the backup, media intact
+  fs.writeFileSync(path.join(SV, 'old.bcl'), JSON.stringify(ck));
+  const oldText = fs.readFileSync(path.join(SV, 'old.bcl'), 'utf8');
+  assert.strictEqual(JSON.parse(await call('read', 'old.bcl')).files.im1.data, 'bcl-media:m:im1', 'converted on first read');
+  assert.strictEqual(fs.readFileSync(path.join(SV, 'Backups', 'old.bcl.bak'), 'utf8'), oldText, 'the original kept as its backup');
+  assert(Buffer.from(await call('media', 'old.bcl', 'm:im1')).equals(photo));
+  const restored = await call('restore', 'old.bcl'); assert(/restored/.test(restored) && JSON.parse(await call('read', restored + '.bcl')).name === 'job', 'restore from that backup works');
 
   // updates: off by default; a newer release is found, downloaded, checked and swapped in; the previous version is kept
   const base = 'http://127.0.0.1:' + srv.address().port, sha = 'sha256:' + crypto.createHash('sha256').update(ASSET).digest('hex');

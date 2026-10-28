@@ -202,6 +202,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 @media (max-width:900px){.xpl{width:170px}.xpdf{flex-direction:column}.xpopts{width:auto;max-height:118px;flex-direction:row;flex-wrap:wrap;align-content:flex-start}.xph{width:100%}.xpgrid{display:contents}}
 #xppages{flex:1;min-height:200px;overflow:auto;background:#6f747a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center}
 .xppg{width:100%;max-width:820px;flex:none;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}.xppg canvas{display:block;width:100%;height:100%}
+.stbar{height:12px;border-radius:6px;background:var(--line);overflow:hidden}.stbar i{display:block;height:100%;width:0;background:var(--acc);border-radius:6px;transition:width .3s}.stbar i.hi{background:var(--warn)}
 #pk{z-index:61}
 .mtools button.on{background:var(--acc)}
 #txl{position:absolute;z-index:1}#txl.t-new{cursor:text}#txl.t-move .txb{cursor:move}#txl.t-sel .txb,#txl.t-new .txb{cursor:text}
@@ -338,6 +339,16 @@ const logEv=(ev,it,by,uid)=>{const lg=(S.log=S.log||[]);
 const voidIfNeeded=t=>{if(t.done&&!t.steps.every(s=>s.done)){logEv('sign-off voided',t,t.sig&&t.sig.by);t.hist.push({ev:'void',by:t.sig&&t.sig.by,at:now()});t.done=false;t.sig=null}};
 // ---------- file storage ----------
 const MEDIA={},PDFS={},PIDX={},idbOf=s=>s==='m'?MEDIA:PDFS;
+// a photo, PDF or video record: {data} or {blob} until saved, then {ref}: its key in the checklist file, read only when it is shown
+const REFP='bcl-media:';
+// storage: each checklist file holds at most CAP (photos, PDFs and videos included); the bar is in Settings > This checklist
+let CAP=2*1073741824;
+const sizeTxt=n=>n>=1073741824?(n/1073741824).toFixed(2).replace(/\.?0+$/,'')+' GB':n>=1048576?(n/1048576).toFixed(n>=104857600?0:1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
+const recSize=r=>r.ref?0:r.blob?r.blob.size:r.buf?r.buf.byteLength:r.data?Math.round(r.data.length*.75):0;   // not saved yet
+async function usage(){let u=0;try{if(FS.info&&CUR)u=(await FS.info(CUR+'.bcl')).used}catch(e){}for(const m of [MEDIA,PDFS,VIDS])for(const k in m)u+=recSize(m[k]);return u}
+async function roomFor(n){const u=await usage();if(u+n<=CAP)return true;toast(`Not enough room in this checklist: ${sizeTxt(u)} of ${sizeTxt(CAP)} used, this needs ${sizeTxt(n)}. Link big videos instead of copying them, or start a new checklist.`);return false}
+async function mBlob(r){if(r.blob)return r.blob;if(r.data)return r.blob=await(await fetch(r.data)).blob();if(r.ref&&CUR)return r.blob=new Blob([await FS.media(CUR+'.bcl',r.ref)],{type:r.type||''});return null}
+async function pdfBuf(r,prog){if(r.buf)return r.buf;if(r.ref)return r.buf=new Uint8Array(await FS.media(CUR+'.bcl',r.ref)).slice().buffer;return r.buf=(await d2u(r.data,prog)).buffer}
 const idbPut=async(s,k,v)=>{idbOf(s)[k]=v},idbDel=async(s,k)=>{delete idbOf(s)[k]},idbGet=async(s,k)=>idbOf(s)[k];
 // ---------- left: checklist ----------
 let ES=null,ER=null,pendDel=null,FT=null;
@@ -434,7 +445,7 @@ function setTab(t){tab=t;document.querySelectorAll('.tabs button').forEach(b=>b.
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 const urls={};
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
- if(!urls[id]){const r=await idbGet('m',id);if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id],!!(TX&&TX.mid===id)):urls[id]}}if(TX)txMount()}
+ if(!urls[id]){const r=await idbGet('m',id);if(r){const b=await mBlob(r).catch(()=>null);if(b)urls[id]=URL.createObjectURL(b)}}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id],!!(TX&&TX.mid===id)):urls[id]}}if(TX)txMount()}
 // big photos are shrunk when added (Settings, on by default): a 4 MB 12-megapixel phone photo becomes about 0.5 MB and stays sharp
 async function shrinkImg(blob,type){if(AS.shrink===false||!/^image\/(jpeg|png|webp)$/.test(type))return{blob,type};let bm;try{bm=await createImageBitmap(blob)}catch(e){return{blob,type}}
  const k=Math.min(1,2560/Math.max(bm.width,bm.height));if(k===1&&blob.size<1.5e6){bm.close();return{blob,type}}
@@ -442,7 +453,7 @@ async function shrinkImg(blob,type){if(AS.shrink===false||!/^image\/(jpeg|png|we
  if(jpg){g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height)}g.drawImage(bm,0,0,c.width,c.height);bm.close();
  const out=await new Promise(r=>c.toBlob(r,jpg?'image/jpeg':'image/png',.86));return out&&out.size<blob.size?{blob:out,type:jpg?'image/jpeg':'image/png'}:{blob,type}}
 async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.startsWith('video');if(vid&&blob.size>MAXCOPY)return toast('Videos over 300 MB are too big to copy into a checklist: use Video Player to link it');
- if(!vid)({blob,type}=await shrinkImg(blob,type));
+ if(!vid)({blob,type}=await shrinkImg(blob,type));if(!await roomFor(blob.size))return;
  const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
 function renderR(){
@@ -518,13 +529,13 @@ const MAXCOPY=300*1048576;
 const isVid=m=>m.kind==='vref'||(m.kind==='file'&&m.type==='video');
 const vkey=m=>m.kind==='vref'?'r:'+m.vid+':'+m.start+':'+m.end:'m:'+m.id;
 const vlabel=m=>m.kind==='vref'?`${fmtT(m.start)}–${fmtT(m.end)} · linked`:m.clip?`${fmtT(m.clip.start)}–${fmtT(m.clip.end)} · in checklist`:esc(m.name||'Video');
-const blobOf=async r=>r.blob||(r.blob=await(await fetch(r.data)).blob());   // fetch, not atob: copied videos can be hundreds of MB
+const blobOf=mBlob;
 // a playable URL for a library video; own: the caller made it and must revoke it
 async function vidSrc(v){if(v.link){const i=await FS.videoInfo(v.link);if(!i.exists)return{err:'Video file not found: '+(v.link.rel||v.link.path)+'. It may have been moved or renamed.'};
   return{url:i.url,changed:!!((v.link.size&&i.size!==v.link.size)||(v.link.mtime&&Math.abs(i.mtime-v.link.mtime)>2000))}}
  const r=VIDS[v.id];if(!r)return{err:'This video is missing from the checklist file.'};return{url:URL.createObjectURL(await blobOf(r)),own:true}}
 // drop decoded copies nobody is showing (the text copy in the checklist stays, so it can be decoded again)
-function vidTrim(){const used=new Set(Object.values(VEL).map(E=>E.vid).concat(VP.id&&PV3?[VP.id]:[]));for(const id in VIDS)if(!used.has(id)&&VIDS[id].data)delete VIDS[id].blob}
+function vidTrim(){const used=new Set(Object.values(VEL).map(E=>E.vid).concat(VP.id&&PV3?[VP.id]:[]));for(const id in VIDS)if(!used.has(id)&&(VIDS[id].data||VIDS[id].ref))delete VIDS[id].blob}
 function thumbAt(url,t){return new Promise(res=>{const v=document.createElement('video');let ok=false;v.muted=true;v.preload='auto';
  const done=x=>{if(ok)return;ok=true;v.removeAttribute('src');v.load();res(x)};
  v.onloadedmetadata=()=>{v.currentTime=Math.min(Math.max(0,t||0),Math.max(0,v.duration-0.05))};
@@ -542,7 +553,7 @@ async function vidPlay(k){const m=SEL&&SEL.media.find(x=>isVid(x)&&vkey(x)===k);
   E=VEL[k]={el,url,own,vid,mid:m.kind==='file'?m.id:null,item:SEL,timer:0}}
  E.item=SEL;vidMount();E.el.play().catch(()=>{})}
 function vidRelease(k){const E=VEL[k];if(!E)return;clearTimeout(E.timer);E.el.pause();E.el.removeAttribute('src');E.el.load();E.el.remove();if(E.own)URL.revokeObjectURL(E.url);
- if(E.mid&&MEDIA[E.mid]&&MEDIA[E.mid].data)delete MEDIA[E.mid].blob;delete VEL[k];vidTrim()}
+ if(E.mid&&MEDIA[E.mid]&&(MEDIA[E.mid].data||MEDIA[E.mid].ref))delete MEDIA[E.mid].blob;delete VEL[k];vidTrim()}
 // after every render: put loaded videos back in place; videos of other items pause and are released after a minute
 function vidMount(){for(const k in VEL){const E=VEL[k];
  if(E.item===SEL){clearTimeout(E.timer);E.timer=0;const ph=[...document.querySelectorAll('#p-img .vth')].find(x=>x.dataset.vk===k);if(ph&&E.el.parentNode!==ph){ph.appendChild(E.el);ph.classList.add('on')}}
@@ -573,7 +584,7 @@ async function vpAdd(f){if(isLocked())return toast('Editing is locked');f=f||awa
  <button class="vopt" id="vaLink" ${f.path?'':'disabled'}><b>Call to the existing file</b><span>The checklist only remembers where the video is. Nothing is added to the file, but if the video is moved, renamed or changed it will not play properly.${f.rel?' It is inside the save folder, so it keeps working if that folder (or USB drive) moves.':''}${f.path?'':' Not possible here: the file\'s location is unknown.'}</span></button>
  <div class="dbtn"><button data-d="x">Cancel</button></div>`);
  $('#vaLink').onclick=()=>{closeDlg();const id=uid();S.videos.push({id,name:f.name,size:f.size,link:{path:f.path,rel:f.rel,size:f.size,mtime:f.mtime}});save();vpShow(id)};
- $('#vaCopy').onclick=async()=>{closeDlg();const r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=f.blob||await FS.videoRead({path:f.path});await step(1);return b}).catch(()=>null);
+ $('#vaCopy').onclick=async()=>{closeDlg();if(!await roomFor(f.size))return;const r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=f.blob||await FS.videoRead({path:f.path});await step(1);return b}).catch(()=>null);
   if(!r||r==='cancelled')return toast('Could not import that video');const id=uid();VIDS[id]={blob:r instanceof Blob?r:new Blob([r],{type:/\.webm$/i.test(f.path)?'video/webm':'video/mp4'})};S.videos.push({id,name:f.name,size:f.size,link:null});save();vpShow(id)}}
 function vpRemove(id){if(isLocked())return toast('Editing is locked');const v=vp(id);if(!v)return;let n=0;for(const s of S.sections)for(const c of s.cards)for(const x of [c,...c.steps])n+=x.media.filter(m=>m.kind==='vref'&&m.vid===id).length;
  ask(`Remove "${esc(v.name)}" from this checklist?${n?` ${n} linked clip${n>1?'s':''} on checklist items will stop playing. Installed clips are not affected.`:''}`,'Remove',()=>{S.videos=S.videos.filter(x=>x.id!==id);delete VIDS[id];if(VP.id===id){const x=vv();x.pause();x.removeAttribute('src');x.load();if(VP.own)URL.revokeObjectURL(VP.url);VP.id=null;VP.url='';VP.own=false;VP.sel=false;vpSelUI()}vpList();save();if(S.videos[0])vpShow(S.videos[0].id);else vpMsg('No videos yet: + Add video…')},1)}
@@ -633,7 +644,7 @@ async function installWin(v,it,a,b,thumbFn){vv().pause();const w=$('#iw');let jo
   $('#iwq').innerHTML=[['native','Native','original quality'],['medium','Medium','good for most steps'],['low','Low','smallest file']].map(([k,t,d])=>{const z=job.sizes[k][snd?'with':'without'],r=k==='native'?(h?h+'p':''):res(k==='medium'?720:480);
    return `<label class="iwr"><input type="radio" name="iwq" value="${k}" ${q===k?'checked':''}><b>${t}</b><span class="mut">${r} · ${d}</span><span class="iwz">${MB(z)}</span></label>`}).join('')};
  w.onclick=async e=>{const t=e.target.closest('[data-iw]');if(!t)return;if(t.dataset.iw==='x')return close();
-  if(!job)return;t.disabled=true;try{const snd=job.audio&&$('#iwsnd').checked,bytes=await FS.clipRead(job.id,q,snd),thumb=await thumbFn(),mid=uid();
+  if(!job)return;t.disabled=true;try{const snd=job.audio&&$('#iwsnd').checked,bytes=await FS.clipRead(job.id,q,snd);if(!await roomFor(bytes.length)){t.disabled=false;return}const thumb=await thumbFn(),mid=uid();
    MEDIA[mid]={blob:new Blob([bytes],{type:'video/mp4'}),name:v.name+' '+fmtT(a)+'.mp4',type:'video/mp4'};
    it.media.push({kind:'file',id:mid,type:'video',name:v.name,thumb,clip:{start:+a.toFixed(2),end:+b.toFixed(2),q,sound:!!snd}});done=true;FS.clipDone(job.id);close();vpDone(it,'Clip installed ('+MB(bytes.length)+') on')}
   catch(x){t.disabled=false;toast('Could not install the clip')}};
@@ -682,10 +693,10 @@ const imgOf=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i)
 async function shownUrl(m,src,noText){if(!(hasDraw(m)||(!noText&&hasText(m)))||DHIDE.has(m.id))return src;const k=JSON.stringify([m.draw,noText?0:m.text]),ck=m.id+(noText?':n':'');if(DRC[ck]&&DRC[ck].k===k)return DRC[ck].url;
  try{const im=await imgOf(src),c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d');await txFonts(noText?[]:m.text);g.drawImage(im,0,0);if(hasDraw(m))paintStrokes(g,m.draw.s,im.naturalWidth/(m.draw.w||im.naturalWidth));if(!noText)paintText(g,m.text,1);
   const b=await new Promise(r=>c.toBlob(r,/jpe?g/i.test((MEDIA[m.id]||{}).type||'')?'image/jpeg':'image/png',.92));if(DRC[ck])URL.revokeObjectURL(DRC[ck].url);DRC[ck]={k,url:URL.createObjectURL(b)};return DRC[ck].url}catch(e){return src}}
-const mediaSrc=id=>{if(!urls[id]){const r=MEDIA[id];if(r)urls[id]=URL.createObjectURL(r.blob||(r.blob=d2b(r.data)))}return urls[id]};
+const mediaSrc=async id=>{if(!urls[id]){const r=MEDIA[id],b=r&&await mBlob(r);if(b)urls[id]=URL.createObjectURL(b)}return urls[id]};
 // ----- the editor -----
 const DCOL=['#e5332a','#ff8a00','#ffd400','#2fb344','#1e88ff','#b44bff','#ffffff','#000000'];
-async function drawOpen(m){if(isLocked())return toast('Editing is locked');const src=mediaSrc(m.id);if(!src)return;let im;try{im=await imgOf(src)}catch(e){return toast('Could not open that image')}
+async function drawOpen(m){if(isLocked())return toast('Editing is locked');const src=await mediaSrc(m.id);if(!src)return;let im;try{im=await imgOf(src)}catch(e){return toast('Could not open that image')}
  await txFonts(m.text);const W=im.naturalWidth,H=im.naturalHeight,f=m.draw&&m.draw.w?W/m.draw.w:1;   // older drawings are scaled to the image's current size
  let strokes=hasDraw(m)?m.draw.s.map(s=>({c:s.c,w:s.w*f,p:s.p.map(v=>v*f)})):[],hist=[],fut=[],cur=null,sc=1;
  const col=AS.dcol||'#e5332a',size=AS.dsz||6,w=$('#dw');
@@ -779,11 +790,11 @@ async function d2u(d,prog){const i=d.indexOf(',')+1,n=d.length-i,u=new Uint8Arra
 async function openP(id,page){const rec=PDFS[id],P=pr(id);if(!rec||!P)return false;
  if(ACT===id&&pdf){page?show(page):draw();return true}
  let doc;try{doc=await load('Loading '+P.name,async step=>{let b=rec.buf;
-  if(!b){await step(0,'Reading '+P.name+'…');b=(await d2u(rec.data,f=>step(f*.8))).buffer;rec.buf=b}
+  if(!b){await step(0,'Reading '+P.name+'…');b=await pdfBuf(rec,f=>step(f*.8))}
   await step(.85,'Opening PDF…');const d=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise;await step(1);return d})}
  catch(e){vmsg('Could not read PDF: '+(e&&e.message||e),true);return false}
  if(!doc||doc==='cancelled')return false;pdf=doc;ACT=id;renderPdfUI();show(page||1);return true}
-async function addPdf(f){if(!CUR)return toast('Open a checklist first');if(isLocked())return toast('Editing is locked');let r;
+async function addPdf(f){if(!CUR)return toast('Open a checklist first');if(isLocked())return toast('Editing is locked');if(!await roomFor(f.size))return;let r;
  try{r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=await f.arrayBuffer();await step(.6,'Checking PDF…');const d=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise;await step(1);return{b,d}})}
  catch(e){return toast('Could not read '+f.name)}
  if(!r||r==='cancelled')return;const id=uid();PDFS[id]={buf:r.b};S.pdfs.push({id,name:f.name.replace(/\.pdf$/i,''),offset:0,map:{}});pdf=r.d;ACT=id;save();renderPdfUI();show(1);if(PV2)indexAll();toast('PDF added')}
@@ -808,7 +819,7 @@ function pvOpen(){if(!CUR)return toast('Open a checklist first');PV2=true;$('#pv
 function pvClose(){PV2=false;$('#pv').hidden=true;IXB++;$('#pvidx').textContent='';if(tab==='pdf')draw()}
 async function indexAll(){const tk=++IXB;
  for(const P of S.pdfs){const rec=PDFS[P.id];if(PIDX[P.id]||!rec)continue;if(tk!==IXB)return;let doc=P.id===ACT?pdf:null;
-  try{if(!doc){const b=rec.buf||(rec.buf=(await d2u(rec.data,tick)).buffer);doc=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise}
+  try{if(!doc){const b=await pdfBuf(rec,tick);doc=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise}
    const out=[];for(let i=1;i<=doc.numPages;i++){if(tk!==IXB)return;const t=await(await doc.getPage(i)).getTextContent();out.push(t.items.map(x=>x.str).join(' ').toLowerCase());
     if(i%4===0){$('#pvidx').textContent=`Indexing ${P.name}: ${i}/${doc.numPages}`;await tick()}}
    PIDX[P.id]=out;if(PV2)pvSearch()}catch(e){}}
@@ -846,7 +857,7 @@ $('#autos').value=AS.auto;$('#autos').onchange=e=>{AS.auto=e.target.value;saveAp
 function applyTheme(){const r=document.documentElement;if(AS.theme==='light')r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');r.style.setProperty('--acc',`hsl(${AS.hue} 78% 48%)`)}
 function uncheckAll(by){S.sections.forEach(s=>s.cards.forEach(c=>[c,...c.steps].forEach(x=>{x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft=''})));logEv('uncheck everything',{text:'all items'},by?by.name:'',by?by.uid:'');save();renderL();renderR()}
 function saveAs(){dlg(`<div class="dh"><b>Save as</b></div><label>File name<input id="sa" value="${esc(S.name||'unnamed')}"></label><p class="mut">Creates a copy and stays on this checklist.</p><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Save copy</button></div>`);
- DLGOK=async()=>{const nm=uniqueName($('#sa').value);DIRTY=true;await flush();await FS.write(nm+'.bcl',await pack(nm));LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});toast('Saved as '+nm)}}
+ DLGOK=async()=>{const nm=uniqueName($('#sa').value);DIRTY=true;await flush();await FS.write(nm+'.bcl',await pack(nm),CUR+'.bcl');LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});toast('Saved as '+nm)}}
 function openSettings(){
  dlg(`<div class="dh"><b>Settings</b><button data-d="x">✕</button></div>
  <div class="ds"><div class="dt">Themes <span class="mut">(saved in the app, not in the checklist)</span></div>
@@ -856,9 +867,12 @@ function openSettings(){
  <div class="ds"><div class="dt">This checklist</div>
  <label class="chk"><input type="checkbox" id="lockc" ${S.locked?'checked':''}> Master file: lock editing (checking, initials and sign-offs still work)</label>
  <label>Manual / revision<input id="mrev" value="${esc(S.manual)}" ${isLocked()?'disabled':''}></label>
- <label class="chk"><input type="checkbox" id="mechc" ${S.mech?'checked':''} ${isLocked()?'disabled':''}> Mechanical wording (technician, inspector, torque, spec)</label><p class="mut" style="margin:2px 0 0 24px">Off: general words, for any kind of checklist. Used in this checklist and on its printouts.</p></div>
+ <label class="chk"><input type="checkbox" id="mechc" ${S.mech?'checked':''} ${isLocked()?'disabled':''}> Mechanical wording (technician, inspector, torque, spec)</label><p class="mut" style="margin:2px 0 0 24px">Off: general words, for any kind of checklist. Used in this checklist and on its printouts.</p>
+ <div class="dt" style="margin:12px 0 6px">Storage</div><div class="stbar"><i id="stfill"></i></div><div id="sttxt" class="mut" style="margin-top:4px">Working out…</div>
+ <p class="mut" style="margin:4px 0 0">Each checklist has a hard limit of ${sizeTxt(CAP)}, photos, PDFs and videos included. Performance may drop as it fills up: big checklists take longer to open, back up, export and copy. Linking big videos instead of copying them keeps a checklist small.</p></div>
  ${savedirHtml()}${updHtml()}<div class="ds"><div class="dt">Profile and PINs</div><p class="mut">Set these up in Profile on the main menu. Everything is off by default.</p></div>
- <div class="ds"><div class="dt">Activity log</div><button data-d="log">Open the full activity log</button></div>`)}
+ <div class="ds"><div class="dt">Activity log</div><button data-d="log">Open the full activity log</button></div>`);stFill()}
+async function stFill(){const u=await usage(),f=$('#stfill'),t=$('#sttxt');if(!f||!t)return;const p=Math.min(100,u/CAP*100);f.style.width=Math.max(p,u?.5:0)+'%';f.classList.toggle('hi',p>=80);t.textContent=`${sizeTxt(u)} of ${sizeTxt(CAP)} used (${p<1&&u?'under 1':Math.round(p)}%)`}
 $('#cog').onclick=openSettings;
 $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||e.target===$('#modal'))closeDlg();else if(d.d==='ok'){const f=DLGOK;closeDlg();f&&f()}
  else if(d.d==='log'){closeDlg();viewLogOf(CUR)}
@@ -885,7 +899,8 @@ function markOpened(id,to){let r={};try{r=JSON.parse(localStorage.getItem('ewf-r
 let FLP=Promise.resolve();   // saves run one at a time, in order
 function flush(){return FLP=FLP.then(flushNow,flushNow)}
 async function flushNow(){if(!CUR||!DIRTY)return true;if(RO){DIRTY=false;return true}DIRTY=false;clearTimeout(save.t);const id=CUR;
- try{await FS.write(id+'.bcl',await pack());const e=LIB.find(x=>x.id===id);if(e)e.saved=Date.now();return true}catch(x){DIRTY=true;toast('Could not save: '+((x&&x.message)||x));return false}}
+ try{const t=await pack(),fr=pack.fresh,res=await FS.write(id+'.bcl',t);if(res&&res.container)for(const [r,k] of fr){r.ref=k;delete r.data}   // now in the file: drop the text copy
+  const e=LIB.find(x=>x.id===id);if(e)e.saved=Date.now();return true}catch(x){DIRTY=true;toast('Could not save: '+((x&&x.message)||x));return false}}
 async function addEntry(obj,name){const base=uniqueName(name);obj.name=obj.name||base;await FS.write(base+'.bcl',JSON.stringify(obj));LIB.push({id:base,name:base,saved:Date.now(),opened:0});return base}
 async function syncName(){const nn=uniqueName(S.name,CUR);if(nn===CUR)return;DIRTY=true;await flush();
  try{await FS.rename(CUR+'.bcl',nn+'.bcl')}catch(e){toast(e.message||'Could not rename the file');return}
@@ -895,6 +910,7 @@ async function openProject(id){let r;
   if(CUR&&DIRTY){await step(.6,'Saving the open checklist…');await flush()}await step(.8,'Preparing checklist…');const u=unpack(raw);await step(1);return u})}
  catch(e){toast('Could not read that file');return}
  if(!r||r==='cancelled')return;
+ if(CUR&&CUR!==id&&FS.tidy)FS.tidy(CUR+'.bcl').catch(()=>{});
  TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();   // RO: saved by a newer version, so view-only and never saved hereLQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
  for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
@@ -908,25 +924,27 @@ const d2b=d=>{const i=d.indexOf(','),bin=atob(d.slice(i+1)),u=new Uint8Array(bin
 // builds the file text; the big base64 blobs are cached and spliced in, so JSON.stringify never re-scans them
 async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.pid,rv:PR.rv};   // every saved checklist carries the profile ID
  // version and stamp first: the menu list reads only the start of each file
- const o=Object.assign({app:undefined,stamp:undefined},JSON.parse(JSON.stringify(S))),big={};o.files={};if(name!=null)o.name=name;if(strip)strip(o);
- for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r){const k='m:'+m.id;big[k]=r.data||(r.data=await b2d(r.blob));o.files[m.id]={name:r.name,type:r.type,data:'@@'+k+'@@'}}}
- for(const p of o.pdfs){const r=PDFS[p.id];if(r){const k='p:'+p.id;big[k]=r.data||(r.data=await b2d(new Blob([r.buf],{type:'application/pdf'})));p.data='@@'+k+'@@'}}
- for(const v of o.videos){const r=VIDS[v.id];if(r&&!v.link){const k='v:'+v.id;big[k]=r.data||(r.data=await b2d(r.blob));v.data='@@'+k+'@@'}}
+ const o=Object.assign({app:undefined,stamp:undefined},JSON.parse(JSON.stringify(S))),big={},fresh=pack.fresh=[];o.files={};if(name!=null)o.name=name;if(strip)strip(o);
+ // media already in the checklist file go in as references (nothing to send); new ones as data, listed in pack.fresh for flushNow
+ const put=async(k,r,mk)=>{if(r.ref)return REFP+r.ref;big[k]=r.data||(r.data=await b2d(await mk()));fresh.push([r,k]);return '@@'+k+'@@'};
+ for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r)o.files[m.id]={name:r.name,type:r.type,data:await put('m:'+m.id,r,()=>r.blob)}}
+ for(const p of o.pdfs){const r=PDFS[p.id];if(r)p.data=await put('p:'+p.id,r,()=>new Blob([r.buf],{type:'application/pdf'}))}
+ for(const v of o.videos){const r=VIDS[v.id];if(r&&!v.link)v.data=await put('v:'+v.id,r,()=>r.blob)}
  if(APPV)o.app=APPV;   // the version that saved it: an older copy opens it view-only instead of dropping what it does not know
  const t=JSON.stringify(o).split(/"@@([mpv]:[a-z0-9]+)@@"/);let out=t[0];for(let i=1;i<t.length;i+=2)out+=big[t[i]]!==undefined?'"'+big[t[i]]+'"'+t[i+1]:'"@@'+t[i]+'@@"'+t[i+1];return out}
 // nothing heavy is decoded here: images and PDFs stay as text until they are first shown
-function unpack(o){const files=o.files||{};delete o.files;
+function unpack(o){const files=o.files||{};delete o.files;const lazy=r=>{if(typeof r.data==='string'&&r.data.startsWith(REFP)){r.ref=r.data.slice(REFP.length);delete r.data}return r};for(const k in files)lazy(files[k]);
  if(o.pdf&&!(o.pdfs&&o.pdfs.length))o.pdfs=[{name:o.manual||'Manual',offset:o.offset,map:o.map,data:o.pdf}];delete o.pdf;
- const P={};(o.pdfs||[]).forEach(p=>{p.id=p.id||uid();if(p.data){P[p.id]={data:p.data};delete p.data}});
- const V={};(o.videos||[]).forEach(v=>{v.id=v.id||uid();if(v.data){V[v.id]={data:v.data};delete v.data}});return{o:norm(o),files,P,V}}
-async function dlCopy(){toast('Preparing copy…');const t=await pack(),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'application/json'}));a.download=uniqueName(S.name,'-')+'.bcl';a.click();toast('Copy downloaded')}
+ const P={};(o.pdfs||[]).forEach(p=>{p.id=p.id||uid();if(p.data){P[p.id]=lazy({data:p.data});delete p.data}});
+ const V={};(o.videos||[]).forEach(v=>{v.id=v.id||uid();if(v.data){V[v.id]=lazy({data:v.data});delete v.data}});return{o:norm(o),files,P,V}}
+async function dlCopy(){if(CUR&&DIRTY)await flush();try{const f=await FS.saveFile({title:'Save a copy elsewhere',name:uniqueName(S.name,'-')+'.bcl',filters:[{name:'Checklist',extensions:['bcl']}],from:CUR+'.bcl'},await pack());if(f)toast('Saved: '+f)}catch(e){toast('Could not save the copy')}}
 // a shareable copy: same content, images and PDFs, but no profile stamp, no progress and no log, so it opens cleanly on any computer
 // keepLog: the old entries stay readable, under a marked segment, so the checks can be re-entered from them
 // the same checklist for the next job: everything except progress, the log and the profile link; saved here and opened
 function newJob(){if(!CUR)return;const from=S.name||CUR;dlg(`<div class="dh"><b>Start a new job</b></div><p>Makes a fresh copy of "${esc(from)}" with every section, step, image, PDF and video, and nothing checked off. This checklist stays as it is.</p><label>Name of the new checklist<input id="njn" value="${esc(uniqueName(from+' - new job'))}"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Start job</button></div>`);
  setTimeout(()=>{const i=$('#njn');if(i){i.focus();i.select()}},0);
  DLGOK=async()=>{const nm=uniqueName(($('#njn').value||'').trim()||from+' - new job');if(CUR&&DIRTY)await flush();toast('Preparing the new job…');
-  try{await FS.write(nm+'.bcl',await pack(nm,o=>{blankCopy(false)(o);o.log=[{at:now(),ev:'New job started',item:'From the checklist "'+from+'"',by:'',uid:''}]}));LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});await openProject(nm);toast('New job: '+nm)}
+  try{const cur=CUR+'.bcl';await FS.write(nm+'.bcl',await pack(nm,o=>{blankCopy(false)(o);o.log=[{at:now(),ev:'New job started',item:'From the checklist "'+from+'"',by:'',uid:''}]}),cur);LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});await openProject(nm);toast('New job: '+nm)}
   catch(e){toast('Could not start the new job')}}}
 const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
  if(keepLog)segOn(o,'recovery','Exported as a fresh copy','Entries above come from the original file');
@@ -963,14 +981,15 @@ async function xpPreview(k){const box=$('#xppages');let doc;try{doc=await pdfjsL
  for(let n=1;n<=doc.numPages;n++){const v=(await doc.getPage(n)).getViewport({scale:1}),d=document.createElement('div');d.className='xppg';d.dataset.n=n;d.style.aspectRatio=v.width+'/'+v.height;box.appendChild(d);io.observe(d)}xpWhere()}
 function xpWhere(){const box=$('#xppages');if(!box||!box.firstElementChild||!XP.pages)return;const top=box.getBoundingClientRect().top+box.clientHeight/3;let n=1;for(const d of box.children)if(d.getBoundingClientRect().top<=top)n=+d.dataset.n;$('#xpinfo').textContent=`Page ${n} of ${XP.pages} · ${PO().paper}`}
 async function xpExport(){const b=$('#xpgo');b.disabled=true;let f=null;
- try{if(XP.k==='fresh')f=await FS.saveFile({title:'Export a fresh copy',name:uniqueName(S.name,'-')+' (shared).bcl',filters:[{name:'Checklist',extensions:['bcl']}]},await pack(null,blankCopy($('#exlog').checked)));
+ try{if(XP.k==='fresh')f=await FS.saveFile({title:'Export a fresh copy',name:uniqueName(S.name,'-')+' (shared).bcl',filters:[{name:'Checklist',extensions:['bcl']}],from:CUR+'.bcl'},await pack(null,blankCopy($('#exlog').checked)));
   else if(XP.pdf)f=await FS.saveFile({title:'Export printable checklist',name:(S.name||'Checklist').replace(/[\\/:*?"<>|]+/g,'_')+' - checklist.pdf',filters:[{name:'PDF',extensions:['pdf']}]},XP.pdf);
   if(f){xpClose();toast('Saved: '+f)}}
  catch(e){toast('Could not export: '+String((e&&e.message)||e).replace(/^.*Error: /,''))}finally{if(!$('#xp').hidden)b.disabled=false}}
 $('#xp').addEventListener('click',e=>{const t=e.target;if(t.closest('[data-xp=x]'))return xpClose();const k=t.closest('[data-xk]');if(k&&k.dataset.xk!==XP.k)return xpShow(k.dataset.xk);if(t.closest('#xpgo'))xpExport()});
 $('#xp').addEventListener('change',e=>{const t=e.target,o=PO();if(t.name==='xpp')o.paper=t.value;else if(t.dataset.po)o[t.dataset.po]=t.checked;else if(t.dataset.ps!=null){t.checked?XP.skip.delete(+t.dataset.ps):XP.skip.add(+t.dataset.ps)}else return;AS.pdf=o;saveApp();xpMake()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#xp').hidden&&$('#modal').hidden)xpClose()});
-$('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+$('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const p=FS.pathOf&&FS.pathOf(f);
+ if(p){try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}return}   // copied by main.js: works for any size
  try{const txt=await f.text(),raw=JSON.parse(txt);if(!raw.sections&&!raw.prep&&!raw.tasks)throw 0;const base=await FS.writeNew(f.name.replace(/\.[^.]+$/,''),txt);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}};
 let HS=null;
 const rel=t=>{const d=new Date(t);return d.toDateString()===new Date().toDateString()?'Today '+d.toLocaleTimeString([],{timeStyle:'short'}):d.toLocaleDateString([],{dateStyle:'medium'})};

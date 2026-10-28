@@ -170,7 +170,7 @@ pending = argFile(process.argv);
 const web = u => { try { return /^https?:$/.test(new URL(u).protocol); } catch (e) { return false; } };
 
 const handlers = {
-  dir: () => savesDir(), list: () => st.list(), read: n => st.read(n), write: (n, t) => st.write(n, t),
+  dir: () => savesDir(), list: () => st.list(), read: n => st.read(n), write: (n, t, from) => st.write(n, t, from), media: (n, k) => st.media(n, k), info: n => st.info(n), tidy: n => st.tidy(n),
   writeNew: (n, t) => st.writeNew(n, t), rename: (a, b) => st.rename(a, b), remove: n => st.remove(n),
   importPath: p => st.importPath(p), backup: n => st.backup(n), restore: n => st.restore(n),
   choose: async () => { const r = await dialog.showOpenDialog(win, { title: 'Choose the save folder', properties: ['openDirectory', 'createDirectory'], defaultPath: savesDir() }); if (r.canceled || !r.filePaths[0]) return null; cfg.savesDir = r.filePaths[0]; saveCfg(); writeMarker(); return savesDir(); },
@@ -233,7 +233,9 @@ const handlers = {
   pdfMake: (data, opts) => makePdf(data, opts || {}),
   saveFile: async (o, data) => { o = o || {};
     const r = await dialog.showSaveDialog(win, { title: String(o.title || 'Export'), defaultPath: path.join(app.getPath('documents'), String(o.name || 'export').replace(/[\\/:*?"<>|]+/g, '_')), filters: Array.isArray(o.filters) ? o.filters : undefined });
-    if (r.canceled || !r.filePath) return null; await fsp.writeFile(r.filePath, typeof data === 'string' ? data : Buffer.from(data)); return r.filePath; },
+    if (r.canceled || !r.filePath) return null;
+    if (o.from) return st.exportTo(r.filePath, data, o.from);   // a checklist: a complete file with the photos, PDFs and videos of checklist o.from
+    await fsp.writeFile(r.filePath, typeof data === 'string' ? data : Buffer.from(data)); return r.filePath; },
   // updates
   appVersion: () => app.getVersion(),
   updGet: () => { const c = updCfg(), K = kind(), f = c.found && newer(c.found.version, app.getVersion()) ? c.found : null;

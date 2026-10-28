@@ -480,6 +480,18 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(shr.w === 2560 && shr.h === 1920 && shr.after < shr.before / 2 && shr.type === 'image/jpeg', 'a 4000x3000 photo is stored at 2560x1920 and much smaller: ' + JSON.stringify(shr));
   assert.strictEqual(shr.off, shr.before, 'with the setting off the original is kept');
 
+  // ---- storage bar and the limit per checklist ----
+  await pg.evaluate(() => openSettings()); await pg.waitForTimeout(200);
+  const st1 = await pg.evaluate(() => ({ txt: $('#sttxt').textContent, w: parseFloat($('#stfill').style.width), note: $('#modal').textContent }));
+  assert(/^[\d.]+ (KB|MB) of 2 GB used/.test(st1.txt) && st1.w > 0 && /hard limit of 2 GB/.test(st1.note) && /Performance may drop as it fills up/.test(st1.note), 'storage bar with numbers and the note: ' + st1.txt);
+  await pg.evaluate(() => { closeDlg(); CAP = 3 * 1048576; openSettings(); }); await pg.waitForTimeout(200);
+  assert(await pg.evaluate(() => $('#stfill').classList.contains('hi') || parseFloat($('#stfill').style.width) > 0), 'bar fills as the limit gets close');
+  const mCount = await pg.evaluate(() => SEL.media.length);
+  await pg.evaluate(async () => { closeDlg(); const c = document.createElement('canvas'); c.width = 3000; c.height = 2000; const g = c.getContext('2d'), d = g.createImageData(3000, 2000); for (let i = 0; i < d.data.length; i++) d.data[i] = Math.random() * 255; g.putImageData(d, 0, 0);
+    AS.shrink = false; await attach(await new Promise(r => c.toBlob(r, 'image/png')), 'huge.png', 'image/png'); });
+  assert(await pg.evaluate(n => SEL.media.length === n && /Not enough room in this checklist/.test($('#toast').textContent), mCount), 'adding past the limit is refused with an explanation');
+  await pg.evaluate(() => { CAP = 2 * 1073741824; AS.shrink = true; });
+
   // ---- Start a new job from this checklist ----
   pg = await page({ 'Engine.bcl': used }, prof('a'.repeat(32)));
   await open(pg, 'Engine');

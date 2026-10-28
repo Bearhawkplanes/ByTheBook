@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const call = (op, ...a) => ipcRenderer.invoke('fs', op, ...a);
 contextBridge.exposeInMainWorld('fsapi', {
-  dir: () => call('dir'), list: () => call('list'), read: n => call('read', n), write: (n, t) => call('write', n, t),
+  dir: () => call('dir'), list: () => call('list'), read: n => call('read', n), write: (n, t, from) => call('write', n, t, from), media: (n, k) => call('media', n, k), info: n => call('info', n), tidy: n => call('tidy', n),
   writeNew: (n, t) => call('writeNew', n, t), rename: (a, b) => call('rename', a, b), remove: n => call('remove', n),
   importPath: p => call('importPath', p), choose: () => call('choose'), resetDir: () => call('resetDir'),
   openDir: () => call('openDir'), reveal: n => call('reveal', n), pending: () => call('pending'),

@@ -34,7 +34,7 @@ Install Node.js LTS once, then in this folder:
 
 ## Where things live (all next to the app by default)
 - `Saves/`  your checklists, one `.bcl` file each (PDF and images are inside the file)
-- `Saves/Backups/`  one older copy of each file, refreshed at most every 5 minutes. Menu > Restore from backup… opens it as a new checklist ("name (restored)"); the current file is never overwritten. Backups stay in this folder after a checklist is deleted.
+- `Saves/Backups/`  one older copy of each file, refreshed at most every 5 minutes (30 minutes for checklists over 100 MB, which take a while to copy). Menu > Restore from backup… opens it as a new checklist ("name (restored)"); the current file is never overwritten. Backups stay in this folder after a checklist is deleted.
 - `Data/`  app settings, the signed `profile.json` (username, PIN hashes, roster, recovery verifier) and `config.json` (custom save folder)
 - `Saves/.profile-marker.json`  small signed record of the profile ID, kept with the checklists
 
@@ -131,8 +131,11 @@ For torque patterns, bolt numbering and the like.
 - The log keeps the newest 5,000 entries (old step entries go first; sign-offs and markers are kept).
 
 ## Size limits and speed
-- A checklist is saved as one file. It can hold roughly 350 MB of photos, PDFs and clips (for example about 450 shrunk photos plus a few manuals); beyond that the app can no longer save it. Photos are shrunk when added (Settings > Shrink big photos, on by default: phone photos go to 2560 px, about 0.4–0.7 MB each), and linking big videos instead of copying them keeps files small.
-- Measured on a deliberately huge checklist (3,900 rows, 300 photos, 60 clips, three PDFs incl. 400 pages, 341 MB file): menu 1.4 s, opening 6 s, the printable PDF (301 pages) 4–5 s. Every save rewrites the whole file, which takes several seconds at that size (in the background; the app stays usable).
+- Each checklist is still one `.bcl` file, to copy or share as it is. Inside, photos, PDFs and videos are stored once as they are; a save only adds what changed (the checklist itself, a few KB to a few MB), so ticking a box stays quick however many photos a checklist has. Photos, PDFs and videos are read from the file only when they are shown.
+- Old copies of the checklist part pile up inside the file as unused space; the app clears it now and then, and when you switch to another checklist. A save cut short (power cut) falls back to the last complete save.
+- Settings > This checklist > Storage shows how full the checklist is ("120 MB of 2 GB used"). Each checklist has a hard limit of 2 GB, photos, PDFs and videos included; adding more is refused with a message. Performance may drop as it fills up: big checklists take longer to back up, export and copy.
+- Photos are shrunk when added (Settings > Shrink big photos, on by default: phone photos go to 2560 px, about 0.4–0.7 MB each), and linking big videos instead of copying them keeps checklists small.
+- Checklists from before this file format are converted the first time they are opened; the original is kept in `Saves/Backups/`. Copies of the app from before this change cannot open the new files, so update every computer together.
 
 ## Notes
 - Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. If the final save fails, closing asks whether to keep the app open.

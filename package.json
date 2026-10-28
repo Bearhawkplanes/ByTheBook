@@ -21,6 +21,7 @@
       "main.js",
       "preload.js",
       "storage.js",
+      "bcl.js",
       "index.html",
       "print.html",
       "lib/**"
