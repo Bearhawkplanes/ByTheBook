@@ -9,7 +9,7 @@ Windows may warn the first time because the app is not code-signed: click "More 
 To update, replace the exe with the new one; keep the `Saves/` and `Data/` folders.
 
 ## Publishing a new version (maintainer)
-Raise `"version"` in `package.json`, commit, then push a matching tag (for example `git tag v0.6.0 && git push origin v0.6.0`). GitHub Actions builds both Windows files and attaches them to a new release.
+Raise `"version"` in `package.json` and commit. On GitHub: Releases > Draft a new release > choose a tag > type the matching tag (for example `v0.6.0`) > "Create new tag on publish" > Publish release. GitHub Actions then builds both Windows files and attaches them to that release (takes about 5 minutes).
 
 ## Build the app (on the computer type you are building for)
 Install Node.js LTS once, then in this folder:

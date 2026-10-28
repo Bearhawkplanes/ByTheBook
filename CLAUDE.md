@@ -36,5 +36,5 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - Security is deliberately "deters casual tampering". The README says what it does not stop; keep that honest when changing things.
 
 ## Releases
-- Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a `v*` tag is pushed, and attached to a GitHub Release. Never commit built `.exe` files or `dist/` to the repo.
-- To release: bump `version` in `package.json` (and `package-lock.json`), commit, push, then `git tag vX.Y.Z` and `git push origin vX.Y.Z`. Ask the owner before tagging a release.
+- Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a release is published, and attached to it. Never commit built `.exe` files or `dist/` to the repo.
+- To release: bump `version` in `package.json` (and `package-lock.json`), commit and push; then the owner publishes a release on GitHub with tag `vX.Y.Z` (cloud sessions cannot push tags: HTTP 403). Ask the owner before preparing a release.

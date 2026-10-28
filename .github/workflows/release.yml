@@ -1,9 +1,10 @@
 # Builds the Windows downloads and attaches them to a GitHub Release.
-# Runs when a version tag like v0.5.0 is pushed (the tag should match "version" in package.json).
+# Runs when a release is published on GitHub (tag like v0.5.0, matching "version" in package.json).
+# "Run workflow" on the Actions page builds the same files as a test download, without a release.
 name: Release
 on:
-  push:
-    tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
 permissions:
   contents: write
@@ -24,7 +25,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: dist/*.exe
-          generate_release_notes: true
       - uses: actions/upload-artifact@v4
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
