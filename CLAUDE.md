@@ -34,3 +34,7 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
   - The shop must never lose its files to a bad employee: even under E-4417/E-4418, checklists must still open and **Menu > Export for sharing…** must still work.
   - Export for sharing (`exportDlg` > `exportShare` > `blankCopy`) keeps all content, images and PDFs, and clears progress, stamp and `ids`. "Include the activity log" keeps the old log read-only under an "Exported as a fresh copy" segment, so the checks can be re-entered by hand in a new install.
 - Security is deliberately "deters casual tampering". The README says what it does not stop; keep that honest when changing things.
+
+## Releases
+- Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a `v*` tag is pushed, and attached to a GitHub Release. Never commit built `.exe` files or `dist/` to the repo.
+- To release: bump `version` in `package.json` (and `package-lock.json`), commit, push, then `git tag vX.Y.Z` and `git push origin vX.Y.Z`. Ask the owner before tagging a release.

@@ -1,6 +1,6 @@
 {
   "name": "build-checklist",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Offline build checklist with manual PDF viewer",
   "main": "main.js",
   "scripts": {
@@ -36,6 +36,7 @@
       "artifactName": "BuildChecklist.exe"
     },
     "nsis": {
+      "artifactName": "BuildChecklist-Setup.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },

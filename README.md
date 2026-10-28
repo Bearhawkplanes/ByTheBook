@@ -1,5 +1,16 @@
 # Build Checklist (offline desktop app)
 
+## Download (Windows)
+Get the latest version from the Releases page (right side of the repository page on GitHub):
+- `BuildChecklist.exe`: portable, nothing to install. Put it in its own folder (for example on the desktop or a USB drive); `Saves/` and `Data/` are created next to it.
+- `BuildChecklist-Setup.exe`: installer. Also lets you double-click `.bcl` files to open them.
+
+Windows may warn the first time because the app is not code-signed: click "More info" > "Run anyway".
+To update, replace the exe with the new one; keep the `Saves/` and `Data/` folders.
+
+## Publishing a new version (maintainer)
+Raise `"version"` in `package.json`, commit, then push a matching tag (for example `git tag v0.6.0 && git push origin v0.6.0`). GitHub Actions builds both Windows files and attaches them to a new release.
+
 ## Build the app (on the computer type you are building for)
 Install Node.js LTS once, then in this folder:
 
