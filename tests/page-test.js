@@ -712,6 +712,9 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const vdm = await pg.evaluate(async () => { const n = LIB.length, inMenu = !!document.querySelector('[data-m=demo]'); $('#hDemo').click(); await new Promise(r => setTimeout(r, 1200)); return { more: LIB.length === n + 1, cur: CUR, inMenu, tut: !!$('#hTut') }; });
   assert(vdm.more && /^Demo engine build/.test(vdm.cur) && !vdm.inMenu && vdm.tut, 'View Demo on the main menu adds and opens the demo; Tutorial button is there: ' + JSON.stringify(vdm));
 
+  const hdr = await pg.evaluate(() => { S.name = 'A very long checklist name '.repeat(6); renderTitle(); const t = $('#ptitle'); return { opts: [...$('#autos').options].map(o => o.value).join(), label: $('.autol span').textContent, cut: t.scrollWidth > t.clientWidth, hover: t.title === S.name }; });
+  assert(hdr.opts === 'stay,img,desc,pdf,wp' && hdr.label === 'On click,' && hdr.cut && hdr.hover, 'header: no Auto option, short label, long title cut with … and full name on hover: ' + JSON.stringify(hdr));
+
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');

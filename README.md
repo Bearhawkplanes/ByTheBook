@@ -163,7 +163,8 @@ For torque patterns, bolt numbering and the like.
 
 ## Around the screen
 - Under the checklist name: **Items** = main items checked off / all main items, **Sections** = sections complete (all their main items done, shown green) / all sections. The small pie right of the name fills by main items done (hover for the numbers).
-- Right panel tabs: Images, Description, PDF, Work Photos (the selected one is highlighted).
+- Right panel tabs: Images, Description, PDF, Work Photos (the selected one is highlighted). "On click," at the top left picks what the right panel shows when you click an item: stay on the current tab, or always Images, Description, PDF or Work Photos.
+- On small screens a long checklist name is shortened with … (hover to see all of it), and an item's tags (quantity, page, pictures) move under its name when they don't fit beside it.
 - Greyed-out menu items (Delete in a master file or worker mode, most items in worker mode) say why when you hover over them.
 - Main menu: **View Demo** next to Import adds the demo checklist again as a new checklist (a fresh install also starts with it). **Tutorial** next to Profile is a placeholder for now. Esc on the Profile page goes back to the menu.
 - With "Require a PIN for sign-offs" on, the sign-off box on main items reads "Boss Sign-Off".
