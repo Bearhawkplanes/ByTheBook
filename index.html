@@ -515,7 +515,7 @@ async function wpThumb(blob){const bm=await createImageBitmap(blob),k=Math.min(1
 function wpWho(n){const t='Add '+n+' work photo'+(n>1?'s':'');if(pinOn('sign')||pinOn('names'))return askPin({title:t,note:'Your PIN records who added '+(n>1?'them':'it')+'.'}).then(w=>w&&{by:w.name,uid:w.uid});
  return new Promise(res=>{DLGOK=()=>{const v=$('#wpn').value.trim();if(!v)return res(null);AS.wpby=v;saveApp();res({by:v,uid:''})};
   dlg(`<div class="dh"><b>${t}</b></div><label>Your name (shown with the photo${n>1?'s':''})<input id="wpn" value="${esc(AS.wpby||'')}" maxlength="60"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Add</button></div>`);setTimeout(()=>{const i=$('#wpn');if(i)i.select()},0)})}
-async function wpAdd(files){const it=SEL;files=files.filter(f=>/^image\//.test(f.type));if(!it||!files.length)return;if(errNow())return showErr(errNow());
+async function wpAdd(files){const it=SEL,n=files.length;files=files.filter(f=>/^image\//.test(f.type));if(n>files.length)toast('Work Photos takes photos only (no videos)');if(!it||!files.length)return;if(errNow())return showErr(errNow());
  if(wpLocked(it))return toast('This item is signed off: its work photos can no longer change');
  const who=await wpWho(files.length);if(!who)return;
  for(const f of files){const{blob,type}=await shrinkImg(f,f.type);let tb;try{tb=await wpThumb(blob)}catch(e){toast('Could not read '+f.name);continue}
