@@ -158,6 +158,8 @@ For torque patterns, bolt numbering and the like.
 - Settings > This checklist > Storage shows how full the checklist is ("120 MB of 2 GB used"). Each checklist has a hard limit of 2 GB, photos, PDFs and videos included; adding more is refused with a message. Performance may drop as it fills up: big checklists take longer to back up, export and copy.
 - Photos are shrunk when added (Settings > Shrink big photos, on by default: phone photos go to 2560 px, about 0.4–0.7 MB each), and linking big videos instead of copying them keeps checklists small.
 - Checklists from before this file format are converted the first time they are opened; the original is kept in `Saves/Backups/`. Copies of the app from before this change cannot open the new files, so update every computer together.
+- Very long checklists stay quick on slow laptops: the list draws the sections near what you are looking at and fills in the rest as you scroll; ticking a box redraws only that item; search and the section tabs jump straight to items further down. The backup copy is made alongside saving instead of holding it up, and photos not looked at for a while are let go from memory (they load again when shown).
+- Measured on a simulated weak laptop (2 cores, 4× slower) with a 555 MB checklist of 3,900 steps and 700 photos: opening 1.7 s, ticking a box under 0.4 s including the save, search 0.2 s.
 
 ## Notes
 - Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. A small green "Saved!" appears left of the checklist name after each save and fades away (just under the name when the window is narrow). If the final save fails, closing asks whether to keep the app open.

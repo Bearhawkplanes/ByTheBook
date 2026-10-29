@@ -7,11 +7,20 @@ module.exports = (getDir, trash) => {
   const bakOf = n => path.join(getDir(), 'Backups', path.basename(n) + '.bak');
   const uniq = base => { base = clean(base); let n = base, k = 2; while (fs.existsSync(path.join(getDir(), n + '.bcl'))) n = base + ' ' + k++; return n; };
   const put = async (base, text, from) => { const n = uniq(base); await B.save(file(n + '.bcl'), text, from); return n; };
-  // one backup copy per checklist, refreshed at most every 5 minutes (30 for big files, which take a while to copy)
+  // one backup copy per checklist, refreshed at most every 5 minutes (30 for big files, which take a while to copy). It runs beside the
+  // saves, not before them: copying a big file takes seconds on a slow drive. A copy taken while a save is being added is still
+  // valid (readers use the last complete save in it). Compaction waits for it (it renames over the file).
+  const bk = new Map();
+  const bgBackup = (n, f) => { if (!bk.has(f)) bk.set(f, backup(n, f).finally(() => bk.delete(f))); };
   const backup = async (n, f) => { try { if (!fs.existsSync(f)) return; const b = bakOf(n), size = (await fsp.stat(f)).size; await fsp.mkdir(path.dirname(b), { recursive: true });
-    let old = true; try { old = Date.now() - (await fsp.stat(b)).mtimeMs > (size > 100 * 1048576 ? 1800000 : 300000); } catch (e) {} if (old) await fsp.copyFile(f, b); } catch (e) {} };
+    let old = true; try { old = Date.now() - (await fsp.stat(b)).mtimeMs > (size > 100 * 1048576 ? 1800000 : 300000); } catch (e) {} if (!old) return;
+    // copies the file up to its last complete save: saves only ever add after that point, so the copy stays consistent while they run
+    if (!(await B.isContainer(f))) return await fsp.copyFile(f, b); const end = (await B.openIndex(f)).end, tmp = b + '.tmp', src = await fsp.open(f, 'r'), out = await fsp.open(tmp, 'w'), buf = Buffer.alloc(1 << 22);
+    try { for (let p = 0; p < end;) { const { bytesRead } = await src.read(buf, 0, Math.min(buf.length, end - p), p); if (!bytesRead) throw new Error('short read'); await out.write(buf, 0, bytesRead); p += bytesRead; } await out.close(); await fsp.rename(tmp, b); }
+    catch (e) { await out.close().catch(() => {}); await fsp.unlink(tmp).catch(() => {}); } finally { await src.close(); } } catch (e) {} };
   // a file from before the current format is converted the first time it is read (the original is kept as its backup)
-  const ready = f => queue(f, async () => { if (!(await B.isContainer(f))) { const n = path.basename(f), b = bakOf(n); await fsp.mkdir(path.dirname(b), { recursive: true }); await fsp.copyFile(f, b); await B.convert(f); } });
+  const known = new Set();   // files already in the current format: no need to wait in the queue to check again
+  const ready = async f => { if (known.has(f)) return; try { if (await B.isContainer(f)) return known.add(f); } catch (e) { return; } return queue(f, async () => { if (!(await B.isContainer(f))) { const n = path.basename(f), b = bakOf(n); await fsp.mkdir(path.dirname(b), { recursive: true }); await fsp.copyFile(f, b); await B.convert(f); } known.add(f); }); };
   // files saved by this version start with {"app": and carry the stamp right after it, so no stamp in the first piece means none.
   // the stamp sits at the start of files saved by this version; older files are scanned in pieces (never read whole: they can be hundreds of MB)
   const scanStamp = async f => { const fh = await fsp.open(f, 'r'), buf = Buffer.alloc(1 << 22), re = /"stamp":\{"pid":"([0-9a-f]{32})"/; let pos = 0, tail = '';
@@ -35,11 +44,11 @@ module.exports = (getDir, trash) => {
     media: async (n, key) => { await ready(file(n)); return B.readMedia(file(n), key); },
     info: async n => { await ready(file(n)); return B.info(file(n)); },
     // saves a checklist: only new media and the checklist are added to the file. `from`: another checklist whose media are used (Save as, a new job)
-    write: (n, text, from) => queue(file(n), async () => { const f = file(n); await backup(n, f); if (from) await ready(file(from)); await B.save(f, text, from ? file(from) : null); return { container: true }; }),
+    write: (n, text, from) => queue(file(n), async () => { const f = file(n); bgBackup(n, f); if (from) await ready(file(from)); await B.save(f, text, from ? file(from) : null, { beforeCompact: () => bk.get(f) }); return { container: true }; }),
     writeNew: (base, text) => put(base, text),
     // an export somewhere else (Save dialog): a complete, tidy file with the media of checklist `from`
     exportTo: async (dest, text, from) => { await ready(file(from)); await B.save(dest, text, file(from)); return dest; },
-    tidy: n => queue(file(n), async () => { const f = file(n); if (fs.existsSync(f) && await B.isContainer(f)) { const i = await B.info(f); if (i.file - i.used > 8 * 1048576) await B.compact(f); } return true; }),
+    tidy: n => queue(file(n), async () => { const f = file(n); if (fs.existsSync(f) && await B.isContainer(f)) { const i = await B.info(f); if (i.file - i.used > 8 * 1048576) { await bk.get(f); await B.compact(f); } } return true; }),
     rename: (a, b) => { if (fs.existsSync(file(b))) throw new Error('A file with that name already exists'); fs.renameSync(file(a), file(b)); try { const ba = bakOf(a); if (fs.existsSync(ba)) fs.renameSync(ba, bakOf(b)); } catch (e) {} return true; },
     remove: async n => { const f = file(n); try { await trash(f); } catch (e) { fs.unlinkSync(f); } return true; },
     importPath: async p => { const base = path.basename(p).replace(/\.[^.]+$/, '');

@@ -79,8 +79,12 @@ module.exports = {
   // saves the checklist JSON `text` to f. Media references point into `from` (another checklist file, e.g. for Save as / a new job /
   // an export) or, without it, into f itself; then only new media and the checklist are appended to f.
   save: async (f, text, from, opts) => {
-    opts = opts || {}; const o = JSON.parse(text), srcFile = from || f;
-    const src = fs.existsSync(srcFile) && await isContainer(srcFile) ? await openIndex(srcFile) : null, items = resolve(o, src, srcFile), skel = Buffer.from(JSON.stringify(o));
+    opts = opts || {}; const srcFile = from || f;
+    const src = fs.existsSync(srcFile) && await isContainer(srcFile) ? await openIndex(srcFile) : null;
+    // most saves (a tick, a note) bring no new media: then the text is stored as it is, without parsing a big checklist twice
+    let items, skel;
+    if (src && !/(?<!\\)"data:/.test(text) && !/"pdf":"(?!")/.test(text)) { items = new Map(); for (const m of text.matchAll(/(?<!\\)"bcl-media:([^"\\]+)"/g)) { const k = m[1], e = src.media[k]; if (!e) throw new Error('A photo, PDF or video is missing from the checklist file (' + k + ')'); items.set(k, { type: e[2], off: e[0], len: e[1], file: srcFile }); } JSON.parse(text); skel = Buffer.from(text); }
+    else { const o = JSON.parse(text); items = resolve(o, src, srcFile); skel = Buffer.from(JSON.stringify(o)); }
     if (from || !src) return writeFresh(f, items, skel);
     const fh = await fsp.open(f, 'r+'), media = {}; let pos = src.end;
     try {
@@ -93,7 +97,7 @@ module.exports = {
     cache.delete(f);
     // dead space (older saves, removed media) is cleared once it is big compared with what is in use
     const used = MAGIC.length + Object.values(media).reduce((a, e) => a + e[1], 0) + skel.length, dead = pos - used;
-    if (opts.compact || dead > Math.max(opts.minDead || 64 * 1048576, used * 0.5)) await module.exports.compact(f);
+    if (opts.compact || dead > Math.max(opts.minDead || 64 * 1048576, used * 0.5)) { if (opts.beforeCompact) await opts.beforeCompact(); await module.exports.compact(f); }
   },
   compact: async f => { const ix = await openIndex(f), items = new Map(Object.entries(ix.media).map(([k, e]) => [k, { type: e[2], off: e[0], len: e[1], file: f }])); await writeFresh(f, items, ix.skel); },
   // a file from before this format: plain JSON with data: URLs inside

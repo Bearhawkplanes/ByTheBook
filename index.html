@@ -53,7 +53,7 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 canvas{display:block;margin:0 auto}
 @media(max-width:900px){#vbox{max-height:70vh}}
 .secband{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;margin:28px 0 12px;padding:10px 0;border-top:2px solid var(--fg);border-bottom:1px solid var(--line)}
-#L .secband:first-child{margin-top:0}
+#L>.secband:first-child{margin-top:0}
 .secband h3{margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em}
 .sectitle{display:flex;align-items:center;gap:8px}
 .tedit{font:600 18px 'IBM Plex Sans',sans-serif;text-align:center;min-width:240px}
@@ -377,30 +377,51 @@ function rowL(si,ci,j,it,pre,post){
  ${it.page?`<button class="chip pg" data-a="go" title="Show page in PDF">p.${esc(it.page)}</button>`:''}
  ${it.media.length?`<span class="chip">🖼 ${it.media.length}</span>`:''}${it.ver?'<span class="chip ok">✔</span>':''}
  ${post||''}<button class="ed" data-a="up" ${fr?'disabled':''}>↑</button><button class="ed" data-a="dn" ${fr?'disabled':''}>↓</button><button class="ed" data-a="del" ${fr?'disabled':''}>✕</button></div>`}
+// the list is built per section, and only for sections near the view (plus the selected item's): a checklist of thousands of rows
+// would otherwise take seconds to draw on a slow laptop. The rest are placeholders of their last measured height, filled in on scroll.
+// A tick or opening an item redraws just that main item (renderCard).
+const SECH={};let LIO=null;
+const cardHTML=(si,ci)=>{const t=S.sections[si].cards[ci],d=t.steps.filter(s=>s.done).length,n=t.steps.length;
+ return `<div class="card task${t.done?' signed':''}" data-ck="${si}-${ci}">${rowL(si,ci,null,t,`<button data-a="tog">${t.open?'▾':'▸'}</button>`,`<span class="mut">${d}/${n}</span><span class="bar"><i style="width:${n?d/n*100:0}%"></i></span>`)}
+ ${t.open?`<div class="steps">${t.steps.map((s,j)=>rowL(si,ci,j,s)).join('')}<button class="ed" data-a="addstep" data-s="${si}" data-c="${ci}" ${t.done?'disabled':''} style="margin:6px 0">+ Add step</button></div>`:''}</div>`};
+const secDone=sec=>sec.cards.length>0&&sec.cards.every(c=>c.done);
+function secHTML(si){const sec=S.sections[si],cards=sec.cards.map((t,ci)=>cardHTML(si,ci)).join('');const title=ES===si?`<input class="tedit" value="${esc(sec.title)}">`:`<h3>${esc(sec.title)||'(untitled)'}</h3>`;
+ return `<div class="secband${secDone(sec)?' complete':''}" data-si="${si}"><div class="sectitle">${title}<button class="pencil ed" data-a="edit" data-s="${si}" title="Rename section">✎</button></div>
+  <div class="secctl ed"><label title="Main items in this section need a sign-off"><input type="checkbox" data-a="sign" data-s="${si}" ${sec.sign?'checked':''}> Sign-off</label><button data-a="secup" data-s="${si}" title="Move section up">↑</button><button data-a="secdn" data-s="${si}" title="Move section down">↓</button><button data-a="secdel" data-s="${si}" title="Delete section">✕</button></div></div>
+  ${cards||'<div class="mut" style="margin-bottom:8px;text-align:center">Nothing here yet.</div>'}<button class="ed" data-a="addcard" data-s="${si}">+ Add main item</button>`}
+const secEst=si=>{const s=S.sections[si];return 90+s.cards.reduce((a,c)=>a+48+(c.open?c.steps.length*44+40:0),0)};
+function mountSec(si){const w=L.querySelector(`.secw[data-sw="${si}"]`);if(!w||w.dataset.on)return w;w.dataset.on=1;w.innerHTML=secHTML(si);w.style.minHeight='';SECH[si]=w.offsetHeight;return w}
+// a section and enough of the ones above it, so nothing above shifts once they fill in after a jump
+function mountNear(i){const el=mountSec(i);for(let k=i-1,h=0;el&&k>=0&&h<1500;k--)h+=mountSec(k).offsetHeight;return el}
+const secOf=it=>{if(!it)return -1;for(let si=0;si<S.sections.length;si++)for(const c of S.sections[si].cards)if(c===it||c.steps.includes(it))return si;return -1};
+function renderCounts(){let sd=0,st=0,sg=0,sc=0;S.sections.forEach(sec=>sec.cards.forEach(t=>{st+=t.steps.length;sd+=t.steps.filter(s=>s.done).length;if(sec.sign){sc++;if(t.done)sg++}}));
+ $('#prog').textContent=`Steps ${sd}/${st} · Signed ${sg}/${sc}`;
+ S.sections.forEach((sec,si)=>{const all=secDone(sec),b=L.querySelector(`.secband[data-si="${si}"]`),t=L.querySelector(`.stab[data-s="${si}"]`);if(b)b.classList.toggle('complete',all);if(t)t.classList.toggle('complete',all)})}
 function renderL(){
  renderTitle();document.body.classList.toggle('locked',isLocked());
- let sd=0,st=0,sg=0,sc=0;
- const html=S.sections.map((sec,si)=>{
-  const cards=sec.cards.map((t,ci)=>{const d=t.steps.filter(s=>s.done).length,n=t.steps.length;st+=n;sd+=d;if(sec.sign){sc++;if(t.done)sg++}
-   return `<div class="card task${t.done?' signed':''}">${rowL(si,ci,null,t,`<button data-a="tog">${t.open?'▾':'▸'}</button>`,`<span class="mut">${d}/${n}</span><span class="bar"><i style="width:${n?d/n*100:0}%"></i></span>`)}
-   ${t.open?`<div class="steps">${t.steps.map((s,j)=>rowL(si,ci,j,s)).join('')}<button class="ed" data-a="addstep" data-s="${si}" data-c="${ci}" ${t.done?'disabled':''} style="margin:6px 0">+ Add step</button></div>`:''}</div>`}).join('');
-  const all=sec.cards.length>0&&sec.cards.every(c=>c.done);const title=ES===si?`<input class="tedit" value="${esc(sec.title)}">`:`<h3>${esc(sec.title)||'(untitled)'}</h3>`;
-  return `<div class="secband${all?' complete':''}" data-si="${si}"><div class="sectitle">${title}<button class="pencil ed" data-a="edit" data-s="${si}" title="Rename section">✎</button></div>
-  <div class="secctl ed"><label title="Main items in this section need a sign-off"><input type="checkbox" data-a="sign" data-s="${si}" ${sec.sign?'checked':''}> Sign-off</label><button data-a="secup" data-s="${si}" title="Move section up">↑</button><button data-a="secdn" data-s="${si}" title="Move section down">↓</button><button data-a="secdel" data-s="${si}" title="Delete section">✕</button></div></div>
-  ${cards||'<div class="mut" style="margin-bottom:8px;text-align:center">Nothing here yet.</div>'}<button class="ed" data-a="addcard" data-s="${si}">+ Add main item</button>`}).join('');
- const stabs=`<div class="stabs">${S.sections.map((s,i)=>`<button class="stab${s.cards.length&&s.cards.every(c=>c.done)?' complete':''}" data-a="gosec" data-s="${i}" title="${esc(s.title)}">${esc(s.title)||'Untitled'}</button>`).join('')}<button class="stab add ed" data-a="addsec" title="Add section">+</button></div>`;
- $('#L').innerHTML=stabs+html+`<div class="addsec ed"><button data-a="addsec">+ Add section</button></div>`;
- $('#prog').textContent=`Steps ${sd}/${st} · Signed ${sg}/${sc}`;markTab();
-}
+ const keep=new Set([...L.querySelectorAll('.secw[data-on]')].filter(w=>{const r=w.getBoundingClientRect(),v=L.getBoundingClientRect();return r.bottom>v.top-1200&&r.top<v.bottom+1200}).map(w=>+w.dataset.sw));
+ [secOf(SEL),secOf(ER),ES==null?-1:ES].forEach(i=>i>=0&&keep.add(i));
+ const stabs=`<div class="stabs">${S.sections.map((s,i)=>`<button class="stab${secDone(s)?' complete':''}" data-a="gosec" data-s="${i}" title="${esc(s.title)}">${esc(s.title)||'Untitled'}</button>`).join('')}<button class="stab add ed" data-a="addsec" title="Add section">+</button></div>`;
+ const top=L.scrollTop;
+ L.innerHTML=stabs+S.sections.map((s,si)=>keep.has(si)?`<div class="secw" data-sw="${si}" data-on="1">${secHTML(si)}</div>`:`<div class="secw" data-sw="${si}" style="min-height:${SECH[si]||secEst(si)}px"></div>`).join('')+`<div class="addsec ed"><button data-a="addsec">+ Add section</button></div>`;
+ L.scrollTop=top;
+ // fill in what is in view now (top to bottom; heights change as sections appear), the rest when scrolled to
+ const v=L.getBoundingClientRect();for(const w of L.querySelectorAll('.secw')){if(w.dataset.on){SECH[w.dataset.sw]=w.offsetHeight;continue}const r=w.getBoundingClientRect();if(r.bottom>v.top-800&&r.top<v.bottom+800)mountSec(+w.dataset.sw)}
+ if(LIO)LIO.disconnect();LIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)mountSec(+e.target.dataset.sw)}),{root:L,rootMargin:'800px 0px'});
+ L.querySelectorAll('.secw:not([data-on])').forEach(w=>LIO.observe(w));
+ renderCounts();markTab()}
+// one main item and its steps, after a tick, a sign-off or opening it; falls back to the whole list if it is not on screen
+function renderCard(si,ci){const el=L.querySelector(`.card[data-ck="${si}-${ci}"]`);if(!el)return renderL();renderTitle();document.body.classList.toggle('locked',isLocked());el.outerHTML=cardHTML(si,ci);
+ const w=L.querySelector(`.secw[data-sw="${si}"]`);if(w)SECH[si]=w.offsetHeight;renderCounts()}
 function loc(row){const si=+row.dataset.s,ci=+row.dataset.c,j=row.dataset.j!=null?+row.dataset.j:null,sec=S.sections[si],card=sec.cards[ci];
  const arr=j!=null?card.steps:sec.cards,idx=j!=null?j:ci;return{arr,idx,item:arr[idx],card,sec,isCard:j==null}}
 function autoTab(it){const m=AS.auto;setTab(m==='stay'?tab:m==='auto'?(it.media.length?'img':it.page?'pdf':'desc'):m)}
 function select(it){if(TX&&it!==SEL)txEnd();SEL=it;document.querySelectorAll('#L .row.sel').forEach(x=>x.classList.remove('sel'));renderR();autoTab(it)}
 const L=$('#L');
 let MT=-1;
-function scrollToSec(i){const el=document.querySelector(`#L .secband[data-si="${i}"]`);if(!el)return;const tb=$('#L .stabs');L.scrollTop=el.getBoundingClientRect().top-L.getBoundingClientRect().top+L.scrollTop-(tb?tb.offsetHeight:0)-8}
+function scrollToSec(i){const el=mountNear(i);if(!el)return;const tb=$('#L .stabs');L.scrollTop=el.getBoundingClientRect().top-L.getBoundingClientRect().top+L.scrollTop-(tb?tb.offsetHeight:0)-8}
 function markTab(){const tb=$('#L .stabs');if(!tb)return;const top=L.getBoundingClientRect().top+tb.offsetHeight+24;let act=0;
- document.querySelectorAll('#L .secband').forEach((b,i)=>{if(b.getBoundingClientRect().top<=top)act=i});if(FT!=null)act=FT;
+ document.querySelectorAll('#L .secw').forEach((b,i)=>{if(b.getBoundingClientRect().top<=top)act=i});if(FT!=null)act=FT;
  tb.querySelectorAll('.stab[data-s]').forEach(x=>x.classList.toggle('on',+x.dataset.s===act));
  const on=tb.querySelector('.on');if(on&&MT!==act){MT=act;const l=on.offsetLeft,w=on.offsetWidth;if(l<tb.scrollLeft||l+w>tb.scrollLeft+tb.clientWidth)tb.scrollLeft=Math.max(0,l-24)}}
 L.addEventListener('scroll',()=>{if(markTab.q)return;markTab.q=1;requestAnimationFrame(()=>{markTab.q=0;markTab()})});
@@ -421,7 +442,7 @@ L.addEventListener('click',e=>{
  if(a==='del'){[item,...(item.steps||[])].forEach(x=>{x.media.forEach(m=>m.id&&idbDel('m',m.id));(x.wp||[]).forEach(p=>{idbDel('m',p.id);idbDel('m',p.tid)})});arr.splice(idx,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR()}
  else if(a==='up'&&idx>0){[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];save();renderL()}
  else if(a==='dn'&&idx<arr.length-1){[arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]];save();renderL()}
- else if(a==='tog'){item.open=!item.open;save();renderL()}
+ else if(a==='tog'){item.open=!item.open;save();renderCard(+row.dataset.s,+row.dataset.c)}
  else if(a==='ren'){ER=item;renderL();const t=$('#L .tin');if(t){t.focus();t.select()}}
  else if(a==='go'){SEL=item;renderL();renderR();goPage()}
  else if(b&&a!=='done'&&a!=='text')return;
@@ -447,7 +468,7 @@ L.addEventListener('change',e=>{const a=e.target.dataset.a;
    else{logEv('unchecked',item,who!=null?who:(item.sig?item.sig.by:''),uid);if(item.sig)item.hist.push({ev:'unsigned',by:item.sig.by,at:now()});item.done=false;item.sig=null}
   }else{const prev=item.init||'';item.done=want;item.doneAt=want?now():'';if(who!=null)item.init=want?who:'';
    logEv(want?'step checked':'step unchecked'+(prev?' (was '+prev+')':''),item,who!=null?who:prev,uid);voidIfNeeded(card)}
-  save();renderL()};
+  save();renderCard(+row.dataset.s,+row.dataset.c)};
  if(!pn){if(isCard&&want&&sec.sign&&!(item.sigDraft||'').trim()){e.target.checked=false;const si=row.querySelector('.sig');si.classList.add('need');si.focus();return}go(null);return}
  if(isCard&&!sec.sign){go(null);return}
  e.target.checked=!want;   // the box only changes after a valid PIN
@@ -457,8 +478,13 @@ function setTab(t){tab=t;document.querySelectorAll('.tabs button').forEach(b=>b.
  ['img','wp','desc','pdf'].forEach(k=>$('#p-'+k).hidden=k!==t);if(t==='pdf')pdfShow()}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 const urls={};
+// pictures already in the file are let go once 60 others have been shown since (they load again when needed), so browsing a
+// big checklist does not keep every photo in memory
+const UORD=[];
+function urlTrim(){const on=new Set([...document.querySelectorAll('[data-mid]')].map(e=>e.dataset.mid));
+ while(UORD.length>60){const k=UORD.findIndex(id=>!on.has(id));if(k<0)break;const id=UORD.splice(k,1)[0],r=MEDIA[id];if(!r||!r.ref)continue;URL.revokeObjectURL(urls[id]);delete urls[id];delete r.blob}}
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
- if(!urls[id]){const r=await idbGet('m',id);if(r){const b=await mBlob(r).catch(()=>null);if(b)urls[id]=URL.createObjectURL(b)}}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id],!!(TX&&TX.mid===id)):urls[id]}}if(TX)txMount()}
+ if(!urls[id]){const r=await idbGet('m',id);if(r){const b=await mBlob(r).catch(()=>null);if(b){urls[id]=URL.createObjectURL(b);UORD.push(id);urlTrim()}}}if(urls[id]){const m=SEL&&SEL.media.find(x=>x.id===id);el.src=m?await shownUrl(m,urls[id],!!(TX&&TX.mid===id)):urls[id]}}if(TX)txMount()}
 // big photos are shrunk when added (Settings, on by default): a 4 MB 12-megapixel phone photo becomes about 0.5 MB and stays sharp
 async function shrinkImg(blob,type){if(AS.shrink===false||!/^image\/(jpeg|png|webp)$/.test(type))return{blob,type};let bm;try{bm=await createImageBitmap(blob)}catch(e){return{blob,type}}
  const k=Math.min(1,2560/Math.max(bm.width,bm.height));if(k===1&&blob.size<1.5e6){bm.close();return{blob,type}}
@@ -995,7 +1021,7 @@ async function openProject(id){let r;
  TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();
  // RO above: saved by a newer version, so view-only and never saved here
  LQ='';$('#lsearch').value='';$('#lcount').textContent='';
- for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
+ for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}UORD.length=0;
  for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
  renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();wgClose();afterOpen()}
@@ -1007,7 +1033,8 @@ const d2b=d=>{const i=d.indexOf(','),bin=atob(d.slice(i+1)),u=new Uint8Array(bin
 // builds the file text; the big base64 blobs are cached and spliced in, so JSON.stringify never re-scans them
 async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.pid,rv:PR.rv};   // every saved checklist carries the profile ID
  // version and stamp first: the menu list reads only the start of each file
- const o=Object.assign({app:undefined,stamp:undefined,locked:undefined,worker:undefined},JSON.parse(JSON.stringify(S))),big={},fresh=pack.fresh=[];o.files={};if(name!=null)o.name=name;if(strip)strip(o);
+ // a plain save only changes the copy's top level and its PDF / video records, so the items are not deep-copied (slow on big checklists)
+ const o=Object.assign({app:undefined,stamp:undefined,locked:undefined,worker:undefined},strip?JSON.parse(JSON.stringify(S)):Object.assign({},S,{pdfs:(S.pdfs||[]).map(p=>({...p})),videos:(S.videos||[]).map(v=>({...v}))})),big={},fresh=pack.fresh=[];o.files={};if(name!=null)o.name=name;if(strip)strip(o);
  // media already in the checklist file go in as references (nothing to send); new ones as data, listed in pack.fresh for flushNow
  const put=async(k,r,mk)=>{if(r.ref)return REFP+r.ref;big[k]=r.data||(r.data=await b2d(await mk()));fresh.push([r,k]);return '@@'+k+'@@'};
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of [...x.media,...(x.wp||[]).flatMap(p=>[{id:p.id},{id:p.tid}])])if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r)o.files[m.id]={name:r.name,type:r.type,data:await put('m:'+m.id,r,()=>r.blob)}}
@@ -1286,10 +1313,13 @@ document.addEventListener('keydown',e=>{if(!LD||$('#ld').hidden)return;e.prevent
 // ---------- search inside the checklist ----------
 let LQ='',LH=0;
 const hitIt=it=>LQ&&[it.text,it.desc,it.spec,it.qty,it.size].some(v=>String(v||'').toLowerCase().includes(LQ));
-function lsearch(step){LQ=$('#lsearch').value.trim().toLowerCase();
- if(LQ)S.sections.forEach(s=>s.cards.forEach(c=>{if(c.steps.some(hitIt))c.open=true}));
- renderL();const h=[...document.querySelectorAll('#L .row.hit')];if(h.length)LH=(LH+step+h.length)%h.length;else LH=0;
- $('#lcount').textContent=LQ?(h.length?`${LH+1}/${h.length}`:'0 found'):'';if(h[LH])h[LH].scrollIntoView({block:'center'})}
+// hits come from the checklist itself (the list only draws sections near the view); Enter moves to the next hit without redrawing
+let LHITS=[];
+function lsearch(step){const q=$('#lsearch').value.trim().toLowerCase();
+ if(q!==LQ||!step||!q){LQ=q;LHITS=[];if(LQ)S.sections.forEach((s,si)=>s.cards.forEach((c,ci)=>[c,...c.steps].forEach((x,k)=>{if(hitIt(x)){LHITS.push([si,ci,k?k-1:null]);if(k)c.open=true}})));renderL()}
+ const h=LHITS;if(h.length)LH=(LH+step+h.length)%h.length;else LH=0;
+ $('#lcount').textContent=LQ?(h.length?`${LH+1}/${h.length}`:'0 found'):'';if(!h[LH])return;
+ const[si,ci,j]=h[LH];mountNear(si);const r=L.querySelector(`.row[data-s="${si}"][data-c="${ci}"]`+(j==null?':not([data-j])':`[data-j="${j}"]`));if(r)r.scrollIntoView({block:'center'})}
 // search redraws once typing pauses: big checklists take a moment to draw
 $('#lsearch').oninput=()=>{LH=0;clearTimeout(lsearch.t);lsearch.t=setTimeout(()=>lsearch(0),200)};
 $('#lsearch').onkeydown=e=>{if(e.key==='Enter')lsearch(e.shiftKey?-1:1);else if(e.key==='Escape'){e.target.value='';LH=0;lsearch(0)}};

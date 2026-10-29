@@ -111,6 +111,8 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   const s0 = fsz('job.bcl'); sk.sections[0].cards[0].steps[0].done = true; await call('write', 'job.bcl', JSON.stringify(sk));
   assert(fsz('job.bcl') - s0 < 2048, 'a tick adds only the checklist, not the photo: +' + (fsz('job.bcl') - s0) + ' bytes');
   assert.strictEqual(JSON.parse(await call('read', 'job.bcl')).sections[0].cards[0].steps[0].done, true);
+  await new Promise(r => setTimeout(r, 300));   // the backup is copied beside the save, up to the last complete save
+  assert(Buffer.from(await B.readMedia(path.join(SV, 'Backups', 'job.bcl.bak'), 'm:im1')).equals(photo), 'backup made in the background is a complete, readable checklist');
   // a power cut in the middle of a save: the previous save is used
   fs.appendFileSync(path.join(SV, 'job.bcl'), Buffer.concat([Buffer.alloc(5000, 1), Buffer.from('BCLT'), Buffer.alloc(20)]));
   assert.strictEqual(JSON.parse(await call('read', 'job.bcl')).sections[0].cards[0].steps[0].done, true, 'last complete save recovered');

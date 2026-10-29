@@ -675,6 +675,20 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(svi.on && svi.op > .5 && svi.left && svi.txt === 'Saved!', 'Saved! shows left of the title after saving: ' + JSON.stringify(svi));
   assert(await pg.evaluate(() => new Promise(r => setTimeout(() => r(+getComputedStyle($('#savedi')).opacity < .1), 2300))), 'and fades away');
 
+  // ---- a big checklist: only sections near the view are drawn; ticks redraw one item; search and section tabs reach the rest ----
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const big = await pg.evaluate(() => { S.sections = Array.from({ length: 12 }, (_, si) => ({ title: 'Sec ' + si, sign: false, cards: Array.from({ length: 20 }, (_, ci) => mk({ text: 'Item ' + si + '.' + ci, open: true, steps: Array.from({ length: 10 }, (_, j) => mk({ text: (si === 11 && ci === 19 && j === 9 ? 'zebra ' : '') + 'Step ' + j })) })) })); renderL();
+    const drawn = document.querySelectorAll('#L .secw[data-on]').length, waiting = document.querySelectorAll('#L .secw:not([data-on])').length, prog = $('#prog').textContent;
+    const keep = document.querySelector('.card[data-ck="0-1"]'), b = document.querySelector('.card[data-ck="0-0"] .steps .row input[data-a=done]'); b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true }));
+    return { drawn, waiting, prog, same: document.querySelector('.card[data-ck="0-1"]') === keep, ticked: S.sections[0].cards[0].steps[0].done, prog2: $('#prog').textContent }; });
+  assert(big.drawn >= 1 && big.waiting >= 5 && big.prog === 'Steps 0/2400 · Signed 0/0', 'only sections near the view are drawn: ' + JSON.stringify(big));
+  assert(big.same && big.ticked && big.prog2 === 'Steps 1/2400 · Signed 0/0', 'a tick redraws only its own main item and the totals');
+  const zs = await pg.evaluate(async () => { $('#lsearch').value = 'zebra'; lsearch(0); await new Promise(r => setTimeout(r, 50)); const r = document.querySelector('#L .row.hit'); return { count: $('#lcount').textContent, txt: r && r.textContent.includes('zebra Step 9'), seen: r && r.getBoundingClientRect().top < innerHeight && r.getBoundingClientRect().bottom > 0 }; });
+  assert(zs.count === '1/1' && zs.txt && zs.seen, 'search finds and shows a hit in a section that was not drawn: ' + JSON.stringify(zs));
+  const tabj = await pg.evaluate(async () => { $('#lsearch').value = ''; lsearch(0); L.scrollTop = 0; await new Promise(r => setTimeout(r, 50)); scrollToSec(7); await new Promise(r => setTimeout(r, 100)); const b = document.querySelector('.secband[data-si="7"]'); return b ? b.getBoundingClientRect().top - L.getBoundingClientRect().top : null; });
+  assert(tabj !== null && Math.abs(tabj) < 200, 'a section tab jumps to a section that was not drawn yet: ' + tabj);
+
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');
