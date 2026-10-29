@@ -603,6 +603,26 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const hd = await pg.evaluate(async () => { await openHome(); HS = 'shop'; renderHome(); const r = { locked: $('#hdelb').disabled }; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })); r.modal = !$('#modal').hidden; HS = 'other'; renderHome(); r.other = $('#hdelb').disabled; return r; });
   assert(hd.locked && !hd.modal && !hd.other, 'home list: a master file cannot be deleted, other checklists can: ' + JSON.stringify(hd));
 
+  // ---- worker mode: menu and Settings behind a main/Boss PIN, editing locked, no leaving the checklist ----
+  pg = await page({ 'shop.bcl': shared, 'other.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  await pg.evaluate(() => { openSettings(); const c = $('#workc'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); closeDlg(); });
+  assert(await pg.evaluate(() => S.worker && isLocked() && S.log.some(l => l.ev === 'worker mode on')), 'worker mode on: editing locked, logged');
+  await pg.evaluate(() => { PR.req.names = true; PR.people = [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }]; $('#menuBtn').click(); }); await pg.waitForTimeout(80);
+  assert(await pg.evaluate(() => $('#menu').hidden && !!document.querySelector('.overlay input.pin')), 'the menu asks for a PIN first');
+  const wm = await tryPin('1357'); assert(/Only the main profile or a Boss/.test(wm), 'a worker PIN does not open it: ' + wm);
+  await tryPin('24680'); await pg.waitForTimeout(80);
+  assert(await pg.evaluate(() => !$('#menu').hidden && $('[data-m=delete]').disabled), 'Boss/main PIN opens the menu; Delete stays greyed out');
+  await pg.evaluate(() => { $('#menu').hidden = true; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: true })); }); await pg.waitForTimeout(150);
+  assert.strictEqual(await pg.evaluate(() => CUR), 'shop', 'Ctrl+N does not leave the checklist');
+  await pg.evaluate(() => $('#cog').click()); await pg.waitForTimeout(80);
+  assert(await pg.evaluate(() => $('#modal').hidden && !!document.querySelector('.overlay input.pin')), 'Settings asks for a PIN first');
+  await tryPin('24680'); await pg.waitForTimeout(80);
+  await pg.evaluate(() => { const c = $('#workc'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); closeDlg(); });
+  assert(await pg.evaluate(() => !S.worker && S.log.some(l => l.ev === 'worker mode off' && l.by === 'A')), 'turned off, logged with who unlocked Settings');
+  await pg.evaluate(() => $('#menuBtn').click()); await pg.waitForTimeout(80);
+  assert(await pg.evaluate(() => !$('#menu').hidden && !document.querySelector('.overlay input.pin')), 'without worker mode the menu opens straight away');
+
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');

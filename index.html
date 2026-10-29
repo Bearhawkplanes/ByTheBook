@@ -866,6 +866,7 @@ function openSettings(){
  <label class="chk" style="margin-top:10px"><input type="checkbox" id="shrinkc" ${AS.shrink===false?'':'checked'}> Shrink big photos when adding them (to 2560 px; keeps checklists small and fast)</label></div>
  <div class="ds"><div class="dt">This checklist</div>
  <label class="chk"><input type="checkbox" id="lockc" ${S.locked?'checked':''}> Master file: lock editing (checking, initials and sign-offs still work)</label>
+ <label class="chk"><input type="checkbox" id="workc" ${S.worker?'checked':''} ${PR.hash?'':'disabled'}> Worker mode: lock the menu and Settings behind a Boss PIN</label><p class="mut" style="margin:2px 0 0 24px">${PR.hash?'Also locks editing like a master file. Whoever opens this checklist stays in it until the main profile or a Boss enters their PIN. Closing the app is still possible; opening this checklist again locks it again.':'Needs a profile with a main PIN first (main menu > Profile).'}</p>
  <label>Manual / revision<input id="mrev" value="${esc(S.manual)}" ${isLocked()?'disabled':''}></label>
  <label class="chk"><input type="checkbox" id="mechc" ${S.mech?'checked':''} ${isLocked()?'disabled':''}> Mechanical wording (technician, inspector, torque, spec)</label><p class="mut" style="margin:2px 0 0 24px">Off: general words, for any kind of checklist. Used in this checklist and on its printouts.</p>
  <div class="dt" style="margin:12px 0 6px">Storage</div><div class="stbar"><i id="stfill"></i></div><div id="sttxt" class="mut" style="margin-top:4px">Working out…</div>
@@ -873,19 +874,24 @@ function openSettings(){
  ${savedirHtml()}${updHtml()}<div class="ds"><div class="dt">Profile and PINs</div><p class="mut">Set these up in Profile on the main menu. Everything is off by default.</p></div>
  <div class="ds"><div class="dt">Activity log</div><button data-d="log">Open the full activity log</button></div>`);stFill()}
 async function stFill(){const u=await usage(),f=$('#stfill'),t=$('#sttxt');if(!f||!t)return;const p=Math.min(100,u/CAP*100);f.style.width=Math.max(p,u?.5:0)+'%';f.classList.toggle('hi',p>=80);t.textContent=`${sizeTxt(u)} of ${sizeTxt(CAP)} used (${p<1&&u?'under 1':Math.round(p)}%)`}
-$('#cog').onclick=openSettings;
+$('#cog').onclick=async()=>{WKW=null;if(wkGate()&&!(WKW=await wkAsk('Open Settings')))return;openSettings()};
 $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||e.target===$('#modal'))closeDlg();else if(d.d==='ok'){const f=DLGOK;closeDlg();f&&f()}
  else if(d.d==='log'){closeDlg();viewLogOf(CUR)}
  else if(d.th){if(d.th==='reset')AS.hue=20;else AS.theme=d.th;saveApp();applyTheme();openSettings()}});
 $('#modal').addEventListener('input',e=>{if(e.target.id==='hue'){AS.hue=+e.target.value;saveApp();applyTheme()}});
 $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if(!t.checked&&S.locked&&pinOn('edit')){t.checked=true;askPin({title:'Turn off the master file lock',note:'Main profile or Boss PIN.',boss:true}).then(w=>{if(!w)return;S.locked=false;logEv('master lock off',{text:S.name||''},w.name,w.uid);save();renderL();renderR();openSettings()});return}
-  S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='shrinkc'){AS.shrink=t.checked;saveApp()}else if(t.id==='mechc'){if(isLocked()){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
+  S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='workc'){if(!PR.hash){t.checked=false;return}S.worker=t.checked;logEv(S.worker?'worker mode on':'worker mode off',{text:S.name||''},WKW&&WKW.name,WKW&&WKW.uid);save();renderL();renderR();openSettings()}
+  else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='shrinkc'){AS.shrink=t.checked;saveApp()}else if(t.id==='mechc'){if(isLocked()){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
 document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key==='Escape')closeDlg();else if(e.key==='Enter'){const b=$('#modal [data-d=ok]');if(b){e.preventDefault();b.click()}}});
 const menu=$('#menu');
 // a master file (or worker mode) cannot be deleted: the menu item is greyed out, and the home list's Delete too (noDel)
 const noDel=e=>e&&(e.id===CUR&&S?!!(S.locked||S.worker):!!(e.locked||e.worker));
 const menuOpen=()=>{menu.querySelector('[data-m=delete]').disabled=!!(S.locked||S.worker);menu.hidden=false};
-$('#menuBtn').onclick=e=>{e.stopPropagation();if(!menu.hidden){menu.hidden=true;return}menuOpen()};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
+// worker mode (S.worker): locks editing like a master file and puts the menu and Settings behind a main/Boss PIN, so whoever opens
+// the checklist stays in it. Not without a profile or under E-4417/18/19: then nobody could enter a PIN, and exports must stay possible.
+let WKW=null;const wkGate=()=>!!(CUR&&S.worker&&PR.hash&&!TAMPER&&$('#home').hidden);
+const wkAsk=t=>askPin({title:t,note:'Worker mode is on in this checklist. Main profile or Boss PIN.',boss:true});
+$('#menuBtn').onclick=async e=>{e.stopPropagation();if(!menu.hidden){menu.hidden=true;return}if(wkGate()&&!await wkAsk('Open the menu'))return;menuOpen()};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
 menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
  if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
@@ -915,7 +921,9 @@ async function openProject(id){let r;
  catch(e){toast('Could not read that file');return}
  if(!r||r==='cancelled')return;
  if(CUR&&CUR!==id&&FS.tidy)FS.tidy(CUR+'.bcl').catch(()=>{});
- TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();   // RO: saved by a newer version, so view-only and never saved hereLQ='';$('#lsearch').value='';$('#lcount').textContent='';
+ TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();
+ // RO above: saved by a newer version, so view-only and never saved here
+ LQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
  for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
@@ -1043,7 +1051,7 @@ async function initProfile(){let r=await FS.integrity(),MIG=null;
  PR.people.forEach(p=>{if(!p.id)p.id=uid()});
  TAMPER=r.code||null;PRX={body:r.body||null,profile:r.body?{pid:r.body.pid,rv:r.body.rv}:null,marker:r.marker||null};return MIG}
 const pinOn=k=>!!(PR.hash&&PR.req[k]);
-const isLocked=()=>!!S.locked||(pinOn('edit')&&!EDITOK)||!!errNow();
+const isLocked=()=>!!S.locked||!!S.worker||(pinOn('edit')&&!EDITOK)||!!errNow();
 // who a PIN can belong to: the main profile always; the Names list only while "Assign PINs to names" is on
 const roster=()=>[{id:'owner',uid:PR.pid,name:PR.user,boss:true,salt:PR.salt,hash:PR.hash},...(PR.req.names?PR.people.map(p=>({id:p.id,uid:p.id,name:p.name,boss:!!p.boss,salt:p.salt,hash:p.hash})):[])];
 // every typed PIN goes through pinTry in main.js, which counts wrong PINs: 5 -> Forgot PIN hint, every 15th -> 20-minute wait, 100 -> E-4419
@@ -1216,8 +1224,8 @@ $('#lsearch').onkeydown=e=>{if(e.key==='Enter')lsearch(e.shiftKey?-1:1);else if(
 // ---------- shortcuts ----------
 async function newCl(){if(!$('#modal').hidden)return;if(CUR&&DIRTY)await flush();ask('Your work is saved. Create new checklist?','Create new',()=>addEntry(norm(),'unnamed').then(openProject))}
 document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey||!$('#modal').hidden)return;const k=e.key.toLowerCase();
- if(k==='s'){e.preventDefault();if(!CUR)return;if(e.shiftKey)saveAs();else{DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}}
- else if(k==='n'&&!e.shiftKey){e.preventDefault();newCl()}});
+ if(k==='s'){e.preventDefault();if(!CUR)return;if(e.shiftKey){if(!wkGate())saveAs()}else{DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}}
+ else if(k==='n'&&!e.shiftKey){e.preventDefault();if(!wkGate())newCl()}});
 // ---------- updates: a bar at the bottom of the menu page; Settings > Updates switches automatic checks on (off by default) ----------
 let UPD=null,APPV='';
 const verNewer=(a,b)=>{const p=v=>String(v||'').replace(/^v/i,'').split(/[-+]/)[0].split('.').map(n=>parseInt(n,10)||0),x=p(a),y=p(b);for(let i=0;i<3;i++)if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0);return false};
@@ -1249,7 +1257,7 @@ const savedirHtml=()=>`<div class="ds"><div class="dt">Save file location</div><
 $('#modal').addEventListener('click',async e=>{const s=e.target.dataset.sv;if(!s)return;
  const moved=async d=>{SAVEDIR=d;if(CUR){DIRTY=true;await flush()}await refreshLib();renderHome();openSettings();toast('Save location updated')};
  if(s==='choose'){const d=await FS.choose();if(d)await moved(d)}else if(s==='open')FS.openDir();else if(s==='reset')await moved(await FS.resetDir())});
-async function importPath(p){try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(e){toast('Could not open that file')}}
+async function importPath(p){if(wkGate())return toast('Worker mode is on: open the menu with a Boss PIN to switch checklists');try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(e){toast('Could not open that file')}}
 // start-up; the loading window (splash.html) shows the steps, and the main window appears when the menu is ready
 const BOOT=(t,p)=>{try{FS.loading&&FS.loading(t,p)}catch(e){}};
 (async()=>{try{APPV=FS.appVersion?await FS.appVersion():''}catch(e){}BOOT('Checking the profile…',.25);const MIG=await initProfile();SAVEDIR=await FS.dir();BOOT('Reading saved checklists…',.5);await refreshLib();

@@ -49,6 +49,10 @@ To use your own animation instead of the wrench, put a file named `loading.gif`,
 ## Master file (Settings > This checklist)
 "Master file: lock editing" keeps the checklist's content from being changed (checking, initials and sign-offs still work) and stops it from being deleted: Delete checklist in the menu and DELETE in the Saved checklists list are greyed out. To delete it, turn the lock off first (needs the main profile or a Boss PIN when PINs are required for editing).
 
+## Worker mode (Settings > This checklist)
+For a checklist handed to a worker: it locks editing like a master file (and cannot be deleted), and the menu (☰) and Settings (⚙) ask for the main profile or a Boss PIN before they open. So whoever has it open stays in that checklist: they can check off steps, add initials and look at images, PDFs and videos, but cannot switch to another checklist, start a new one (Ctrl+N), Save as, delete or export without a Boss. Closing the app still works; when the app opens again it starts on the main menu as usual, and opening this checklist locks it again. Turning worker mode on or off is recorded in the activity log.
+Needs a profile with a main PIN. It does not apply when the app itself is locked (E-4417/E-4418/E-4419), so a Fresh copy export always stays possible.
+
 ## Starting a new job
 Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "<name> - new job"), then makes a fresh copy inside the app with every section, step, image, PDF and video and nothing checked off, and opens it. Its activity log starts with "New job started, from the checklist …". The original keeps its progress. A master file lock carries over to the job.
 
