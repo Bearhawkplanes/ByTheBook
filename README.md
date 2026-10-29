@@ -50,11 +50,13 @@ To use your own animation instead of the wrench, put a file named `loading.gif`,
 "Master file: lock editing" keeps the checklist's content from being changed (checking, initials and sign-offs still work) and stops it from being deleted: Delete checklist in the menu and DELETE in the Saved checklists list are greyed out. To delete it, turn the lock off first (needs the main profile or a Boss PIN when PINs are required for editing).
 
 ## Worker mode (Settings > This checklist)
-For a checklist handed to a worker: it locks editing like a master file (and cannot be deleted), and the menu (☰) and Settings (⚙) ask for the main profile or a Boss PIN before they open. So whoever has it open stays in that checklist: they can check off steps, add initials and look at images, PDFs and videos, but cannot switch to another checklist, start a new one (Ctrl+N), Save as, delete or export without a Boss. Closing the app still works; when the app opens again it starts on the main menu as usual, and opening this checklist locks it again. Turning worker mode on or off is recorded in the activity log.
+For a checklist handed to a worker: it locks editing like a master file (and cannot be deleted). In the menu (☰) only Save and Export… work; everything else is greyed out until "Unlock menu (Boss PIN)…" at the top gets the main profile or a Boss PIN (for that one opening of the menu). Settings (⚙) asks for that PIN before it opens. So whoever has it open stays in that checklist: they can check off steps, add initials, add work photos and look at images, PDFs and videos, but cannot switch to another checklist, start a new one (Ctrl+N), Save as, copy or delete it without a Boss. Export only makes a fresh copy (nothing checked off) or a blank printable checklist, so no finished work leaves with it. Closing the app still works; when the app opens again it starts on the main menu as usual, and opening this checklist locks it again. Turning worker mode on or off is recorded in the activity log.
 Needs a profile with a main PIN. It does not apply when the app itself is locked (E-4417/E-4418/E-4419), so a Fresh copy export always stays possible.
 
 ## Starting a new job
 Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "<name> - new job"), then makes a fresh copy inside the app with every section, step, image, PDF and video and nothing checked off, and opens it. Its activity log starts with "New job started, from the checklist …". The original keeps its progress. A master file lock carries over to the job.
+
+Exporting a fresh copy is noted in the original's activity log. When the copy includes the log, its last entry says it is a copy, of which checklist and when, and that the entries above record work done in the original.
 
 ## Opening files
 - Menu > Import, or drag a `.bcl` onto the app / use "Open with": the file is copied into Saves and opened.

@@ -240,7 +240,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </style></head><body>
 <header>
 <div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click, show</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="auto">Auto (images, else PDF)</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option></select></label><div id="menu" hidden>
-<button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button><button data-m="delete">Delete checklist</button>
+<button data-m="wunlock" hidden>Unlock menu (Boss PIN)…</button><button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button><button data-m="delete">Delete checklist</button>
 <button data-m="loc">Open file location</button><button data-m="export">Export…</button>
 <button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><hr>
 <button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
@@ -947,13 +947,16 @@ document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key===
 const menu=$('#menu');
 // a master file (or worker mode) cannot be deleted: the menu item is greyed out, and the home list's Delete too (noDel)
 const noDel=e=>e&&(e.id===CUR&&S?!!(S.locked||S.worker):!!(e.locked||e.worker));
-const menuOpen=()=>{menu.querySelector('[data-m=delete]').disabled=!!(S.locked||S.worker);menu.hidden=false};
+// worker mode: only Save and Export work until a Boss unlocks the menu (for that one opening). Export gives a fresh copy, so no work leaves.
+const WKFREE=['save','export','wunlock'];
+const menuOpen=unl=>{const wk=wkGate()&&!unl;menu.querySelectorAll('button[data-m]').forEach(b=>b.disabled=wk&&!WKFREE.includes(b.dataset.m));
+ menu.querySelector('[data-m=wunlock]').hidden=!wk;menu.querySelector('[data-m=delete]').disabled=!!(S.locked||S.worker);menu.hidden=false};
 // worker mode (S.worker): locks editing like a master file and puts the menu and Settings behind a main/Boss PIN, so whoever opens
 // the checklist stays in it. Not without a profile or under E-4417/18/19: then nobody could enter a PIN, and exports must stay possible.
 let WKW=null;const wkGate=()=>!!(CUR&&S.worker&&PR.hash&&!TAMPER&&$('#home').hidden);
 const wkAsk=t=>askPin({title:t,note:'Worker mode is on in this checklist. Main profile or Boss PIN.',boss:true});
-$('#menuBtn').onclick=async e=>{e.stopPropagation();if(!menu.hidden){menu.hidden=true;return}if(wkGate()&&!await wkAsk('Open the menu'))return;menuOpen()};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
-menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;
+$('#menuBtn').onclick=e=>{e.stopPropagation();if(!menu.hidden){menu.hidden=true;return}menuOpen()};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
+menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;if(m==='wunlock'){wkAsk('Unlock the menu').then(w=>w&&menuOpen(true));return}
  if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
  else if(m==='newjob')newJob();
@@ -1020,7 +1023,7 @@ function newJob(){if(!CUR)return;const from=S.name||CUR;dlg(`<div class="dh"><b>
   try{const cur=CUR+'.bcl';await FS.write(nm+'.bcl',await pack(nm,o=>{blankCopy(false)(o);o.log=[{at:now(),ev:'New job started',item:'From the checklist "'+from+'"',by:'',uid:''}]}),cur);LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});await openProject(nm);toast('New job: '+nm)}
   catch(e){toast('Could not start the new job')}}}
 const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
- if(keepLog)segOn(o,'recovery','Exported as a fresh copy','Entries above come from the original file');
+ if(keepLog)segOn(o,'recovery','Exported as a fresh copy','This file is a copy of "'+(S.name||'unnamed')+'" made '+fmt(now())+'. Entries above come from the original and record work done there, not in this copy.');
  else{delete o.segs;delete o.seg;o.log=[]}
  for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps]){x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft='';x.hist=[];delete x.wp}};
 // ---------- Export window: the kinds of export on the left (room for more), their settings and a preview on the right ----------
@@ -1054,7 +1057,8 @@ async function xpPreview(k){const box=$('#xppages');let doc;try{doc=await pdfjsL
  for(let n=1;n<=doc.numPages;n++){const v=(await doc.getPage(n)).getViewport({scale:1}),d=document.createElement('div');d.className='xppg';d.dataset.n=n;d.style.aspectRatio=v.width+'/'+v.height;box.appendChild(d);io.observe(d)}xpWhere()}
 function xpWhere(){const box=$('#xppages');if(!box||!box.firstElementChild||!XP.pages)return;const top=box.getBoundingClientRect().top+box.clientHeight/3;let n=1;for(const d of box.children)if(d.getBoundingClientRect().top<=top)n=+d.dataset.n;$('#xpinfo').textContent=`Page ${n} of ${XP.pages} · ${PO().paper}`}
 async function xpExport(){const b=$('#xpgo');b.disabled=true;let f=null;
- try{if(XP.k==='fresh')f=await FS.saveFile({title:'Export a fresh copy',name:uniqueName(S.name,'-')+' (shared).bcl',filters:[{name:'Checklist',extensions:['bcl']}],from:CUR+'.bcl'},await pack(null,blankCopy($('#exlog').checked)));
+ try{if(XP.k==='fresh'){f=await FS.saveFile({title:'Export a fresh copy',name:uniqueName(S.name,'-')+' (shared).bcl',filters:[{name:'Checklist',extensions:['bcl']}],from:CUR+'.bcl'},await pack(null,blankCopy($('#exlog').checked)));
+   if(f&&!errNow()){logEv('exported a fresh copy'+($('#exlog').checked?' with the log':''),{text:f.split(/[\\/]/).pop()});save()}}
   else if(XP.pdf)f=await FS.saveFile({title:'Export printable checklist',name:(S.name||'Checklist').replace(/[\\/:*?"<>|]+/g,'_')+' - checklist.pdf',filters:[{name:'PDF',extensions:['pdf']}]},XP.pdf);
   if(f){xpClose();toast('Saved: '+f)}}
  catch(e){toast('Could not export: '+String((e&&e.message)||e).replace(/^.*Error: /,''))}finally{if(!$('#xp').hidden)b.disabled=false}}

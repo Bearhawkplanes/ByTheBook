@@ -609,10 +609,19 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(() => { openSettings(); const c = $('#workc'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); closeDlg(); });
   assert(await pg.evaluate(() => S.worker && isLocked() && S.log.some(l => l.ev === 'worker mode on')), 'worker mode on: editing locked, logged');
   await pg.evaluate(() => { PR.req.names = true; PR.people = [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }]; $('#menuBtn').click(); }); await pg.waitForTimeout(80);
-  assert(await pg.evaluate(() => $('#menu').hidden && !!document.querySelector('.overlay input.pin')), 'the menu asks for a PIN first');
-  const wm = await tryPin('1357'); assert(/Only the main profile or a Boss/.test(wm), 'a worker PIN does not open it: ' + wm);
+  const wmen = await pg.evaluate(() => ({ open: !$('#menu').hidden, pin: !!document.querySelector('.overlay input.pin'), on: [...$('#menu').querySelectorAll('button[data-m]')].filter(b => !b.disabled && !b.hidden).map(b => b.dataset.m) }));
+  assert(wmen.open && !wmen.pin && wmen.on.join() === 'wunlock,export,save', 'worker menu opens with only Unlock, Export and Save usable: ' + JSON.stringify(wmen));
+  await pg.evaluate(() => { const b = $('[data-m=mainmenu]'); b.click(); });
+  assert.strictEqual(await pg.evaluate(() => CUR), 'shop', 'greyed-out items do nothing');
+  await pg.evaluate(() => $('[data-m=wunlock]').click()); await pg.waitForTimeout(80);
+  const wm = await tryPin('1357'); assert(/Only the main profile or a Boss/.test(wm), 'a worker PIN does not unlock it: ' + wm);
   await tryPin('24680'); await pg.waitForTimeout(80);
-  assert(await pg.evaluate(() => !$('#menu').hidden && $('[data-m=delete]').disabled), 'Boss/main PIN opens the menu; Delete stays greyed out');
+  assert(await pg.evaluate(() => !$('#menu').hidden && !$('[data-m=mainmenu]').disabled && $('[data-m=wunlock]').hidden && $('[data-m=delete]').disabled), 'Boss/main PIN unlocks the menu; Delete stays greyed out');
+  await pg.evaluate(() => { $('#menu').hidden = true; $('#menuBtn').click(); });
+  assert(await pg.evaluate(() => $('[data-m=mainmenu]').disabled), 'locked again the next time it opens');
+  // exporting a fresh copy with the log: the copy's log says it is a copy, the original notes the export
+  const wex = await pg.evaluate(async () => { $('[data-m=export]').click(); await new Promise(r => setTimeout(r, 100)); $('#exlog').checked = true; await xpExport(); const d = window.__saved.d, c = JSON.parse(typeof d === 'string' ? d : new TextDecoder().decode(new Uint8Array(d))); return { mark: c.log.at(-1), orig: S.log.at(-1).ev }; });
+  assert(wex.mark.ev === 'Exported as a fresh copy' && /This file is a copy of "shop"/.test(wex.mark.item) && wex.orig === 'exported a fresh copy with the log', 'copy\'s log says it is a copy; original logs the export: ' + JSON.stringify(wex));
   await pg.evaluate(() => { $('#menu').hidden = true; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: true })); }); await pg.waitForTimeout(150);
   assert.strictEqual(await pg.evaluate(() => CUR), 'shop', 'Ctrl+N does not leave the checklist');
   await pg.evaluate(() => $('#cog').click()); await pg.waitForTimeout(80);
