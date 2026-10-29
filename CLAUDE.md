@@ -61,6 +61,17 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 - The bcl.js format keeps media out of the checklist JSON, so there is no text-size ceiling and a tick appends only the checklist. Limit per checklist: `CAP` = 2 GB (under FAT32's 4 GB with room for compaction); `roomFor()` refuses new media past it; Settings > This checklist shows the storage bar (`stFill`, `usage()` = saved size from `FS.info` + unsaved media).
 - `pack()` puts `app` and `stamp` first; `storage.list()` reads the stamp from the start of the checklist JSON (new files) or scans old files in 4 MB pieces. Search redraws 200 ms after typing stops. `shrinkImg()` shrinks photos on attach (AS.shrink, default on, 2560 px JPEG 86%; PNG screenshots stay PNG unless > 3 MB).
 
+## Future plan: host computer (owner's idea, NOT started; first a stable, tested release)
+Agreed with the owner, to build later, only when they ask:
+- One always-on **host computer** stores the shop's checklists. Each project has **one laptop** that everyone on that project uses; another project uses another laptop.
+- **Local first, mirrored to the host:** the laptop keeps working from its own copy (fast, works without Wi-Fi). After every save it sends the host what changed (bcl.js already appends each save, so usually only the new tail of the file). If the host cannot be reached, changes queue up and are sent later, with a small "not backed up to host since …" warning.
+- **The host copy is independent evidence:** logs, work photos and saves are stored on both, identical, but the host never deletes because a laptop said so. A deleted checklist or removed photo on a laptop stays on the host with its earlier versions, so a crashed laptop, a failed drive or a worker deleting evidence never loses the record. The host can show/restore earlier versions.
+- **"In use" lock held by the host:** opening a checklist marks it taken by that laptop; any other laptop gets view-only ("In use on <laptop>"). A Boss PIN can release a lock if a laptop dies.
+- The host runs the same app in a "host mode" (no extra software, shop network only, no internet). Laptops are paired to it once with a code.
+- Videos for Work Photos may come back then, stored only on the host (owner's decision: not inside laptop checklists).
+- Still to decide with the owner: how long the host keeps old versions, who can view/restore from it (main profile only or Bosses too), and a second backup drive for the host itself.
+- A simpler first step was discussed: a shared network folder as the save location plus an "in use" lock. The owner prefers the host design above.
+
 ## Releases
 - Windows downloads are built by `.github/workflows/release.yml` on GitHub Actions when a release is published, and attached to it. Never commit built `.exe` files or `dist/` to the repo.
 - To release: bump `version` in `package.json` (and `package-lock.json`), commit and push; then the owner publishes a release on GitHub with tag `vX.Y.Z` (cloud sessions cannot push tags: HTTP 403). Ask the owner before preparing a release.
