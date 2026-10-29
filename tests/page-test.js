@@ -623,6 +623,41 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(() => $('#menuBtn').click()); await pg.waitForTimeout(80);
   assert(await pg.evaluate(() => !$('#menu').hidden && !document.querySelector('.overlay input.pin')), 'without worker mode the menu opens straight away');
 
+  // ---- work photos: per item / step tab, the Work Photos page by section, full screen with the details ----
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const wphoto = async (pg, n) => pg.evaluate(async n => { const fs = []; for (let i = 0; i < n; i++) { const c = document.createElement('canvas'); c.width = 1600; c.height = 1200; const g = c.getContext('2d'); g.fillStyle = ['#c33', '#3a3', '#36c'][i % 3]; g.fillRect(0, 0, 1600, 1200);
+    fs.push(new File([await new Promise(r => c.toBlob(r, 'image/jpeg', .9))], 'work' + i + '.jpg', { type: 'image/jpeg' })); } window.__wpf = fs; }, n);
+  await wphoto(pg, 2);
+  await pg.evaluate(() => { S.locked = true; select(S.sections[0].cards[0].steps[1]); setTab('wp'); wpAdd(window.__wpf); }); await pg.waitForTimeout(100);
+  await pg.evaluate(() => { $('#wpn').value = 'Joe Smith'; document.querySelector('#modal [data-d=ok]').click(); }); await pg.waitForTimeout(600);
+  const wone = await pg.evaluate(() => ({ n: SEL.wp.length, by: SEL.wp[0].by, tiles: document.querySelectorAll('#p-wp .wtile').length, imgs: Object.keys(MEDIA).length, log: S.log.filter(l => l.ev === 'work photo added').length, shown: !$('#p-wp').hidden }));
+  assert(wone.n === 2 && wone.by === 'Joe Smith' && wone.tiles === 2 && wone.log === 2 && wone.shown, 'two work photos added in a master file, with the name, logged: ' + JSON.stringify(wone));
+  await pg.evaluate(async () => { select(S.sections[1].cards[0]); window.__wpf = window.__wpf.slice(0, 1); wpAdd(window.__wpf); await new Promise(r => setTimeout(r, 80)); document.querySelector('#modal [data-d=ok]').click(); }); await pg.waitForTimeout(500);
+  // the main item's tab also shows its steps' photos; the Work Photos page groups by section
+  const wmain = await pg.evaluate(() => { select(S.sections[0].cards[0]); return document.querySelectorAll('#p-wp .wtile').length; });
+  assert.strictEqual(wmain, 2, 'a main item shows its steps\' work photos too');
+  await pg.evaluate(() => $('#wpBtn').click()); await pg.waitForTimeout(400);
+  const wgi = await pg.evaluate(() => ({ secs: [...document.querySelectorAll('#wgbody .wgsec')].map(x => [x.querySelector('h3').firstChild.textContent.trim(), x.querySelectorAll('.wtile').length]), cap: $('#wgbody .wcap').textContent, main: S.sections[0].cards[0].text, titles: S.sections.slice(0, 2).map(s => s.title), loaded: !!$('#wgbody img').src }));
+  assert.deepStrictEqual(wgi.secs, [[wgi.titles[0], 2], [wgi.titles[1], 1]], 'grouped by section');
+  assert(wgi.cap === wgi.main && wgi.loaded, 'caption is the main item, previews load: ' + JSON.stringify(wgi));
+  await pg.evaluate(() => $('#wgbody .wtile').click()); await pg.waitForTimeout(300);
+  const wfi = await pg.evaluate(() => ({ info: $('#wf .wfinfo').textContent, big: (() => { const i = $('#wf img'); return i.naturalWidth; })(), step: S.sections[0].cards[0].steps[1].text }));
+  assert(/Logged:/.test(wfi.info) && wfi.info.includes('Section: ' + wgi.titles[0]) && wfi.info.includes('Main item: ' + wgi.main) && wfi.info.includes('Step: ' + wfi.step) && /Added by: Joe Smith/.test(wfi.info) && wfi.big === 1600, 'full screen with date, section, item, step and who: ' + JSON.stringify(wfi));
+  await pg.keyboard.press('ArrowRight'); await pg.waitForTimeout(200);
+  assert(await pg.evaluate(() => /2 of 3/.test($('#wf .wfinfo').textContent)), 'arrow keys go to the next photo');
+  await pg.keyboard.press('Escape'); await pg.keyboard.press('Escape');
+  assert(await pg.evaluate(() => !$('#wf') && $('#wg').hidden), 'Esc closes the photo, then the page');
+  // saved in the file (photo + preview), loaded again after reopening; signed-off items are locked; a fresh copy has none
+  const wsv = await pg.evaluate(async () => { DIRTY = true; await flush(); const o = JSON.parse(await window.fsapi.read('shop.bcl')), p = o.sections[0].cards[0].steps[1].wp[0]; return { files: !!(o.files[p.id] && o.files[p.tid]), by: p.by }; });
+  assert(wsv.files && wsv.by === 'Joe Smith', 'photos and previews saved in the checklist file');
+  await open(pg, 'shop');
+  const wre = await pg.evaluate(async () => { wgOpen(); await new Promise(r => setTimeout(r, 400)); const n = document.querySelectorAll('#wgbody .wtile').length, ok = [...document.querySelectorAll('#wgbody img')].every(i => i.src); wgClose(); return { n, ok }; });
+  assert(wre.n === 3 && wre.ok, 'after reopening the Work Photos page shows them all');
+  const wlk = await pg.evaluate(async () => { const c = S.sections[0].cards[0]; c.sig = { by: 'Boss', at: now() }; select(c.steps[1]); const r = { btn: $('#wpadd').disabled, del: document.querySelectorAll('#p-wp .wdel').length }; await wpDel(c.steps[1], 0); r.n = c.steps[1].wp.length; return r; });
+  assert(wlk.btn && wlk.del === 0 && wlk.n === 2, 'signed off: no adding or removing: ' + JSON.stringify(wlk));
+  assert(await pg.evaluate(async () => { const o = JSON.parse(await pack(null, blankCopy(false))); return !o.sections.some(s => s.cards.some(c => [c, ...c.steps].some(x => x.wp))) ; }), 'a fresh copy has no work photos');
+
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');

@@ -107,6 +107,14 @@ One window: the kinds of export on the left, their settings on the right, and Ex
   - Options (remembered): paper size Letter or A4; Contents page (fill-in fields and where each section starts); Qty / size column; Values / Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
   - No images, videos, PDFs, descriptions or progress: it is always a blank copy.
 
+## Work Photos
+Photos that prove the work was done (for example for a customer), kept apart from the instruction images on the Images tab.
+- Every main item and step has a **Work Photos** tab: + Add work photos picks photos from the computer. Each one records who added it (the name tied to the PIN when PINs are in use, otherwise a name typed once and remembered) and when, and the activity log notes it. A main item's tab also shows its steps' photos.
+- Adding work photos counts as progress, like ticking a box: it works in a master file and in worker mode, but not while the checklist or the app shows an error.
+- Once a main item is signed off, its photos and its steps' photos are locked. Removing a photo before that asks for confirmation (a main or Boss PIN in worker mode or when signing needs a PIN) and is logged.
+- The **Work Photos** button at the top right opens a page with every work photo in the checklist, in a grid grouped by section, each captioned with its main item. Click one to see it full screen with when it was logged, its section, main item and step, and who added it. ← / → go through them, Esc closes.
+- Photos are shrunk like other photos (Settings) and stored in the checklist file with a small preview for the grids, so they count toward its storage limit. A Fresh copy or a new job starts without them.
+
 ## Video Player
 Top bar > Video Player (next to PDF Viewer). The player shows the videos of the open checklist.
 - + Add video… asks how to add it:

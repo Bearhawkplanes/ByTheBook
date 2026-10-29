@@ -81,6 +81,13 @@ body.locked .ed{display:none!important}
 .seg button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 .fit{position:relative;height:calc(100vh - 290px);min-height:260px;background:var(--bg);border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .fit img,.fit video{max-width:100%;max-height:100%;object-fit:contain}
+.wtile{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);cursor:pointer;aspect-ratio:4/3}.wtile:hover{border-color:var(--acc)}
+.wtile img{width:100%;height:100%;object-fit:cover;display:block}.wtile .wcap{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:12px;line-height:1.3;background:rgba(0,0,0,.62);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wtile .wdel{position:absolute;top:6px;right:6px;padding:2px 8px}.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:8px 0 14px}
+#wg{position:fixed;inset:0;z-index:32;display:flex;flex-direction:column;background:var(--bg)}#wgtop{display:flex;gap:14px;align-items:center;padding:10px 16px;background:var(--hbg);color:var(--hfg)}
+#wgbody{flex:1;overflow:auto;padding:14px 20px}.wgsec h3{margin:14px 0 4px;font-size:16px}.wgsec h3 .mut{font-weight:400;font-size:13px}
+#wf{position:fixed;inset:0;z-index:40;background:#000;display:flex;flex-direction:column}#wf .wfimg{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center}
+#wf .wfimg img{max-width:100%;max-height:100%;object-fit:contain}#wf .x{position:absolute;top:10px;right:12px}#wf .wfinfo{background:var(--hbg);color:var(--hfg);padding:10px 18px;font-size:14px;line-height:1.7}
 .nav{position:absolute;top:50%;transform:translateY(-50%);font-size:18px;padding:10px 12px;opacity:.85}.nav.l{left:8px}.nav.r{right:8px}.fit .x{position:absolute;top:8px;right:8px}
 .stack .tile{margin-bottom:14px}.g3 .tile img,.g3 .tile video{aspect-ratio:4/3;object-fit:cover}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:flex;align-items:center;justify-content:center}
@@ -239,16 +246,17 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button></div></div>
 <div class="hc"><div class="tline"><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span></div><div id="prog"></div></div>
-<div class="hr" style="gap:8px"><button id="lockBtn" hidden></button><button id="pdfBtn" title="PDF viewer">PDF Viewer</button><button id="vidBtn" title="Video player">Video Player</button><button id="cog" title="Settings">⚙</button></div>
+<div class="hr" style="gap:8px"><button id="lockBtn" hidden></button><button id="wpBtn" title="Every work photo in this checklist, by section">Work Photos</button><button id="pdfBtn" title="PDF viewer">PDF Viewer</button><button id="vidBtn" title="Video player">Video Player</button><button id="cog" title="Settings">⚙</button></div>
 <input id="file" type="file" accept="application/pdf" multiple hidden><input id="jfile" type="file" accept=".bcl,.json,application/json" hidden>
 </header>
 <main>
 <section id="L"></section>
 <div id="split" title="Drag to resize (snaps to the middle). Double-click to reset"></div>
 <section id="R">
-<div class="tabs"><button data-tab="img">Images</button><button data-tab="desc">Description</button><button data-tab="pdf">PDF</button></div>
+<div class="tabs"><button data-tab="img">Images</button><button data-tab="wp">Work Photos</button><button data-tab="desc">Description</button><button data-tab="pdf">PDF</button></div>
 <div id="sel"></div>
 <div id="p-img"></div>
+<div id="p-wp" hidden></div>
 <div id="p-desc"></div>
 <div id="p-pdf" hidden>
 <div class="tb"><select id="psel" hidden></select><button id="prev">◀</button><input id="pn" type="number" style="width:70px" title="PDF page"><button id="next">▶</button>
@@ -272,6 +280,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page names and words…" style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
 <div class="tb"><button id="pvprev">◀</button><input id="pvpg" type="number" min="1" placeholder="Page #" style="width:84px" title="Go to PDF page number"><button id="pvgo">Go</button><button id="pvnext">▶</button><button id="pvzo">−</button><button id="pvzi">+</button><input id="pvname" placeholder="Name this page" style="width:140px"><button id="pvmap">Name</button></div>
 <div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><canvas id="cv2"></canvas></div></section></div></div>
+<div id="wg" hidden><div id="wgtop"><button id="wgBack">← Return</button><b>Work Photos</b><span id="wgt"></span></div><div id="wgbody"></div></div>
 <div id="vp" hidden><div id="vptop"><button id="vpBack">← Return</button><b id="vpt"></b><span id="vpfor"></span></div><div id="vpbody"><aside id="vpside"><div class="hh">Videos in this checklist</div><div id="vplist"></div><button id="vpadd">+ Add video…</button><p class="mut" style="margin-top:14px">Select Timestamps, then Assign to… to put that part of the video on a step.</p></aside>
 <section id="vpmain"><div id="vpbox"><video id="vpv" playsinline></video><div id="vpmsg" hidden></div></div>
 <div id="tl" title="Click to skip to that point"><div id="tlplay"></div><div id="tlsel"></div><div id="tlhead"></div><div class="hd" id="hA" title="Start of the selection: drag"></div><div class="hd" id="hB" title="End of the selection: drag"></div></div>
@@ -405,7 +414,7 @@ L.addEventListener('click',e=>{
   else return;
   SEL=it;save();renderL();renderR();autoTab(it);L.querySelector('.row.sel .t')?.focus();return}
  if(!row)return;const{arr,idx,item,card}=loc(row);const a=b&&b.dataset.a;if((card.done||isLocked())&&(a==='del'||a==='up'||a==='dn'||a==='ren'))return;
- if(a==='del'){[item,...(item.steps||[])].forEach(x=>x.media.forEach(m=>m.id&&idbDel('m',m.id)));arr.splice(idx,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR()}
+ if(a==='del'){[item,...(item.steps||[])].forEach(x=>{x.media.forEach(m=>m.id&&idbDel('m',m.id));(x.wp||[]).forEach(p=>{idbDel('m',p.id);idbDel('m',p.tid)})});arr.splice(idx,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR()}
  else if(a==='up'&&idx>0){[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];save();renderL()}
  else if(a==='dn'&&idx<arr.length-1){[arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]];save();renderL()}
  else if(a==='tog'){item.open=!item.open;save();renderL()}
@@ -441,7 +450,7 @@ L.addEventListener('change',e=>{const a=e.target.dataset.a;
  askPin({title:isCard?(want?'Sign off this item':'Remove this sign-off'):(want?'Sign this step':'Uncheck this step'),note:item.text||'Untitled',boss:isCard}).then(w=>{if(w)go(w.name,w.uid)})});
 // ---------- right: tabs ----------
 function setTab(t){tab=t;document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
- ['img','desc','pdf'].forEach(k=>$('#p-'+k).hidden=k!==t);if(t==='pdf')pdfShow()}
+ ['img','wp','desc','pdf'].forEach(k=>$('#p-'+k).hidden=k!==t);if(t==='pdf')pdfShow()}
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 const urls={};
 async function hydrate(){for(const el of document.querySelectorAll('[data-mid]')){const id=el.dataset.mid;
@@ -458,8 +467,8 @@ async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
 function renderR(){
  const it=SEL;$('#sel').textContent=it?(it.text||'(untitled)'):'Select a checklist item on the left';
- if(!it){$('#p-img').innerHTML=$('#p-desc').innerHTML='<div class="mut">Nothing selected.</div>';return}
- $('#p-img').innerHTML=imgPane(it);
+ if(!it){$('#p-img').innerHTML=$('#p-wp').innerHTML=$('#p-desc').innerHTML='<div class="mut">Nothing selected.</div>';return}
+ $('#p-img').innerHTML=imgPane(it);$('#p-wp').innerHTML=wpPane(it);
  $('#p-desc').innerHTML=`<label>Description / procedure notes<textarea data-f="desc" rows="9">${esc(it.desc)}</textarea></label>
  <label>${S.mech?'Torque / stretch / limits':'Values / limits'}<input data-f="spec" value="${esc(it.spec)}"></label>
  <div class="g2"><label>Quantity<input data-f="qty" value="${esc(it.qty)}"></label><label>Size<input data-f="size" value="${esc(it.size)}"></label></div>
@@ -493,6 +502,58 @@ R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
  if(t.id==='txs'){AS.tsz=+t.value;saveApp();txSet(x=>x.s=AS.tsz*txW()/1000)}
  if(t.id==='mfile'){const fl=[...t.files],isV=f=>/^video\//.test(f.type)||/\.(mp4|m4v|mov|webm|mkv|avi|wmv|mpe?g|3gp)$/i.test(f.name);t.value='';
   fl.filter(f=>!isV(f)).forEach(f=>attach(f,f.name,f.type));const v=fl.filter(isV);if(v.length)vidFromItem(v)}});
+// ---------- work photos: proof of the work, separate from the instruction images. item.wp=[{id,tid,name,by,uid,at}]: the photo and a
+// small preview (tid, for the grids) are both media in the file. Adding them is progress like checking a box: allowed in a master file
+// and in worker mode, not under an error. Once the main item is signed off its photos (and its steps') can no longer change.
+let WPP=[],WPG=[],WF=null;
+const wpL=x=>x.wp||[],wpOf=x=>x.wp||(x.wp=[]);
+function wpWhere(it){for(const s of S.sections)for(const c of s.cards){if(c===it)return{s,c,st:null};const st=c.steps.find(x=>x===it);if(st)return{s,c,st}}return null}
+const wpLocked=it=>{const w=wpWhere(it);return !!(w&&w.c.sig)};
+async function wpThumb(blob){const bm=await createImageBitmap(blob),k=Math.min(1,480/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);
+ const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(bm,0,0,c.width,c.height);bm.close();return new Promise(r=>c.toBlob(r,'image/jpeg',.8))}
+// who adds them: the PIN's name when PINs are in use, otherwise a name typed once (remembered on this computer)
+function wpWho(n){const t='Add '+n+' work photo'+(n>1?'s':'');if(pinOn('sign')||pinOn('names'))return askPin({title:t,note:'Your PIN records who added '+(n>1?'them':'it')+'.'}).then(w=>w&&{by:w.name,uid:w.uid});
+ return new Promise(res=>{DLGOK=()=>{const v=$('#wpn').value.trim();if(!v)return res(null);AS.wpby=v;saveApp();res({by:v,uid:''})};
+  dlg(`<div class="dh"><b>${t}</b></div><label>Your name (shown with the photo${n>1?'s':''})<input id="wpn" value="${esc(AS.wpby||'')}" maxlength="60"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Add</button></div>`);setTimeout(()=>{const i=$('#wpn');if(i)i.select()},0)})}
+async function wpAdd(files){const it=SEL;files=files.filter(f=>/^image\//.test(f.type));if(!it||!files.length)return;if(errNow())return showErr(errNow());
+ if(wpLocked(it))return toast('This item is signed off: its work photos can no longer change');
+ const who=await wpWho(files.length);if(!who)return;
+ for(const f of files){const{blob,type}=await shrinkImg(f,f.type);let tb;try{tb=await wpThumb(blob)}catch(e){toast('Could not read '+f.name);continue}
+  if(!await roomFor(blob.size+tb.size))break;const id=uid(),tid=uid();await idbPut('m',id,{blob,name:f.name,type});await idbPut('m',tid,{blob:tb,name:'preview of '+f.name,type:'image/jpeg'});
+  wpOf(it).push({id,tid,name:f.name,by:who.by,uid:who.uid,at:now()});logEv('work photo added',it,who.by,who.uid)}
+ save();renderL();if(SEL===it)renderR();if(!$('#wg').hidden)wgRender()}
+async function wpDel(it,i){const p=wpL(it)[i];if(!p)return;if(errNow())return showErr(errNow());if(wpLocked(it))return toast('This item is signed off: its work photos can no longer change');
+ const go=w=>{wpOf(it).splice(i,1);idbDel('m',p.id);idbDel('m',p.tid);logEv('work photo removed ('+(p.name||'photo')+', added by '+(p.by||'unknown')+' '+fmt(p.at)+')',it,w?w.name:'',w?w.uid:'');save();renderL();renderR();if(!$('#wg').hidden)wgRender()};
+ if(S.worker||pinOn('sign')){const w=await askPin({title:'Remove this work photo',note:'Main profile or Boss PIN.',boss:true});if(w)go(w)}
+ else ask('Remove this work photo? The activity log keeps a note of it.','Remove',()=>go(null),1)}
+const wpTile=(o,k,cap,del)=>{const p=wpL(o.it)[o.i];return `<div class="wtile" data-wi="${k}" title="${esc(cap)}"><img data-mid="${p.tid}" alt=""><span class="wcap">${esc(cap)}</span>${del?`<button class="wdel" data-wd="${o.i}" title="Remove this work photo">✕</button>`:''}</div>`};
+function wpPane(it){const w=wpWhere(it),lk=wpLocked(it),own=wpL(it).map((p,i)=>({it,i})),sub=w&&!w.st?w.c.steps.flatMap(st=>wpL(st).map((p,i)=>({it:st,i}))):[];WPP=own.concat(sub);
+ const cap=o=>{const p=wpL(o.it)[o.i];return (o.it===it?'':(o.it.text||'(untitled step)')+' · ')+(p.by||'unknown')+' · '+fmt(p.at)};
+ return `<div class="tb"><button id="wpadd" ${lk||errNow()?'disabled':''}>+ Add work photos</button><input id="wpfile" type="file" accept="image/*" multiple hidden><span class="mut">${lk?'Signed off: these photos are locked.':'Photos that show the work was done. Each one records who added it and when.'}</span></div>`+
+  (own.length?`<div class="wgrid">${own.map((o,k)=>wpTile(o,k,cap(o),!lk&&!errNow())).join('')}</div>`:'<div class="mut" style="margin:8px 0 14px">No work photos on this '+(w&&w.st?'step':'item')+' yet.</div>')+
+  (sub.length?`<div class="dt">On its steps</div><div class="wgrid">${sub.map((o,k)=>wpTile(o,own.length+k,cap(o),false)).join('')}</div>`:'')}
+$('#p-wp').addEventListener('click',e=>{if(e.target.closest('#wpadd')){$('#wpfile').click();return}const d=e.target.closest('[data-wd]');if(d){wpDel(SEL,+d.dataset.wd);return}
+ const t=e.target.closest('.wtile');if(t)wfOpen(WPP,+t.dataset.wi)});
+$('#p-wp').addEventListener('change',e=>{if(e.target.id==='wpfile'){const f=[...e.target.files];e.target.value='';wpAdd(f)}});
+// the Work Photos page: every work photo, grouped by section, captioned with the main item it belongs to
+function wgOpen(){if(!CUR)return toast('Open a checklist first');$('#wg').hidden=false;wgRender()}
+function wgClose(){$('#wg').hidden=true;wfClose()}
+function wgRender(){$('#wgt').textContent=S.name||'Unnamed';WPG=[];let h='';
+ for(const s of S.sections){const l=[];for(const c of s.cards)for(const x of [c,...c.steps])wpL(x).forEach((p,i)=>l.push({it:x,i,c}));if(!l.length)continue;
+  h+=`<section class="wgsec"><h3>${esc(s.title||'Untitled section')} <span class="mut">${l.length} photo${l.length>1?'s':''}</span></h3><div class="wgrid">${l.map(o=>wpTile(o,WPG.push(o)-1,o.c.text||'(untitled)',false)).join('')}</div></section>`}
+ $('#wgbody').innerHTML=h||'<div class="mut">No work photos yet. Add them on the Work Photos tab of a main item or a step.</div>';hydrate()}
+$('#wpBtn').onclick=wgOpen;$('#wgBack').onclick=wgClose;
+$('#wgbody').addEventListener('click',e=>{const t=e.target.closest('.wtile');if(t)wfOpen(WPG,+t.dataset.wi)});
+// full screen: the photo with when it was logged, where it is attached and who added it
+function wfOpen(list,k){WF={list,k};wfShow()}
+function wfClose(){WF=null;const el=$('#wf');if(el)el.remove()}
+function wfShow(){const o=WF&&WF.list[WF.k],p=o&&wpL(o.it)[o.i],w=o&&wpWhere(o.it);if(!p||!w)return wfClose();let el=$('#wf');
+ if(!el){el=document.createElement('div');el.id='wf';document.body.appendChild(el);el.addEventListener('click',e=>{const b=e.target.closest('[data-wf]');if(!b)return;if(b.dataset.wf==='x')wfClose();else wfStep(+b.dataset.wf)})}
+ el.innerHTML=`<div class="wfimg"><img data-mid="${p.id}" src="${urls[p.tid]||''}" alt="${esc(p.name||'')}"><button class="x" data-wf="x" title="Close (Esc)">✕</button>${WF.list.length>1?'<button class="nav l" data-wf="-1" title="Previous (←)">◀</button><button class="nav r" data-wf="1" title="Next (→)">▶</button>':''}</div>
+ <div class="wfinfo"><div><b>Logged:</b> ${esc(fmt(p.at))}</div><div><b>Section:</b> ${esc(w.s.title||'Untitled section')} &nbsp;·&nbsp; <b>Main item:</b> ${esc(w.c.text||'(untitled)')} &nbsp;·&nbsp; <b>Step:</b> ${w.st?esc(w.st.text||'(untitled)'):'none (on the main item)'}</div><div><b>Added by:</b> ${esc(p.by||'unknown')}</div><div style="opacity:.7">${WF.k+1} of ${WF.list.length}${p.name?' · '+esc(p.name):''}</div></div>`;hydrate()}
+const wfStep=d=>{if(!WF)return;const n=WF.list.length;WF.k=(WF.k+d+n)%n;wfShow()};
+document.addEventListener('keydown',e=>{if([...document.querySelectorAll('.overlay')].some(o=>!o.hidden))return;if(WF){if(e.key==='Escape')wfClose();else if(e.key==='ArrowRight')wfStep(1);else if(e.key==='ArrowLeft')wfStep(-1);else return}
+ else if(!$('#wg').hidden&&e.key==='Escape'&&$('#modal').hidden)wgClose();else return;e.preventDefault();e.stopImmediatePropagation()},true);
 // a video chosen on an item's Images tab opens the Video Player (import or link it there), with the step picker starting on that item
 async function vidFromItem(files){if(!SEL||isLocked())return;PKLAST=SEL;vpOpen();for(const f of files){const p=FS.pathOf?FS.pathOf(f):'',st=p&&await FS.videoStat(p);
  await vpAdd(st||{blob:f,name:f.name.replace(/\.[^.]+$/,''),size:f.size});if(files.length>1)await new Promise(r=>{const w=setInterval(()=>{if($('#modal').hidden&&!LD){clearInterval(w);r()}},150)})}}
@@ -927,7 +988,7 @@ async function openProject(id){let r;
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}
  for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
- renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();afterOpen()}
+ renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();wgClose();afterOpen()}
 async function deleteProject(id){clearTimeout(save.t);if(CUR===id)DIRTY=false;try{await FS.remove(id+'.bcl')}catch(e){toast('Could not delete the file');return}
  LIB=LIB.filter(x=>x.id!==id);if(CUR===id){CUR=null;S=norm();SEL=null;pdf=null}if(HS===id)HS=null;renderHome()}
 const askDelete=id=>{const e=LIB.find(x=>x.id===id);if(noDel(e))return toast('This is a master file. Turn off the master file lock in its Settings to delete it.');if(e)ask(`Delete "${esc(e.name)}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',()=>deleteProject(id),1)};
@@ -939,7 +1000,7 @@ async function pack(name,strip){if(PR.pid&&!errNow()&&!S.stamp)S.stamp={pid:PR.p
  const o=Object.assign({app:undefined,stamp:undefined,locked:undefined,worker:undefined},JSON.parse(JSON.stringify(S))),big={},fresh=pack.fresh=[];o.files={};if(name!=null)o.name=name;if(strip)strip(o);
  // media already in the checklist file go in as references (nothing to send); new ones as data, listed in pack.fresh for flushNow
  const put=async(k,r,mk)=>{if(r.ref)return REFP+r.ref;big[k]=r.data||(r.data=await b2d(await mk()));fresh.push([r,k]);return '@@'+k+'@@'};
- for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of x.media)if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r)o.files[m.id]={name:r.name,type:r.type,data:await put('m:'+m.id,r,()=>r.blob)}}
+ for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps])for(const m of [...x.media,...(x.wp||[]).flatMap(p=>[{id:p.id},{id:p.tid}])])if(m.id&&!o.files[m.id]){const r=MEDIA[m.id];if(r)o.files[m.id]={name:r.name,type:r.type,data:await put('m:'+m.id,r,()=>r.blob)}}
  for(const p of o.pdfs){const r=PDFS[p.id];if(r)p.data=await put('p:'+p.id,r,()=>new Blob([r.buf],{type:'application/pdf'}))}
  for(const v of o.videos){const r=VIDS[v.id];if(r&&!v.link)v.data=await put('v:'+v.id,r,()=>r.blob)}
  if(APPV)o.app=APPV;   // the version that saved it: an older copy opens it view-only instead of dropping what it does not know
@@ -961,7 +1022,7 @@ function newJob(){if(!CUR)return;const from=S.name||CUR;dlg(`<div class="dh"><b>
 const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
  if(keepLog)segOn(o,'recovery','Exported as a fresh copy','Entries above come from the original file');
  else{delete o.segs;delete o.seg;o.log=[]}
- for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps]){x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft='';x.hist=[]}};
+ for(const s of o.sections)for(const c of s.cards)for(const x of [c,...c.steps]){x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft='';x.hist=[];delete x.wp}};
 // ---------- Export window: the kinds of export on the left (room for more), their settings and a preview on the right ----------
 let XP={k:'fresh',pdf:null,busy:0,tm:0,skip:new Set()};
 const XKINDS=[['fresh','Fresh copy','.bcl file for sharing or a new install'],['pdf','Printable checklist','PDF, blank, to print and fill in by hand']];
@@ -1021,7 +1082,7 @@ async function adoptFile(id,w){const label='Checklist adopted by "'+w.name+'"',w
  try{if(id===CUR&&S){S.stamp={pid:PR.pid,rv:PR.rv};CLT=null;segOn(S,'recovery',label,why,w.name,w.uid);DIRTY=true;if(!await flush())return;refreshAll()}
   else{const o=JSON.parse(await FS.read(id+'.bcl'));o.stamp={pid:PR.pid,rv:PR.rv};segOn(o,'recovery',label,why,w.name,w.uid);await FS.write(id+'.bcl',JSON.stringify(o))}   // only the stamp and log change; images and PDFs stay as they are
   await refreshLib();renderHome();if(PV)renderProfile();toast('Adopted "'+id+'"')}catch(e){toast('Could not adopt that checklist')}}
-async function openHome(){if(CUR&&DIRTY)await flush();await refreshLib();PV=false;PU=false;EDITOK=null;$('#hcen').hidden=false;$('#hprof').hidden=true;$('#hProf').classList.remove('on');$('#home').hidden=false;renderHome()}
+async function openHome(){wgClose();if(CUR&&DIRTY)await flush();await refreshLib();PV=false;PU=false;EDITOK=null;$('#hcen').hidden=false;$('#hprof').hidden=true;$('#hProf').classList.remove('on');$('#home').hidden=false;renderHome()}
 let lastClk={id:null,t:0};
 $('#home').addEventListener('click',e=>{const ab=e.target.closest('button[data-a=adopt]');if(ab){adoptAsk(ab.closest('[data-id]').dataset.id);return}
  if(e.target.closest('button[data-a=logv]')){viewLogOf(HS);return}
