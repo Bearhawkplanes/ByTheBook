@@ -90,7 +90,7 @@ Exporting a fresh copy is noted in the original's activity log. When the copy in
 - This deters casual tampering. Someone who can edit the app's code, or who deletes the profile, marker and every stamped checklist, is not stopped. Windows folder permissions are the only real lock.
 
 ## Mechanical wording (Settings > This checklist)
-Off by default, saved in each checklist (the demo has it on). The app is for any kind of checklist, so normally the wording is general; switch this on for mechanical work.
+Off by default, saved in each checklist (the demo has it on). The app is for any kind of checklist, so normally the wording is general; switch this on for mechanical work. It can be changed any time except in a master file or in worker mode.
 
 | | Off (general) | On (mechanical) |
 |---|---|---|
@@ -111,10 +111,10 @@ One window: the kinds of export on the left, their settings on the right, and Ex
 
 ## Work Photos
 Photos that prove the work was done (for example for a customer), kept apart from the instruction images on the Images tab.
-- Every main item and step has a **Work Photos** tab: + Add work photos picks photos from the computer (photos only, no videos, to keep checklists small). Each one records who added it (the name tied to the PIN when PINs are in use, otherwise a name typed once and remembered) and when, and the activity log notes it. A main item's tab also shows its steps' photos.
+- Every main item and step has a **Work Photos** tab (after Images, Description and PDF): + Add work photos picks photos from the computer (photos only, no videos, to keep checklists small). Each one records who added it (the name tied to the PIN when PINs are in use, otherwise a name typed once and remembered) and when, and the activity log notes it. A main item's tab also shows its steps' photos.
 - Adding work photos counts as progress, like ticking a box: it works in a master file and in worker mode, but not while the checklist or the app shows an error.
-- Once a main item is signed off, its photos and its steps' photos are locked. Removing a photo before that asks for confirmation (a main or Boss PIN in worker mode or when signing needs a PIN) and is logged.
-- The **Work Photos** button at the top right opens a page with every work photo in the checklist, in a grid grouped by section, each captioned with its main item. Click one to see it full screen with when it was logged, its section, main item and step, and who added it. ← / → go through them, Esc closes.
+- Photos can still be added after a step is checked or a main item is signed off (someone may remember the photo later); the log notes "added after sign-off". Once a main item is signed off, its photos and its steps' photos can no longer be removed. Removing a photo before that asks for confirmation (a main or Boss PIN in worker mode or when signing needs a PIN) and is logged.
+- The **Work Photos** button at the top right opens a page with every work photo in the checklist, in a grid grouped by section, each captioned with its main item. Click one to see it full screen with when it was logged, its section, main item and step, and who added it; **Jump to** (bottom right) goes back to the checklist with that step selected. ← / → go through them, Esc closes.
 - Photos are shrunk like other photos (Settings) and stored in the checklist file with a small preview for the grids, so they count toward its storage limit. A Fresh copy or a new job starts without them.
 
 ## Video Player
@@ -160,6 +160,13 @@ For torque patterns, bolt numbering and the like.
 - Checklists from before this file format are converted the first time they are opened; the original is kept in `Saves/Backups/`. Copies of the app from before this change cannot open the new files, so update every computer together.
 - Very long checklists stay quick on slow laptops: the list draws the sections near what you are looking at and fills in the rest as you scroll; ticking a box redraws only that item; search and the section tabs jump straight to items further down. The backup copy is made alongside saving instead of holding it up, and photos not looked at for a while are let go from memory (they load again when shown).
 - Measured on a simulated weak laptop (2 cores, 4× slower) with a 555 MB checklist of 3,900 steps and 700 photos: opening 1.7 s, ticking a box under 0.4 s including the save, search 0.2 s.
+
+## Around the screen
+- Under the checklist name: **Items** = main items checked off / all main items, **Sections** = sections complete (all their main items done, shown green) / all sections. The small pie right of the name fills by main items done (hover for the numbers).
+- Right panel tabs: Images, Description, PDF, Work Photos (the selected one is highlighted).
+- Greyed-out menu items (Delete in a master file or worker mode, most items in worker mode) say why when you hover over them.
+- Main menu: **View Demo** next to Import adds the demo checklist again as a new checklist (a fresh install also starts with it). **Tutorial** next to Profile is a placeholder for now. Esc on the Profile page goes back to the menu.
+- With "Require a PIN for sign-offs" on, the sign-off box on main items reads "Boss Sign-Off".
 
 ## Notes
 - Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. A small green "Saved!" appears left of the checklist name after each save and fades away (just under the name when the window is narrow). If the final save fails, closing asks whether to keep the app open.

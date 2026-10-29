@@ -20,7 +20,7 @@ const mainWin = async ea => { for (let i = 0; i < 600; i++) { const w = ea.windo
   await pg.waitForFunction(() => typeof LIB !== 'undefined' && !$('#home').hidden, null, { timeout: 60000 }); await pg.waitForTimeout(500);
   const wins = await ea.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter(w => w.isVisible()).map(w => w.webContents.getURL().split('/').pop()));
   assert.deepStrictEqual(wins, ['index.html'], 'only the main window is left once the menu is ready: ' + wins);
-  await pg.evaluate(() => document.querySelector('[data-m="demo"]').click()); await pg.waitForTimeout(2000);
+  await pg.evaluate(() => $('#hDemo').click()); await pg.waitForTimeout(2000);
   await pg.evaluate(() => { select(S.sections[1].cards[0].steps[0]); $('#vidBtn').click(); $('#vpadd').click(); }); await pg.waitForTimeout(300);
   await pg.evaluate(() => $('#vaLink').click()); await pg.waitForTimeout(1500);
   assert.strictEqual(await pg.evaluate(() => Math.round(vpDur())), 30, 'MP4 (H.264 + AAC) plays in the app');

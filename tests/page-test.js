@@ -39,7 +39,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
 
   // computer A: demo checklist with an attached image, everything checked and signed, some log entries
   let pg = await page({}, prof('a'.repeat(32)));
-  await pg.evaluate(() => document.querySelector('[data-m="demo"]').click()); await pg.waitForTimeout(1500);
+  await pg.evaluate(() => $('#hDemo').click()); await pg.waitForTimeout(1500);
   const used = await pg.evaluate(() => {
     const st = S.sections[1].cards[0].steps[0]; MEDIA.img1 = { name: 'photo.png', type: 'image/png', data: 'data:image/png;base64,' + 'A'.repeat(50000) }; st.media.push({ id: 'img1', kind: 'file', name: 'photo.png' });
     S.sections.forEach(s => s.cards.forEach(c => [c, ...c.steps].forEach(x => { x.done = true; x.init = 'AB'; x.doneAt = now(); x.sig = { by: 'A', at: now() }; x.hist.push({ ev: 'x' }); })));
@@ -598,10 +598,10 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   // ---- a master file cannot be deleted: menu item and the home list's Delete are greyed out ----
   pg = await page({ 'shop.bcl': shared, 'other.bcl': shared }, prof('a'.repeat(32)));
   await open(pg, 'shop');
-  const md = await pg.evaluate(async () => { $('#menuBtn').click(); const free = $('[data-m=delete]').disabled; $('#menuBtn').click(); S.locked = true; $('#menuBtn').click(); const b = $('[data-m=delete]'); const r = { free, locked: b.disabled, ptr: getComputedStyle(b).pointerEvents }; b.click(); r.modal = !$('#modal').hidden; DIRTY = true; await flush(); return r; });
-  assert(!md.free && md.locked && md.ptr === 'none' && !md.modal, 'master file: Delete checklist is greyed out and does nothing: ' + JSON.stringify(md));
-  const hd = await pg.evaluate(async () => { await openHome(); HS = 'shop'; renderHome(); const r = { locked: $('#hdelb').disabled }; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })); r.modal = !$('#modal').hidden; HS = 'other'; renderHome(); r.other = $('#hdelb').disabled; return r; });
-  assert(hd.locked && !hd.modal && !hd.other, 'home list: a master file cannot be deleted, other checklists can: ' + JSON.stringify(hd));
+  const md = await pg.evaluate(async () => { $('#menuBtn').click(); const free = $('[data-m=delete]').classList.contains('dis'); $('#menuBtn').click(); S.locked = true; $('#menuBtn').click(); const b = $('[data-m=delete]'); const r = { free, locked: b.classList.contains('dis'), ptr: b.title }; b.click(); r.modal = !$('#modal').hidden; DIRTY = true; await flush(); return r; });
+  assert(!md.free && md.locked && /master file/.test(md.ptr) && !md.modal, 'master file: Delete checklist is greyed out and does nothing: ' + JSON.stringify(md));
+  const hd = await pg.evaluate(async () => { await openHome(); HS = 'shop'; renderHome(); const r = { locked: $('#hdelb').classList.contains('dis'), why: $('#hdelb').title }; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' })); r.modal = !$('#modal').hidden; HS = 'other'; renderHome(); r.other = $('#hdelb').classList.contains('dis'); return r; });
+  assert(hd.locked && /master file/.test(hd.why) && !hd.modal && !hd.other, 'home list: a master file cannot be deleted, other checklists can: ' + JSON.stringify(hd));
 
   // ---- worker mode: menu and Settings behind a main/Boss PIN, editing locked, no leaving the checklist ----
   pg = await page({ 'shop.bcl': shared, 'other.bcl': shared }, prof('a'.repeat(32)));
@@ -609,16 +609,16 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(() => { openSettings(); const c = $('#workc'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); closeDlg(); });
   assert(await pg.evaluate(() => S.worker && isLocked() && S.log.some(l => l.ev === 'worker mode on')), 'worker mode on: editing locked, logged');
   await pg.evaluate(() => { PR.req.names = true; PR.people = [{ id: 'p1', name: 'Joe', salt: '00'.repeat(16), hash: '55'.repeat(32), boss: false }]; $('#menuBtn').click(); }); await pg.waitForTimeout(80);
-  const wmen = await pg.evaluate(() => ({ open: !$('#menu').hidden, pin: !!document.querySelector('.overlay input.pin'), on: [...$('#menu').querySelectorAll('button[data-m]')].filter(b => !b.disabled && !b.hidden).map(b => b.dataset.m) }));
+  const wmen = await pg.evaluate(() => ({ open: !$('#menu').hidden, pin: !!document.querySelector('.overlay input.pin'), on: [...$('#menu').querySelectorAll('button[data-m]')].filter(b => !b.classList.contains('dis') && !b.hidden).map(b => b.dataset.m) }));
   assert(wmen.open && !wmen.pin && wmen.on.join() === 'wunlock,export,save', 'worker menu opens with only Unlock, Export and Save usable: ' + JSON.stringify(wmen));
   await pg.evaluate(() => { const b = $('[data-m=mainmenu]'); b.click(); });
   assert.strictEqual(await pg.evaluate(() => CUR), 'shop', 'greyed-out items do nothing');
   await pg.evaluate(() => $('[data-m=wunlock]').click()); await pg.waitForTimeout(80);
   const wm = await tryPin('1357'); assert(/Only the main profile or a Boss/.test(wm), 'a worker PIN does not unlock it: ' + wm);
   await tryPin('24680'); await pg.waitForTimeout(80);
-  assert(await pg.evaluate(() => !$('#menu').hidden && !$('[data-m=mainmenu]').disabled && $('[data-m=wunlock]').hidden && $('[data-m=delete]').disabled), 'Boss/main PIN unlocks the menu; Delete stays greyed out');
+  assert(await pg.evaluate(() => !$('#menu').hidden && !$('[data-m=mainmenu]').classList.contains('dis') && $('[data-m=wunlock]').hidden && /worker mode/.test($('[data-m=delete]').title)), 'Boss/main PIN unlocks the menu; Delete stays greyed out');
   await pg.evaluate(() => { $('#menu').hidden = true; $('#menuBtn').click(); });
-  assert(await pg.evaluate(() => $('[data-m=mainmenu]').disabled), 'locked again the next time it opens');
+  assert(await pg.evaluate(() => $('[data-m=mainmenu]').classList.contains('dis') && /worker mode/.test($('[data-m=mainmenu]').title)), 'locked again the next time it opens');
   // exporting a fresh copy with the log: the copy's log says it is a copy, the original notes the export
   const wex = await pg.evaluate(async () => { $('[data-m=export]').click(); await new Promise(r => setTimeout(r, 100)); $('#exlog').checked = true; await xpExport(); const d = window.__saved.d, c = JSON.parse(typeof d === 'string' ? d : new TextDecoder().decode(new Uint8Array(d))); return { mark: c.log.at(-1), orig: S.log.at(-1).ev }; });
   assert(wex.mark.ev === 'Exported as a fresh copy' && /This file is a copy of "shop"/.test(wex.mark.item) && wex.orig === 'exported a fresh copy with the log', 'copy\'s log says it is a copy; original logs the export: ' + JSON.stringify(wex));
@@ -663,15 +663,21 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await open(pg, 'shop');
   const wre = await pg.evaluate(async () => { wgOpen(); await new Promise(r => setTimeout(r, 400)); const n = document.querySelectorAll('#wgbody .wtile').length, ok = [...document.querySelectorAll('#wgbody img')].every(i => i.src); wgClose(); return { n, ok }; });
   assert(wre.n === 3 && wre.ok, 'after reopening the Work Photos page shows them all');
-  const wlk = await pg.evaluate(async () => { const c = S.sections[0].cards[0]; c.sig = { by: 'Boss', at: now() }; select(c.steps[1]); const r = { btn: $('#wpadd').disabled, del: document.querySelectorAll('#p-wp .wdel').length }; await wpDel(c.steps[1], 0); r.n = c.steps[1].wp.length; return r; });
-  assert(wlk.btn && wlk.del === 0 && wlk.n === 2, 'signed off: no adding or removing: ' + JSON.stringify(wlk));
+  const wlk = await pg.evaluate(async () => { const c = S.sections[0].cards[0]; c.sig = { by: 'Boss', at: now() }; select(c.steps[1]); setTab('wp'); const r = { btn: $('#wpadd').disabled, del: document.querySelectorAll('#p-wp .wdel').length }; await wpDel(c.steps[1], 0); r.n = c.steps[1].wp.length; return r; });
+  assert(!wlk.btn && wlk.del === 0 && wlk.n === 2, 'signed off: photos can still be added but not removed: ' + JSON.stringify(wlk));
+  await wphoto(pg, 1); await pg.evaluate(async () => { wpAdd(window.__wpf); await new Promise(r => setTimeout(r, 80)); document.querySelector('#modal [data-d=ok]').click(); }); await pg.waitForTimeout(500);
+  assert(await pg.evaluate(() => SEL.wp.length === 3 && S.log.at(-1).ev === 'work photo added after sign-off'), 'a photo added after sign-off is kept and logged as such');
+  // Jump to: back to the checklist with that step selected and in view
+  const wj = await pg.evaluate(async () => { const st = S.sections[0].cards[0].steps[1]; select(S.sections[2].cards[0]); S.sections[0].cards[0].open = false; renderL(); wgOpen(); await new Promise(r => setTimeout(r, 200)); document.querySelector('#wgbody .wtile').click(); await new Promise(r => setTimeout(r, 200));
+    document.querySelector('#wf [data-wf=jump]').click(); await new Promise(r => setTimeout(r, 200)); const r = document.querySelector('#L .row.sel'); return { closed: !$('#wf') && $('#wg').hidden, sel: SEL === st, row: r && r.dataset.j === '1' && r.dataset.c === '0', tab: tab, seen: !!r && r.getBoundingClientRect().top > 0 && r.getBoundingClientRect().bottom < innerHeight }; });
+  assert(wj.closed && wj.sel && wj.row && wj.tab === 'wp' && wj.seen, 'Jump to selects the step in the checklist: ' + JSON.stringify(wj));
   assert(await pg.evaluate(async () => { const o = JSON.parse(await pack(null, blankCopy(false))); return !o.sections.some(s => s.cards.some(c => [c, ...c.steps].some(x => x.wp))) ; }), 'a fresh copy has no work photos');
 
   // ---- "Saved!" left of the title after a save ----
   pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
   await open(pg, 'shop');
   const svi = await pg.evaluate(async () => { const s = $('#savedi'); s.classList.remove('on'); S.manual = 'x'; DIRTY = true; await flush(); const t = s.getBoundingClientRect(), h = $('#ptitle').getBoundingClientRect(); await new Promise(r => setTimeout(r, 400));
-    return { on: s.classList.contains('on'), op: +getComputedStyle(s).opacity, left: t.right <= h.left, txt: s.textContent }; });
+    return { on: s.classList.contains('on'), op: +getComputedStyle(s).opacity, left: t.right <= h.left || (s.classList.contains('dn') && t.top >= h.bottom - 4), txt: s.textContent }; });
   assert(svi.on && svi.op > .5 && svi.left && svi.txt === 'Saved!', 'Saved! shows left of the title after saving: ' + JSON.stringify(svi));
   assert(await pg.evaluate(() => new Promise(r => setTimeout(() => r(+getComputedStyle($('#savedi')).opacity < .1), 2300))), 'and fades away');
 
@@ -682,12 +688,29 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     const drawn = document.querySelectorAll('#L .secw[data-on]').length, waiting = document.querySelectorAll('#L .secw:not([data-on])').length, prog = $('#prog').textContent;
     const keep = document.querySelector('.card[data-ck="0-1"]'), b = document.querySelector('.card[data-ck="0-0"] .steps .row input[data-a=done]'); b.checked = true; b.dispatchEvent(new Event('change', { bubbles: true }));
     return { drawn, waiting, prog, same: document.querySelector('.card[data-ck="0-1"]') === keep, ticked: S.sections[0].cards[0].steps[0].done, prog2: $('#prog').textContent }; });
-  assert(big.drawn >= 1 && big.waiting >= 5 && big.prog === 'Steps 0/2400 · Signed 0/0', 'only sections near the view are drawn: ' + JSON.stringify(big));
-  assert(big.same && big.ticked && big.prog2 === 'Steps 1/2400 · Signed 0/0', 'a tick redraws only its own main item and the totals');
+  assert(big.drawn >= 1 && big.waiting >= 5 && big.prog === 'Items 0/240 · Sections 0/12', 'only sections near the view are drawn: ' + JSON.stringify(big));
+  assert(big.same && big.ticked && big.prog2 === 'Items 0/240 · Sections 0/12', 'a tick redraws only its own main item and the totals');
   const zs = await pg.evaluate(async () => { $('#lsearch').value = 'zebra'; lsearch(0); await new Promise(r => setTimeout(r, 50)); const r = document.querySelector('#L .row.hit'); return { count: $('#lcount').textContent, txt: r && r.textContent.includes('zebra Step 9'), seen: r && r.getBoundingClientRect().top < innerHeight && r.getBoundingClientRect().bottom > 0 }; });
   assert(zs.count === '1/1' && zs.txt && zs.seen, 'search finds and shows a hit in a section that was not drawn: ' + JSON.stringify(zs));
   const tabj = await pg.evaluate(async () => { $('#lsearch').value = ''; lsearch(0); L.scrollTop = 0; await new Promise(r => setTimeout(r, 50)); scrollToSec(7); await new Promise(r => setTimeout(r, 100)); const b = document.querySelector('.secband[data-si="7"]'); return b ? b.getBoundingClientRect().top - L.getBoundingClientRect().top : null; });
   assert(tabj !== null && Math.abs(tabj) < 200, 'a section tab jumps to a section that was not drawn yet: ' + tabj);
+
+  // ---- title counts and pie, tab order, Boss Sign-Off, mechanical wording with the edit PIN on, Esc on Profile, View Demo, Tutorial ----
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const ttl = await pg.evaluate(() => { S.sections.forEach(s => s.cards.forEach(c => { c.done = false; c.steps.forEach(x => x.done = false); })); const all = S.sections.flatMap(s => s.cards), n = all.length;
+    S.sections[0].cards.forEach(c => { c.done = true; c.steps.forEach(x => x.done = true); }); renderL(); const d = S.sections[0].cards.length;
+    return { prog: $('#prog').textContent, want: `Items ${d}/${n} · Sections 1/${S.sections.length}`, p: +$('#pie').style.getPropertyValue('--p'), wantP: d / n * 100, title: $('#pie').title, tabs: [...document.querySelectorAll('.tabs button')].map(b => b.textContent) }; });
+  assert(ttl.prog === ttl.want && Math.abs(ttl.p - ttl.wantP) < .01 && /main items done/.test(ttl.title), 'Items / Sections under the title and the pie: ' + JSON.stringify(ttl));
+  assert.deepStrictEqual(ttl.tabs, ['Images', 'Description', 'PDF', 'Work Photos'], 'tab order');
+  const ph = await pg.evaluate(() => { PR.req.sign = true; S.sections[1].sign = true; renderL(); return document.querySelector('.sig').placeholder; });
+  assert.strictEqual(ph, 'Boss Sign-Off', 'main item sign-off box says Boss Sign-Off');
+  const mc = await pg.evaluate(() => { PR.req.edit = true; EDITOK = null; openSettings(); const r = { locked: isLocked(), off: $('#mechc').disabled }; const c = $('#mechc'); c.checked = !S.mech; c.dispatchEvent(new Event('change', { bubbles: true })); r.changed = S.mech === c.checked; closeDlg(); S.locked = true; openSettings(); r.master = $('#mechc').disabled; closeDlg(); S.locked = false; return r; });
+  assert(mc.locked && !mc.off && mc.changed && mc.master, 'mechanical wording works with the edit PIN on, not in a master file: ' + JSON.stringify(mc));
+  const esq = await pg.evaluate(async () => { await openHome(); showProfile(true); const a = PV; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return { a, b: PV, menu: !$('#hcen').hidden }; });
+  assert(esq.a && !esq.b && esq.menu, 'Esc on the Profile page goes back to the menu');
+  const vdm = await pg.evaluate(async () => { const n = LIB.length, inMenu = !!document.querySelector('[data-m=demo]'); $('#hDemo').click(); await new Promise(r => setTimeout(r, 1200)); return { more: LIB.length === n + 1, cur: CUR, inMenu, tut: !!$('#hTut') }; });
+  assert(vdm.more && /^Demo engine build/.test(vdm.cur) && !vdm.inMenu && vdm.tut, 'View Demo on the main menu adds and opens the demo; Tutorial button is there: ' + JSON.stringify(vdm));
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

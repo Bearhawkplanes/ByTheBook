@@ -35,9 +35,9 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 .steps{margin:4px 0 4px 12px;padding-left:8px;border-left:2px solid var(--line);counter-reset:s}
 .steps .row{counter-increment:s}.steps .row::before{content:counter(s);font:500 11px 'IBM Plex Mono',monospace;color:var(--mut);width:16px;text-align:right}
 .bar{height:5px;width:60px;background:var(--line);border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}
-.tabs{display:flex;position:sticky;top:0;z-index:2;background:var(--panel);margin:0 -16px 14px;padding:0 16px;border-bottom:1px solid var(--line)}
-.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:12px 16px;color:var(--mut);font-weight:500}
-.tabs button.on{color:var(--fg);border-bottom-color:var(--acc)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:0;z-index:2;background:var(--panel);margin:0 -16px 14px;padding:9px 16px;border-bottom:1px solid var(--line)}
+.tabs button{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:7px 14px;color:var(--mut);font-weight:500}
+.tabs button.on{color:var(--fg);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
 #sel{font-size:19px;font-weight:600;margin-bottom:10px;letter-spacing:-.01em}
 .mut{color:var(--mut);font-size:12px}.warn{color:var(--warn)}
 #R label{display:block;margin:10px 0 3px;font-size:12px;color:var(--mut)}
@@ -75,8 +75,8 @@ header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10
 .autol{margin-left:18px;white-space:nowrap}.autol select{max-width:175px;padding:3px 6px}@media(max-width:1100px){.autol span{display:none}}.hl{position:relative}.hr{display:flex;justify-content:flex-end}#menuBtn,#cog{font-size:18px;padding:3px 11px}
 #menu{position:absolute;top:calc(100% + 8px);left:0;z-index:40;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 #menu button{display:flex;justify-content:space-between;gap:12px;width:100%;text-align:left;border:0;background:none;border-radius:6px;padding:7px 10px;color:var(--fg)}
-#menu button:hover:not(:disabled){background:color-mix(in srgb,var(--acc) 14%,transparent)}
-#menu button:disabled{color:var(--mut);cursor:default}#menu button:disabled,#hdelb:disabled{pointer-events:none}#menu i{font-size:11px}#menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}#menu .warnb{color:var(--warn)}
+#menu button:hover:not(:disabled):not(.dis){background:color-mix(in srgb,var(--acc) 14%,transparent)}
+#menu button:disabled{color:var(--mut);cursor:default}#menu button.dis{color:var(--mut);opacity:.4;cursor:not-allowed}.delbtn.dis{opacity:.35;cursor:not-allowed}.delbtn.dis:hover{border-color:var(--warn)}#menu i{font-size:11px}#menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}#menu .warnb{color:var(--warn)}
 button:disabled{opacity:.3;cursor:not-allowed}
 body.locked .ed{display:none!important}
 .row span.t{flex:1;min-width:70px;padding:5px 9px;overflow-wrap:anywhere}
@@ -134,6 +134,10 @@ body.dragging{user-select:none;cursor:col-resize}
 #hdel .delbtn{background:var(--warn);color:#fff;border-color:var(--warn);font-weight:700;padding:8px 22px}#hdel small{display:block;color:var(--warn);font-size:11px;margin-top:3px}
 #hleft{width:300px;max-width:40%;display:flex;flex-direction:column;border-right:1px solid var(--line)}
 #hside{flex:1;border-bottom:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;padding:18px 14px;overflow:auto}
+.hfoot{display:flex;justify-content:center;gap:34px}
+#hprof label:not(.chk){display:grid;grid-template-columns:210px minmax(0,320px);align-items:center;column-gap:12px;margin:10px 0}#hprof label:not(.chk) input{width:100%;margin:0}
+#pie{width:24px;height:24px;border-radius:50%;flex:none;border:2px solid var(--line);background:conic-gradient(var(--ok) calc(var(--p,0)*1%),var(--bg) 0)}
+#wf .wfinfo{position:relative}#wf .wfjump{position:absolute;right:18px;bottom:14px}.big.sm{padding:10px 16px;font-size:14px;align-self:center}
 .prof{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:14px 0 16px;color:var(--fg);font-size:13px}
 .avatar{width:58px;height:58px;border-radius:50%;background:var(--panel);border:2px solid var(--line);display:flex;align-items:flex-end;justify-content:center;overflow:hidden;color:var(--mut);transition:border-color .12s,color .12s}
 .prof:hover .avatar,.prof.on .avatar{border-color:var(--acc);color:var(--acc)}
@@ -247,9 +251,9 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <button data-m="wunlock" hidden>Unlock menu (Boss PIN)…</button><button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button><button data-m="delete">Delete checklist</button>
 <button data-m="loc">Open file location</button><button data-m="export">Export…</button>
 <button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><hr>
-<button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
+<button data-m="pdf">Open PDF…</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button></div></div>
-<div class="hc"><div class="tline"><span id="savedi" aria-live="polite">Saved!</span><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span></div><div id="prog"></div></div>
+<div class="hc"><div class="tline"><span id="savedi" aria-live="polite">Saved!</span><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span><span id="pie" role="img"></span></div><div id="prog"></div></div>
 <div class="hr" style="gap:8px"><button id="lockBtn" hidden></button><button id="wpBtn" title="Every work photo in this checklist, by section">Work Photos</button><button id="pdfBtn" title="PDF viewer">PDF Viewer</button><button id="vidBtn" title="Video player">Video Player</button><button id="cog" title="Settings">⚙</button></div>
 <input id="file" type="file" accept="application/pdf" multiple hidden><input id="jfile" type="file" accept=".bcl,.json,application/json" hidden>
 </header>
@@ -257,7 +261,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <section id="L"></section>
 <div id="split" title="Drag to resize (snaps to the middle). Double-click to reset"></div>
 <section id="R">
-<div class="tabs"><button data-tab="img">Images</button><button data-tab="wp">Work Photos</button><button data-tab="desc">Description</button><button data-tab="pdf">PDF</button></div>
+<div class="tabs"><button data-tab="img">Images</button><button data-tab="desc">Description</button><button data-tab="pdf">PDF</button><button data-tab="wp">Work Photos</button></div>
 <div id="sel"></div>
 <div id="p-img"></div>
 <div id="p-wp" hidden></div>
@@ -272,9 +276,9 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </div>
 </section>
 </main>
-<div id="home"><div id="hleft"><aside id="hside"><div class="hh">Saved checklists</div><div id="flist"></div><p class="mut" style="margin-top:auto;padding-top:14px">Every checklist in this app's save folder shows up here.</p></aside><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button></div>
+<div id="home"><div id="hleft"><aside id="hside"><div class="hh">Saved checklists</div><div id="flist"></div><p class="mut" style="margin-top:auto;padding-top:14px">Every checklist in this app's save folder shows up here.</p></aside><div class="hfoot"><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button><button id="hTut" class="prof" title="Tutorial (coming soon)"><span class="avatar" style="align-items:center"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg></span><span>Tutorial</span></button></div></div>
 <section id="hmain"><div class="hcenter" id="hcen"><h1>Build Checklist</h1>
-<div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button></div>
+<div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button></div>
 <button id="hBack" hidden style="margin-bottom:24px">Back to the open checklist</button>
 <h2>Open recent</h2><div id="rlist"></div></div>
 <div id="hprof" class="hcenter" hidden></div>
@@ -368,7 +372,7 @@ let ES=null,ER=null,pendDel=null,FT=null;
 const inTree=it=>S.sections.some(s=>s.cards.some(c=>c===it||c.steps.includes(it)));
 function rowL(si,ci,j,it,pre,post){
  const pn=pinOn('sign'),sec=S.sections[si],card=j==null,locked=card&&!it.done&&!it.steps.every(s=>s.done),sg=it.sig||{by:'',at:''},fr=S.sections[si].cards[ci].done,ts=j!=null&&it.done&&it.doneAt?`<span class="chip">${esc(fmt(it.doneAt))}</span>`:'';
- const sig=card&&sec.sign?`<input class="sig" data-a="sig" placeholder="${pn?'Boss PIN':'Sign-off'}" title="${pn?'Filled from the PIN entered by the main profile or a Boss':'Name or initials of the person signing off'}" value="${esc(it.done?sg.by:it.sigDraft)}" ${it.done||pn?'readonly':''}>${it.done&&sg.at?`<span class="chip ok">${esc(new Date(sg.at).toLocaleString())}</span>`:''}${!it.done&&it.hist.length&&it.hist[it.hist.length-1].ev==='void'?'<span class="chip warn" title="A step was unchecked after sign-off">sign-off voided</span>':''}`:'';
+ const sig=card&&sec.sign?`<input class="sig" data-a="sig" placeholder="${pn?'Boss Sign-Off':'Sign-off'}" title="${pn?'Filled from the PIN entered by the main profile or a Boss':'Name or initials of the person signing off'}" value="${esc(it.done?sg.by:it.sigDraft)}" ${it.done||pn?'readonly':''}>${it.done&&sg.at?`<span class="chip ok">${esc(new Date(sg.at).toLocaleString())}</span>`:''}${!it.done&&it.hist.length&&it.hist[it.hist.length-1].ev==='void'?'<span class="chip warn" title="A step was unchecked after sign-off">sign-off voided</span>':''}`:'';
  const ini=j!=null?`<input class="init" data-a="init" placeholder="Init." title="Who completed this step${it.doneAt?' \u00b7 '+new Date(it.doneAt).toLocaleString():''}" value="${esc(it.init||'')}" ${pn?'readonly tabindex="-1"':''}>`:'';
  const chip=[it.qty&&'×'+it.qty,it.size].filter(Boolean).join(' ');
  return `<div class="row ${it.done?'done':''} ${it===SEL?'sel':''} ${hitIt(it)?'hit':''}" data-s="${si}" data-c="${ci}"${j!=null?` data-j="${j}"`:''}>
@@ -394,8 +398,10 @@ function mountSec(si){const w=L.querySelector(`.secw[data-sw="${si}"]`);if(!w||w
 // a section and enough of the ones above it, so nothing above shifts once they fill in after a jump
 function mountNear(i){const el=mountSec(i);for(let k=i-1,h=0;el&&k>=0&&h<1500;k--)h+=mountSec(k).offsetHeight;return el}
 const secOf=it=>{if(!it)return -1;for(let si=0;si<S.sections.length;si++)for(const c of S.sections[si].cards)if(c===it||c.steps.includes(it))return si;return -1};
-function renderCounts(){let sd=0,st=0,sg=0,sc=0;S.sections.forEach(sec=>sec.cards.forEach(t=>{st+=t.steps.length;sd+=t.steps.filter(s=>s.done).length;if(sec.sign){sc++;if(t.done)sg++}}));
- $('#prog').textContent=`Steps ${sd}/${st} · Signed ${sg}/${sc}`;
+// under the title: main items checked off and sections complete (green); the pie beside it fills by main items done
+function renderCounts(){let cd=0,ct=0;S.sections.forEach(sec=>sec.cards.forEach(t=>{ct++;if(t.done)cd++}));const sd=S.sections.filter(secDone).length;
+ $('#prog').textContent=`Items ${cd}/${ct} · Sections ${sd}/${S.sections.length}`;
+ const pie=$('#pie'),pc=ct?cd/ct*100:0;pie.style.setProperty('--p',pc.toFixed(2));pie.title=`${cd} of ${ct} main items done (${Math.round(pc)}%)`;pie.setAttribute('aria-label',pie.title);
  S.sections.forEach((sec,si)=>{const all=secDone(sec),b=L.querySelector(`.secband[data-si="${si}"]`),t=L.querySelector(`.stab[data-s="${si}"]`);if(b)b.classList.toggle('complete',all);if(t)t.classList.toggle('complete',all)})}
 function renderL(){
  renderTitle();document.body.classList.toggle('locked',isLocked());
@@ -546,11 +552,10 @@ function wpWho(n){const t='Add '+n+' work photo'+(n>1?'s':'');if(pinOn('sign')||
  return new Promise(res=>{DLGOK=()=>{const v=$('#wpn').value.trim();if(!v)return res(null);AS.wpby=v;saveApp();res({by:v,uid:''})};
   dlg(`<div class="dh"><b>${t}</b></div><label>Your name (shown with the photo${n>1?'s':''})<input id="wpn" value="${esc(AS.wpby||'')}" maxlength="60"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Add</button></div>`);setTimeout(()=>{const i=$('#wpn');if(i)i.select()},0)})}
 async function wpAdd(files){const it=SEL,n=files.length;files=files.filter(f=>/^image\//.test(f.type));if(n>files.length)toast('Work Photos takes photos only (no videos)');if(!it||!files.length)return;if(errNow())return showErr(errNow());
- if(wpLocked(it))return toast('This item is signed off: its work photos can no longer change');
- const who=await wpWho(files.length);if(!who)return;
+ const late=wpLocked(it),who=await wpWho(files.length);if(!who)return;
  for(const f of files){const{blob,type}=await shrinkImg(f,f.type);let tb;try{tb=await wpThumb(blob)}catch(e){toast('Could not read '+f.name);continue}
   if(!await roomFor(blob.size+tb.size))break;const id=uid(),tid=uid();await idbPut('m',id,{blob,name:f.name,type});await idbPut('m',tid,{blob:tb,name:'preview of '+f.name,type:'image/jpeg'});
-  wpOf(it).push({id,tid,name:f.name,by:who.by,uid:who.uid,at:now()});logEv('work photo added',it,who.by,who.uid)}
+  wpOf(it).push({id,tid,name:f.name,by:who.by,uid:who.uid,at:now()});logEv(late?'work photo added after sign-off':'work photo added',it,who.by,who.uid)}
  save();renderL();if(SEL===it)renderR();if(!$('#wg').hidden)wgRender()}
 async function wpDel(it,i){const p=wpL(it)[i];if(!p)return;if(errNow())return showErr(errNow());if(wpLocked(it))return toast('This item is signed off: its work photos can no longer change');
  const go=w=>{wpOf(it).splice(i,1);idbDel('m',p.id);idbDel('m',p.tid);logEv('work photo removed ('+(p.name||'photo')+', added by '+(p.by||'unknown')+' '+fmt(p.at)+')',it,w?w.name:'',w?w.uid:'');save();renderL();renderR();if(!$('#wg').hidden)wgRender()};
@@ -559,7 +564,7 @@ async function wpDel(it,i){const p=wpL(it)[i];if(!p)return;if(errNow())return sh
 const wpTile=(o,k,cap,del)=>{const p=wpL(o.it)[o.i];return `<div class="wtile" data-wi="${k}" title="${esc(cap)}"><img data-mid="${p.tid}" alt=""><span class="wcap">${esc(cap)}</span>${del?`<button class="wdel" data-wd="${o.i}" title="Remove this work photo">✕</button>`:''}</div>`};
 function wpPane(it){const w=wpWhere(it),lk=wpLocked(it),own=wpL(it).map((p,i)=>({it,i})),sub=w&&!w.st?w.c.steps.flatMap(st=>wpL(st).map((p,i)=>({it:st,i}))):[];WPP=own.concat(sub);
  const cap=o=>{const p=wpL(o.it)[o.i];return (o.it===it?'':(o.it.text||'(untitled step)')+' · ')+(p.by||'unknown')+' · '+fmt(p.at)};
- return `<div class="tb"><button id="wpadd" ${lk||errNow()?'disabled':''}>+ Add work photos</button><input id="wpfile" type="file" accept="image/*" multiple hidden><span class="mut">${lk?'Signed off: these photos are locked.':'Photos that show the work was done. Each one records who added it and when.'}</span></div>`+
+ return `<div class="tb"><button id="wpadd" ${errNow()?'disabled':''}>+ Add work photos</button><input id="wpfile" type="file" accept="image/*" multiple hidden><span class="mut">${lk?'Signed off: photos can still be added, but not removed.':'Photos that show the work was done. Each one records who added it and when.'}</span></div>`+
   (own.length?`<div class="wgrid">${own.map((o,k)=>wpTile(o,k,cap(o),!lk&&!errNow())).join('')}</div>`:'<div class="mut" style="margin:8px 0 14px">No work photos on this '+(w&&w.st?'step':'item')+' yet.</div>')+
   (sub.length?`<div class="dt">On its steps</div><div class="wgrid">${sub.map((o,k)=>wpTile(o,own.length+k,cap(o),false)).join('')}</div>`:'')}
 $('#p-wp').addEventListener('click',e=>{if(e.target.closest('#wpadd')){$('#wpfile').click();return}const d=e.target.closest('[data-wd]');if(d){wpDel(SEL,+d.dataset.wd);return}
@@ -578,9 +583,13 @@ $('#wgbody').addEventListener('click',e=>{const t=e.target.closest('.wtile');if(
 function wfOpen(list,k){WF={list,k};wfShow()}
 function wfClose(){WF=null;const el=$('#wf');if(el)el.remove()}
 function wfShow(){const o=WF&&WF.list[WF.k],p=o&&wpL(o.it)[o.i],w=o&&wpWhere(o.it);if(!p||!w)return wfClose();let el=$('#wf');
- if(!el){el=document.createElement('div');el.id='wf';document.body.appendChild(el);el.addEventListener('click',e=>{const b=e.target.closest('[data-wf]');if(!b)return;if(b.dataset.wf==='x')wfClose();else wfStep(+b.dataset.wf)})}
+ if(!el){el=document.createElement('div');el.id='wf';document.body.appendChild(el);el.addEventListener('click',e=>{const b=e.target.closest('[data-wf]');if(!b)return;if(b.dataset.wf==='x')wfClose();else if(b.dataset.wf==='jump')wfJump();else wfStep(+b.dataset.wf)})}
  el.innerHTML=`<div class="wfimg"><img data-mid="${p.id}" src="${urls[p.tid]||''}" alt="${esc(p.name||'')}"><button class="x" data-wf="x" title="Close (Esc)">✕</button>${WF.list.length>1?'<button class="nav l" data-wf="-1" title="Previous (←)">◀</button><button class="nav r" data-wf="1" title="Next (→)">▶</button>':''}</div>
- <div class="wfinfo"><div><b>Logged:</b> ${esc(fmt(p.at))}</div><div><b>Section:</b> ${esc(w.s.title||'Untitled section')} &nbsp;·&nbsp; <b>Main item:</b> ${esc(w.c.text||'(untitled)')} &nbsp;·&nbsp; <b>Step:</b> ${w.st?esc(w.st.text||'(untitled)'):'none (on the main item)'}</div><div><b>Added by:</b> ${esc(p.by||'unknown')}</div><div style="opacity:.7">${WF.k+1} of ${WF.list.length}${p.name?' · '+esc(p.name):''}</div></div>`;hydrate()}
+ <div class="wfinfo"><button class="wfjump pri" data-wf="jump" title="Go to this item in the checklist">Jump to</button><div><b>Logged:</b> ${esc(fmt(p.at))}</div><div><b>Section:</b> ${esc(w.s.title||'Untitled section')} &nbsp;·&nbsp; <b>Main item:</b> ${esc(w.c.text||'(untitled)')} &nbsp;·&nbsp; <b>Step:</b> ${w.st?esc(w.st.text||'(untitled)'):'none (on the main item)'}</div><div><b>Added by:</b> ${esc(p.by||'unknown')}</div><div style="opacity:.7">${WF.k+1} of ${WF.list.length}${p.name?' · '+esc(p.name):''}</div></div>`;hydrate()}
+// back to the checklist with the photo's step (or main item) selected and in view
+function wfJump(){const o=WF&&WF.list[WF.k],w=o&&wpWhere(o.it);wfClose();wgClose();if(!w)return;const si=S.sections.indexOf(w.s),ci=w.s.cards.indexOf(w.c),j=w.st?w.c.steps.indexOf(w.st):null;
+ if(j!=null&&!w.c.open){w.c.open=true;save()}mountNear(si);renderCard(si,ci);select(o.it);setTab('wp');
+ const r=L.querySelector(`.row[data-s="${si}"][data-c="${ci}"]`+(j==null?':not([data-j])':`[data-j="${j}"]`));if(r){r.classList.add('sel');r.scrollIntoView({block:'center'})}}
 const wfStep=d=>{if(!WF)return;const n=WF.list.length;WF.k=(WF.k+d+n)%n;wfShow()};
 document.addEventListener('keydown',e=>{if([...document.querySelectorAll('.overlay')].some(o=>!o.hidden))return;if(WF){if(e.key==='Escape')wfClose();else if(e.key==='ArrowRight')wfStep(1);else if(e.key==='ArrowLeft')wfStep(-1);else return}
  else if(!$('#wg').hidden&&e.key==='Escape'&&$('#modal').hidden)wgClose();else return;e.preventDefault();e.stopImmediatePropagation()},true);
@@ -959,7 +968,7 @@ function openSettings(){
  <label class="chk"><input type="checkbox" id="lockc" ${S.locked?'checked':''}> Master file: lock editing (checking, initials and sign-offs still work)</label>
  <label class="chk"><input type="checkbox" id="workc" ${S.worker?'checked':''} ${PR.hash?'':'disabled'}> Worker mode: lock the menu and Settings behind a Boss PIN</label><p class="mut" style="margin:2px 0 0 24px">${PR.hash?'Also locks editing like a master file. Whoever opens this checklist stays in it until the main profile or a Boss enters their PIN. Closing the app is still possible; opening this checklist again locks it again.':'Needs a profile with a main PIN first (main menu > Profile).'}</p>
  <label>Manual / revision<input id="mrev" value="${esc(S.manual)}" ${isLocked()?'disabled':''}></label>
- <label class="chk"><input type="checkbox" id="mechc" ${S.mech?'checked':''} ${isLocked()?'disabled':''}> Mechanical wording (technician, inspector, torque, spec)</label><p class="mut" style="margin:2px 0 0 24px">Off: general words, for any kind of checklist. Used in this checklist and on its printouts.</p>
+ <label class="chk"><input type="checkbox" id="mechc" ${S.mech?'checked':''} ${S.locked||S.worker?'disabled':''}> Mechanical wording (technician, inspector, torque, spec)</label><p class="mut" style="margin:2px 0 0 24px">Off: general words, for any kind of checklist. Used in this checklist and on its printouts.</p>
  <div class="dt" style="margin:12px 0 6px">Storage</div><div class="stbar"><i id="stfill"></i></div><div id="sttxt" class="mut" style="margin-top:4px">Working out…</div>
  <p class="mut" style="margin:4px 0 0">Each checklist has a hard limit of ${sizeTxt(CAP)}, photos, PDFs and videos included. Performance may drop as it fills up: big checklists take longer to open, back up, export and copy. Linking big videos instead of copying them keeps a checklist small.</p></div>
  ${savedirHtml()}${updHtml()}<div class="ds"><div class="dt">Profile and PINs</div><p class="mut">Set these up in Profile on the main menu. Everything is off by default.</p></div>
@@ -972,21 +981,23 @@ $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||
 $('#modal').addEventListener('input',e=>{if(e.target.id==='hue'){AS.hue=+e.target.value;saveApp();applyTheme()}});
 $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if(!t.checked&&S.locked&&pinOn('edit')){t.checked=true;askPin({title:'Turn off the master file lock',note:'Main profile or Boss PIN.',boss:true}).then(w=>{if(!w)return;S.locked=false;logEv('master lock off',{text:S.name||''},w.name,w.uid);save();renderL();renderR();openSettings()});return}
   S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='workc'){if(!PR.hash){t.checked=false;return}S.worker=t.checked;logEv(S.worker?'worker mode on':'worker mode off',{text:S.name||''},WKW&&WKW.name,WKW&&WKW.uid);save();renderL();renderR();openSettings()}
-  else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='shrinkc'){AS.shrink=t.checked;saveApp()}else if(t.id==='mechc'){if(isLocked()){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
+  else if(t.id==='mrev'){S.manual=t.value;save()}else if(t.id==='shrinkc'){AS.shrink=t.checked;saveApp()}else if(t.id==='mechc'){if(S.locked||S.worker){t.checked=!!S.mech;return}S.mech=t.checked;save();renderR()}});
 document.addEventListener('keydown',e=>{if($('#modal').hidden)return;if(e.key==='Escape')closeDlg();else if(e.key==='Enter'){const b=$('#modal [data-d=ok]');if(b){e.preventDefault();b.click()}}});
 const menu=$('#menu');
 // a master file (or worker mode) cannot be deleted: the menu item is greyed out, and the home list's Delete too (noDel)
 const noDel=e=>e&&(e.id===CUR&&S?!!(S.locked||S.worker):!!(e.locked||e.worker));
 // worker mode: only Save and Export work until a Boss unlocks the menu (for that one opening). Export gives a fresh copy, so no work leaves.
 const WKFREE=['save','export','wunlock'];
-const menuOpen=unl=>{const wk=wkGate()&&!unl;menu.querySelectorAll('button[data-m]').forEach(b=>b.disabled=wk&&!WKFREE.includes(b.dataset.m));
- menu.querySelector('[data-m=wunlock]').hidden=!wk;menu.querySelector('[data-m=delete]').disabled=!!(S.locked||S.worker);menu.hidden=false};
+// greyed-out items are not disabled buttons (those show no tooltip): class .dis, the reason in the tooltip, and clicks are ignored
+const delWhy=()=>S.worker?'Disabled: worker mode is on in this checklist':S.locked?'Disabled: this is a master file (turn off the master file lock in Settings to delete it)':'';
+const menuOpen=unl=>{const wk=wkGate()&&!unl;menu.querySelectorAll('button[data-m]').forEach(b=>{if(b.dataset.t0==null)b.dataset.t0=b.title;const why=b.dataset.m==='delete'&&delWhy()||(wk&&!WKFREE.includes(b.dataset.m)?'Locked in worker mode: use "Unlock menu (Boss PIN)…" at the top':'');b.disabled=false;b.classList.toggle('dis',!!why);b.title=why||b.dataset.t0});
+ menu.querySelector('[data-m=wunlock]').hidden=!wk;menu.hidden=false};
 // worker mode (S.worker): locks editing like a master file and puts the menu and Settings behind a main/Boss PIN, so whoever opens
 // the checklist stays in it. Not without a profile or under E-4417/18/19: then nobody could enter a PIN, and exports must stay possible.
 let WKW=null;const wkGate=()=>!!(CUR&&S.worker&&PR.hash&&!TAMPER&&$('#home').hidden);
 const wkAsk=t=>askPin({title:t,note:'Worker mode is on in this checklist. Main profile or Boss PIN.',boss:true});
 $('#menuBtn').onclick=e=>{e.stopPropagation();if(!menu.hidden){menu.hidden=true;return}menuOpen()};document.addEventListener('click',e=>{if(!e.target.closest('#menu'))menu.hidden=true});
-menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled)return;menu.hidden=true;const m=b.dataset.m;if(m==='wunlock'){wkAsk('Unlock the menu').then(w=>w&&menuOpen(true));return}
+menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(!b||b.disabled||b.classList.contains('dis'))return;menu.hidden=true;const m=b.dataset.m;if(m==='wunlock'){wkAsk('Unlock the menu').then(w=>w&&menuOpen(true));return}
  if(m==='mainmenu')openHome();else if(m==='save'){DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}else if(m==='saveas')saveAs();else if(m==='dl')dlCopy();else if(m==='export')exportDlg();else if(m==='loc')FS.reveal(CUR?CUR+'.bcl':'');
  else if(m==='new')newCl();
  else if(m==='newjob')newJob();
@@ -994,7 +1005,7 @@ menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(
  else if(m==='log')viewLogOf(CUR);
  else if(m==='delete'&&!(S.locked||S.worker))ask(`Delete "${esc(S.name||'unnamed')}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',async()=>{await deleteProject(CUR);openHome()},1);
  else if(m==='pdf'){if(isLocked())toast('Editing is locked');else $('#file').click()}
- else if(m==='demo')(async()=>{const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));openProject(await addEntry(o,'Demo engine build'))})()
+ else if(m==='demo')loadDemo()
  else if(m==='uncheck')ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
 // ---------- file library / main menu ----------
 function uniqueName(base,self){base=(base||'').trim().replace(/[\\/:*?"<>|]+/g,'_')||'unnamed';const used=new Set(LIB.filter(x=>x.id!==self).map(x=>x.name.toLowerCase()));let n=base,k=2;while(used.has(n.toLowerCase()))n=base+' '+k++;return n}
@@ -1109,7 +1120,7 @@ function renderHome(){const rec=LIB.filter(x=>x.opened).sort((a,b)=>b.opened-a.o
  const row=(e,sub)=>{const ad=needAdopt(e);return `<div class="frow${HS===e.id?' sel':''}${ad?' adopt':''}" data-id="${e.id}"><span class="fn">${esc(e.name)}${ad?'<button class="adq" data-a="adopt" title="Saved under a different profile (E-4420)">adopt?</button>':''}</span>${sub?`<span class="mut">${esc(sub)}</span>`:''}${HS===e.id?'<button data-a="logv">LOG</button><button class="open" data-a="open">OPEN</button>':''}</div>`};
  $('#flist').innerHTML=sortedLib().map(e=>row(e,'')).join('')||'<div class="mut">Nothing saved yet.</div>';
  $('#rlist').innerHTML=rec.map(e=>row(e,rel(e.opened))).join('')||'<div class="mut" style="text-align:left">Nothing opened yet.</div>';
- $('#hdel').hidden=!HS||PV;$('#hdelb').disabled=noDel(LIB.find(x=>x.id===HS));$('#hBack').hidden=!CUR}
+ $('#hdel').hidden=!HS||PV;{const e=LIB.find(x=>x.id===HS),d=$('#hdelb'),nd=noDel(e);d.classList.toggle('dis',!!nd);d.title=!nd?'':(e.id===CUR&&S?S.worker:e.worker)?'Disabled: worker mode is on in this checklist':'Disabled: this is a master file (turn off the master file lock in its Settings to delete it)'}$('#hBack').hidden=!CUR}
 // a checklist stamped by another profile (E-4420) can be adopted straight from the list, with the main profile or a Boss PIN
 const needAdopt=e=>!TAMPER&&(e.id===CUR&&S?!!CLT:!!e.pid&&e.pid!==PR.pid);
 function adoptAsk(id){
@@ -1126,6 +1137,10 @@ $('#home').addEventListener('click',e=>{const ab=e.target.closest('button[data-a
  if(e.target.closest('button[data-a=logv]')){viewLogOf(HS);return}
   if(e.target.closest('button[data-a=open]')){openProject(HS);return}const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id,t=Date.now();
  if(lastClk.id===id&&t-lastClk.t<500){lastClk={id:null,t:0};openProject(id);return}lastClk={id,t};HS=id;renderHome()});
+async function loadDemo(){const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));openProject(await addEntry(o,'Demo engine build'))}
+$('#hDemo').onclick=loadDemo;
+// placeholder: the tutorial is still to be written (see CLAUDE.md)
+$('#hTut').onclick=()=>toast('The tutorial is coming soon');
 $('#hNew').onclick=()=>addEntry(norm(),'unnamed').then(openProject);$('#hImp').onclick=()=>$('#jfile').click();
 $('#hBack').onclick=()=>{$('#home').hidden=true;refreshAll()};$('#hdelb').onclick=()=>HS&&askDelete(HS);
 document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.repeat||$('#home').hidden||!$('#modal').hidden||PV||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
@@ -1219,6 +1234,7 @@ function renderProfile(){const p=$('#hprof'),back='<button data-p="back">← Bac
   <div class="pf"><div class="dt">Account</div><label>Username<input id="pu" value="${esc(PR.user)}"></label><label>New main PIN, 5 to 8 digits (leave empty to keep the current one)<input id="pp" class="pin" ${PINF}></label><div id="perr" class="warn" style="min-height:20px"></div><button data-p="saveacct">Save account</button></div>
   <div class="dt" style="margin-top:18px">PIN-protected features <span class="mut">(all off by default)</span></div>${feats}
   <p class="mut">PINs are stored as salted hashes in this app's settings, not inside checklist files. A short PIN cannot stop someone who can edit the app's files or run code on this computer, so treat it as shop procedure, not high security.</p>${errTable()}`}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&PV&&!$('#home').hidden&&$('#modal').hidden&&![...document.querySelectorAll('.overlay')].some(o=>!o.hidden)){e.preventDefault();showProfile(false)}});
 function showProfile(on){PV=on;FORGOT=false;NEWPIN=false;if(!on)PU=false;$('#hcen').hidden=on;$('#hprof').hidden=!on;$('#hProf').classList.toggle('on',on);if(on)renderProfile();renderHome()}
 $('#hProf').onclick=()=>showProfile(!PV);
 $('#hprof').addEventListener('click',async e=>{const b=e.target.closest('[data-p]');if(!b||b.disabled)return;const a=b.dataset.p,v=id=>($('#'+id)||{}).value||'',err=(id,t)=>{const x=$('#'+id);if(x)x.textContent=t};
