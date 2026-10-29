@@ -160,7 +160,7 @@ For torque patterns, bolt numbering and the like.
 - Checklists from before this file format are converted the first time they are opened; the original is kept in `Saves/Backups/`. Copies of the app from before this change cannot open the new files, so update every computer together.
 
 ## Notes
-- Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. If the final save fails, closing asks whether to keep the app open.
+- Autosave: about 3 seconds after you stop editing, at least every minute, when you leave a checklist, and when the window closes. A small green "Saved!" appears left of the checklist name after each save and fades away (just under the name when the window is narrow). If the final save fails, closing asks whether to keep the app open.
 - Deleting sends the file to the Recycle Bin / Trash.
 - Unsigned build: Windows SmartScreen may warn on first run ("More info" > "Run anyway").
 - pdf.js (Apache 2.0) is bundled in lib/ (license: lib/PDFJS-LICENSE.txt).

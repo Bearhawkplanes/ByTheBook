@@ -667,6 +667,14 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(wlk.btn && wlk.del === 0 && wlk.n === 2, 'signed off: no adding or removing: ' + JSON.stringify(wlk));
   assert(await pg.evaluate(async () => { const o = JSON.parse(await pack(null, blankCopy(false))); return !o.sections.some(s => s.cards.some(c => [c, ...c.steps].some(x => x.wp))) ; }), 'a fresh copy has no work photos');
 
+  // ---- "Saved!" left of the title after a save ----
+  pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)));
+  await open(pg, 'shop');
+  const svi = await pg.evaluate(async () => { const s = $('#savedi'); s.classList.remove('on'); S.manual = 'x'; DIRTY = true; await flush(); const t = s.getBoundingClientRect(), h = $('#ptitle').getBoundingClientRect(); await new Promise(r => setTimeout(r, 400));
+    return { on: s.classList.contains('on'), op: +getComputedStyle(s).opacity, left: t.right <= h.left, txt: s.textContent }; });
+  assert(svi.on && svi.op > .5 && svi.left && svi.txt === 'Saved!', 'Saved! shows left of the title after saving: ' + JSON.stringify(svi));
+  assert(await pg.evaluate(() => new Promise(r => setTimeout(() => r(+getComputedStyle($('#savedi')).opacity < .1), 2300))), 'and fades away');
+
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');

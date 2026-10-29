@@ -64,7 +64,11 @@ canvas{display:block;margin:0 auto}
 .addsec{text-align:center;margin:28px 0 8px}
 @media(max-width:700px){.secband{flex-wrap:wrap}.secctl{position:static}}
 header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
-.hc{text-align:center}.tline{display:flex;align-items:center;justify-content:center;gap:10px}
+.hc{text-align:center}.tline{display:flex;align-items:center;justify-content:center;gap:10px;position:relative}
+#savedi{position:absolute;right:100%;margin-right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:600;color:#3f9a4f;white-space:nowrap;opacity:0;pointer-events:none}
+#savedi.dn{right:auto;left:0;top:auto;bottom:-14px;transform:none;margin:0;font-size:11px}
+#savedi.on{animation:savedf 2.2s ease-out}@keyframes savedf{0%{opacity:0}10%,45%{opacity:.9}100%{opacity:0}}
+:root[data-theme="light"] #savedi{color:#2b7a3d}
 #ptitle{margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em}
 #pti{font:600 22px 'IBM Plex Sans',sans-serif;text-align:center;min-width:300px}
 #ptEdit{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35)}
@@ -245,7 +249,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><hr>
 <button data-m="pdf">Open PDF…</button><button data-m="demo">Load demo</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button></div></div>
-<div class="hc"><div class="tline"><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span></div><div id="prog"></div></div>
+<div class="hc"><div class="tline"><span id="savedi" aria-live="polite">Saved!</span><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span></div><div id="prog"></div></div>
 <div class="hr" style="gap:8px"><button id="lockBtn" hidden></button><button id="wpBtn" title="Every work photo in this checklist, by section">Work Photos</button><button id="pdfBtn" title="PDF viewer">PDF Viewer</button><button id="vidBtn" title="Video player">Video Player</button><button id="cog" title="Settings">⚙</button></div>
 <input id="file" type="file" accept="application/pdf" multiple hidden><input id="jfile" type="file" accept=".bcl,.json,application/json" hidden>
 </header>
@@ -974,7 +978,10 @@ let FLP=Promise.resolve();   // saves run one at a time, in order
 function flush(){return FLP=FLP.then(flushNow,flushNow)}
 async function flushNow(){if(!CUR||!DIRTY)return true;if(RO){DIRTY=false;return true}DIRTY=false;clearTimeout(save.t);const id=CUR;
  try{const t=await pack(),fr=pack.fresh,res=await FS.write(id+'.bcl',t);if(res&&res.container)for(const [r,k] of fr){r.ref=k;delete r.data}   // now in the file: drop the text copy
-  const e=LIB.find(x=>x.id===id);if(e)e.saved=Date.now();return true}catch(x){DIRTY=true;toast('Could not save: '+((x&&x.message)||x));return false}}
+  const e=LIB.find(x=>x.id===id);if(e)e.saved=Date.now();if(id===CUR)savedFlash();return true}catch(x){DIRTY=true;toast('Could not save: '+((x&&x.message)||x));return false}}
+// a small dark-green "Saved!" left of the title after each save, fading out
+// no room left of a long title (or a narrow window): it sits just under the title's start instead of over the header controls
+const savedFlash=()=>{const s=$('#savedi');s.classList.remove('on','dn');void s.offsetWidth;if(s.getBoundingClientRect().left<Math.max(...[...$('header .hl').children].filter(x=>x.offsetParent).map(x=>x.getBoundingClientRect().right))+8)s.classList.add('dn');s.classList.add('on')};
 async function addEntry(obj,name){const base=uniqueName(name);obj.name=obj.name||base;await FS.write(base+'.bcl',JSON.stringify(obj));LIB.push({id:base,name:base,saved:Date.now(),opened:0});return base}
 async function syncName(){const nn=uniqueName(S.name,CUR);if(nn===CUR)return;DIRTY=true;await flush();
  try{await FS.rename(CUR+'.bcl',nn+'.bcl')}catch(e){toast(e.message||'Could not rename the file');return}
