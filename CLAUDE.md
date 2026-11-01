@@ -74,6 +74,7 @@ Agreed with the owner, to build later, only when they ask:
 - **"In use" lock held by the host:** opening a checklist marks it taken by that laptop; any other laptop gets view-only ("In use on <laptop>"). A Boss PIN can release a lock if a laptop dies.
 - The host runs the same app in a "host mode" (no extra software, shop network only, no internet). Laptops are paired to it once with a code.
 - Videos for Work Photos may come back then, stored only on the host (owner's decision: not inside laptop checklists).
+- **Phones (owner wants this one day, after the host):** the host also serves the app as a web page on the shop Wi-Fi, opened in a phone browser (add to home screen; no app store, iPhone and Android). Reuse index.html's logic with a phone layout: pick a checklist, tick steps, PIN sign-in, and **Add work photo straight from the camera** (`<input type=file accept=image/* capture=environment>`), stored on the host and shown on the laptop. Probably no editing of the checklist content on phones. Same "in use" rules as laptops. This is why a rewrite in another language is not worth it (owner agreed): the web-based app is what makes the phone version cheap.
 - Still to decide with the owner: how long the host keeps old versions, who can view/restore from it (main profile only or Bosses too), and a second backup drive for the host itself.
 - A simpler first step was discussed: a shared network folder as the save location plus an "in use" lock. The owner prefers the host design above.
 
