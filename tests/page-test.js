@@ -725,6 +725,28 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const rc2 = await pg.evaluate(async () => { document.querySelector('#p-img img').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); document.querySelector('#cm [data-ci="0"]').click(); await new Promise(r => setTimeout(r, 300)); return window.__saved.o.dir; });
   assert.strictEqual(rc2, '/exports', 'the next Save dialog opens in the same folder');
 
+  // ---- PDF Viewer page list: every page for a plain PDF, the PDF's chapters when it has bookmarks ----
+  const toc = await pg.evaluate(async () => {
+    // a small PDF with bookmarks: Chapter 1 (p. 1) > Section 1.1 (p. 2), Chapter 2 (p. 4); 5 pages
+    const mkPdf = () => { const o = {}, N = 5, pg = i => 20 + i; o[1] = '<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>'; o[2] = '<< /Type /Pages /Count ' + N + ' /Kids [' + Array.from({ length: N }, (_, i) => pg(i) + ' 0 R').join(' ') + '] >>';
+      o[3] = '<< /Type /Outlines /First 10 0 R /Last 11 0 R /Count 3 >>'; o[10] = '<< /Title (Chapter 1) /Parent 3 0 R /Next 11 0 R /First 12 0 R /Last 12 0 R /Count 1 /Dest [' + pg(0) + ' 0 R /Fit] >>';
+      o[12] = '<< /Title (Section 1.1) /Parent 10 0 R /Dest [' + pg(1) + ' 0 R /Fit] >>'; o[11] = '<< /Title (Chapter 2) /Parent 3 0 R /Prev 10 0 R /Dest [' + pg(3) + ' 0 R /Fit] >>';
+      for (let i = 0; i < N; i++) o[pg(i)] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>';
+      let out = '%PDF-1.4\n'; const off = {}, ids = Object.keys(o).map(Number).sort((a, b) => a - b); for (const k of ids) { off[k] = out.length; out += k + ' 0 obj\n' + o[k] + '\nendobj\n'; }
+      const max = ids.at(-1), x = out.length; out += 'xref\n0 ' + (max + 1) + '\n0000000000 65535 f \n'; for (let k = 1; k <= max; k++) out += off[k] != null ? String(off[k]).padStart(10, '0') + ' 00000 n \n' : '0000000000 65535 f \n';
+      out += 'trailer\n<< /Size ' + (max + 1) + ' /Root 1 0 R >>\nstartxref\n' + x + '\n%%EOF'; return new TextEncoder().encode(out).buffer; };
+    pvOpen(); await new Promise(r => setTimeout(r, 1500)); const r = {}; const rows = () => [...document.querySelectorAll('#pvtoc .pgi')];
+    r.plain = { n: rows().length, pages: pdf.numPages, first: rows()[0].textContent, modes: $('#pvmode').textContent, grip: !!$('#pvgrip') };
+    rows()[1].click(); await new Promise(r => setTimeout(r, 100)); r.plain.cur = cur; r.plain.on = document.querySelector('#pvtoc .pgi.on').dataset.pg;
+    PDFS.ol = { buf: mkPdf() }; S.pdfs.push({ id: 'ol', name: 'Book', offset: 0, map: {} }); renderPdfUI(); await openP('ol', 1); await new Promise(r => setTimeout(r, 800));
+    r.book = { rows: rows().map(x => x.querySelector('.tt').textContent + '|' + x.dataset.pg), modes: $('#pvmode').textContent };
+    rows().find(x => /Chapter 2/.test(x.textContent)).click(); await new Promise(r => setTimeout(r, 100)); r.book.cur = cur; r.book.on = document.querySelector('#pvtoc .pgi.on .tt').textContent;
+    document.querySelector('#pvtoc [data-tk="0"]').click(); r.book.collapsed = rows().length;
+    document.querySelector('#pvmode [data-tm=pages]').click(); r.book.pages = rows().length; pvClose(); return r; });
+  assert(toc.plain.n === toc.plain.pages && /^Page 1/.test(toc.plain.first) && toc.plain.modes === '' && toc.plain.grip && toc.plain.cur === 2 && toc.plain.on === '2', 'plain PDF: every page listed, click goes there: ' + JSON.stringify(toc.plain));
+  assert.deepStrictEqual(toc.book.rows, ['Chapter 1|1', 'Section 1.1|2', 'Chapter 2|4'], 'bookmarked PDF: its chapters with their pages');
+  assert(toc.book.modes === 'ChaptersPages' && toc.book.cur === 4 && toc.book.on === 'Chapter 2' && toc.book.collapsed === 2 && toc.book.pages === 5, 'chapters: click, highlight, collapse; Pages shows all pages: ' + JSON.stringify(toc.book));
+
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
   console.log('All page tests passed');

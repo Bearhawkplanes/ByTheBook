@@ -117,6 +117,9 @@ Photos that prove the work was done (for example for a customer), kept apart fro
 - The **Work Photos** button at the top right opens a page with every work photo in the checklist, in a grid grouped by section, each captioned with its main item. Click one to see it full screen with when it was logged, its section, main item and step, and who added it; **Jump to** (bottom right) goes back to the checklist with that step selected. ← / → go through them, Esc closes.
 - Photos are shrunk like other photos (Settings) and stored in the checklist file with a small preview for the grids, so they count toward its storage limit. A Fresh copy or a new job starts without them.
 
+## PDF Viewer page list
+The right side of the PDF Viewer lists the open PDF's pages. If the PDF has its own chapters (bookmarks, like Adobe Acrobat shows), they are listed with their page numbers and can be folded open and shut (▾ / ▸); "Pages" switches to the plain list. A plain scan without bookmarks shows every page number, plus the PDF's own page labels (like "iv") and the page names you gave in this checklist. Click a row to go to that page; the page shown is highlighted. Drag the bar on its left edge to make the list wider or narrower (remembered).
+
 ## Video Player
 Top bar > Video Player (next to PDF Viewer). The player shows the videos of the open checklist.
 - + Add video… asks how to add it:
