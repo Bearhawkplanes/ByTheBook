@@ -957,7 +957,7 @@ async function tocBuild(){const doc=pdf;if(!doc||TOC.doc===doc)return tocRender(
  if(TOC.doc===doc)tocRender()}
 const myCh=()=>(AP().ch||[]).slice().sort((a,b)=>a.p-b.p);
 function tocRender(){const box=$('#pvtoc');if(!box)return;if(!pdf){box.innerHTML='<div class="mut">No PDF open.</div>';return}
- const P=AP(),own=myCh(),chs=own.length?own.map((c,i)=>({...c,n:'Chapter '+(i+1)+': '+tcase(c.t),own:1})):(TOC.out||[]).map(c=>({...c,n:c.t})),N=pdf.numPages,lb=TOC.labels,names={},hl=P.hl||{};
+ const P=AP(),own=myCh(),chs=own.length?own.map((c,i)=>({...c,n:'Chapter '+(i+1)+': '+tcase(c.t),own:1})):(TOC.out||[]).map(c=>({...c,n:c.t})),N=pdf.numPages,lb=AS.pvnolab?null:TOC.labels,names={},hl=P.hl||{};
  for(const b of TOC.bm||[])if(own.length||b.lvl)(names[b.p]=names[b.p]||[]).push(b.t);for(const[n,p]of Object.entries(P.map||{}))(names[p]=names[p]||[]).push(n);
  const pageRow=p=>{const l=lb&&lb[p-1]&&lb[p-1]!==String(p)?` (${lb[p-1]})`:'',t=`p.${p}${l}${names[p]?' '+names[p].join(', '):''}`,c=HLC[hl[p]];return `<div class="pgi${c?' hl':''}" data-pg="${p}" title="${esc(t)}"${c?` style="--hl:${c[1]}"`:''}><span class="tt">${esc(t)}</span></div>`};
  const pages=(a,b)=>{let h='';for(let p=a;p<=b;p++)h+=pageRow(p);return h};
@@ -980,10 +980,10 @@ function hlSet(k){if(!pvEdit())return;const P=AP(),h=P.hl=P.hl||{};if(k)h[cur]=k
 // Options (top right of the viewer): adding chapters, highlighting the page shown, and folding the lists
 function pvOpts(){const m=$('#pvom');if(!m.hidden){m.hidden=true;return}const lk=isLocked()?' class="dis" title="Editing is locked"':'',hl=(AP().hl||{})[cur];
  m.innerHTML=`<button data-po="ch"${lk}>Add chapter at this page (p.${cur})…</button><div class="pohl"><span>Highlight this page</span><div>${Object.entries(HLC).map(([k,[n,c]])=>`<button data-ph="${k}" title="${n}" class="sw${hl===k?' on':''}" style="--c:${c}"${lk}></button>`).join('')}<button data-ph="" title="No highlight" class="sw none"${lk}>✕</button></div></div><hr>
- <button data-po="fold">Fold all chapters</button><button data-po="unfold">Unfold all chapters</button><button data-po="side">${$('#pvside').classList.contains('shut')?'Show':'Hide'} the PDFs list</button><div class="mut" style="font-size:12px;padding:6px 10px 4px">Right-click a chapter to rename, move or delete it.</div>`;m.hidden=false}
+ <button data-po="fold">Fold all chapters</button><button data-po="unfold">Unfold all chapters</button><button data-po="lab" title="The page numbers printed in the book, shown in brackets after p.N, for example p.4 (2)">${AS.pvnolab?'Show':'Hide'} the PDF's own page numbers</button><button data-po="side">${$('#pvside').classList.contains('shut')?'Show':'Hide'} the PDFs list</button><div class="mut" style="font-size:12px;padding:6px 10px 4px">Right-click a chapter to rename, move or delete it.</div>`;m.hidden=false}
 $('#pvopts').onclick=e=>{e.stopPropagation();pvOpts()};
 $('#pvom').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.classList.contains('dis'))return;const m=$('#pvom');m.hidden=true;
- if(b.dataset.ph!=null)return hlSet(b.dataset.ph);const k=b.dataset.po;if(k==='ch')chAsk(null);else if(k==='fold'||k==='unfold'){TOC.shut=new Set(k==='fold'?[...$('#pvtoc').querySelectorAll('.pch')].map(x=>x.dataset.cid):[]);tocRender()}else if(k==='side')pvSide()});
+ if(b.dataset.ph!=null)return hlSet(b.dataset.ph);const k=b.dataset.po;if(k==='ch')chAsk(null);else if(k==='fold'||k==='unfold'){TOC.shut=new Set(k==='fold'?[...$('#pvtoc').querySelectorAll('.pch')].map(x=>x.dataset.cid):[]);tocRender()}else if(k==='side')pvSide();else if(k==='lab'){AS.pvnolab=!AS.pvnolab;saveApp();tocRender()}});
 document.addEventListener('click',e=>{if(!e.target.closest('#pvom,#pvopts'))$('#pvom').hidden=true});
 function pvSide(shut){const sd=$('#pvside');shut=shut==null?!sd.classList.contains('shut'):shut;sd.classList.toggle('shut',shut);$('#pvhide').textContent=shut?'▶':'◀';$('#pvhide').title=shut?'Show the PDFs list':'Hide the PDFs list';AS.pvshut=shut;saveApp()}
 $('#pvhide').onclick=()=>pvSide();

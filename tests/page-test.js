@@ -721,8 +721,9 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const wb = await pg.evaluate(async b => { PR.req.edit = false; S.locked = false; S.worker = false; pvOpen(); await new Promise(r => setTimeout(r, 300));
     await addPdf(new File([new Uint8Array(b)], 'Engine workbook.pdf', { type: 'application/pdf' })); await new Promise(r => setTimeout(r, 1200));
     const rows = [...document.querySelectorAll('#pvtoc .pch,#pvtoc .pgi')].map(x => (x.classList.contains('pch') ? '# ' : '') + x.querySelector('.tt').textContent);
+    $('#pvopts').click(); document.querySelector('#pvom [data-po=lab]').click(); const nolab = [...document.querySelectorAll('#pvtoc .pgi .tt')].slice(0, 4).map(x => x.textContent); $('#pvopts').click(); document.querySelector('#pvom [data-po=lab]').click(); rows.push(...nolab.map(t => 'nolab:' + t));
     $('#pvq').value = 'bearing'; await new Promise(r => setTimeout(r, 1500)); pvSearch(); const found = [...document.querySelectorAll('#pvres .frow')].map(x => x.textContent); await openP(S.pdfs[0].id, 1); $('#pvq').value = ''; pvClose(); return { rows, found }; }, [...require('./make-workbook-pdf.js')]);
-  assert.deepStrictEqual(wb.rows, ['# Introduction', 'p.1 (i)', 'p.2 (ii)', '# Engine Block', 'p.3 (1)', 'p.4 (2) Crankshaft torque specs', 'p.5 (3) Bearing clearances', '# Cylinder Heads', 'p.6 (4)', 'p.7 (5)', 'p.8 (6)'], 'imported workbook: chapters, page labels and sub-bookmarks');
+  assert.deepStrictEqual(wb.rows, ['# Introduction', 'p.1 (i)', 'p.2 (ii)', '# Engine Block', 'p.3 (1)', 'p.4 (2) Crankshaft torque specs', 'p.5 (3) Bearing clearances', '# Cylinder Heads', 'p.6 (4)', 'p.7 (5)', 'p.8 (6)', 'nolab:p.1', 'nolab:p.2', 'nolab:p.3', 'nolab:p.4 Crankshaft torque specs'], 'imported workbook: chapters, page labels and sub-bookmarks; Options hides the PDF\'s own page numbers');
   assert(wb.found.some(t => /p\.5.*Bookmark: Bearing clearances/.test(t)), 'bookmarks are found by the PDF search: ' + JSON.stringify(wb.found));
 
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
