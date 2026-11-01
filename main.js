@@ -232,7 +232,7 @@ const handlers = {
   // export: the PDF of a blank checklist, and a Save dialog for any exported file
   pdfMake: (data, opts) => makePdf(data, opts || {}),
   saveFile: async (o, data) => { o = o || {};
-    const r = await dialog.showSaveDialog(win, { title: String(o.title || 'Export'), defaultPath: path.join(app.getPath('documents'), String(o.name || 'export').replace(/[\\/:*?"<>|]+/g, '_')), filters: Array.isArray(o.filters) ? o.filters : undefined });
+    const r = await dialog.showSaveDialog(win, { title: String(o.title || 'Export'), defaultPath: path.join(typeof o.dir === 'string' && o.dir && fs.existsSync(o.dir) ? o.dir : app.getPath('documents'), String(o.name || 'export').replace(/[\\/:*?"<>|]+/g, '_')), filters: Array.isArray(o.filters) ? o.filters : undefined });
     if (r.canceled || !r.filePath) return null;
     if (o.from) return st.exportTo(r.filePath, data, o.from);   // a checklist: a complete file with the photos, PDFs and videos of checklist o.from
     await fsp.writeFile(r.filePath, typeof data === 'string' ? data : Buffer.from(data)); return r.filePath; },

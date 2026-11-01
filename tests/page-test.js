@@ -671,6 +671,8 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const wj = await pg.evaluate(async () => { const st = S.sections[0].cards[0].steps[1]; select(S.sections[2].cards[0]); S.sections[0].cards[0].open = false; renderL(); wgOpen(); await new Promise(r => setTimeout(r, 200)); document.querySelector('#wgbody .wtile').click(); await new Promise(r => setTimeout(r, 200));
     document.querySelector('#wf [data-wf=jump]').click(); await new Promise(r => setTimeout(r, 200)); const r = document.querySelector('#L .row.sel'); return { closed: !$('#wf') && $('#wg').hidden, sel: SEL === st, row: r && r.dataset.j === '1' && r.dataset.c === '0', tab: tab, seen: !!r && r.getBoundingClientRect().top > 0 && r.getBoundingClientRect().bottom < innerHeight }; });
   assert(wj.closed && wj.sel && wj.row && wj.tab === 'wp' && wj.seen, 'Jump to selects the step in the checklist: ' + JSON.stringify(wj));
+  const wdl = await pg.evaluate(async () => { wgOpen(); await new Promise(r => setTimeout(r, 200)); document.querySelector('#wgbody .wtile').click(); await new Promise(r => setTimeout(r, 200)); window.__saved = null; document.querySelector('#wf [data-wf=dl]').click(); await new Promise(r => setTimeout(r, 400)); const r = { name: window.__saved && window.__saved.o.name, bytes: window.__saved && window.__saved.d.length }; wgClose(); return r; });
+  assert(/^work\d\.jpg$/.test(wdl.name) && wdl.bytes > 10000, 'Download… in the full-screen work photo saves the full photo: ' + JSON.stringify(wdl));
   assert(await pg.evaluate(async () => { const o = JSON.parse(await pack(null, blankCopy(false))); return !o.sections.some(s => s.cards.some(c => [c, ...c.steps].some(x => x.wp))) ; }), 'a fresh copy has no work photos');
 
   // ---- "Saved!" left of the title after a save ----
@@ -714,6 +716,14 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
 
   const hdr = await pg.evaluate(() => { S.name = 'A very long checklist name '.repeat(6); renderTitle(); const t = $('#ptitle'); return { opts: [...$('#autos').options].map(o => o.value).join(), label: $('.autol span').textContent, cut: t.scrollWidth > t.clientWidth, hover: t.title === S.name }; });
   assert(hdr.opts === 'stay,img,desc,pdf,wp' && hdr.label === 'On click,' && hdr.cut && hdr.hover, 'header: no Auto option, short label, long title cut with … and full name on hover: ' + JSON.stringify(hdr));
+
+  // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
+  const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
+    const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);
+    window.__saved = null; document.querySelector('#cm [data-ci="0"]').click(); await new Promise(r => setTimeout(r, 300)); return { items, menuGone: !$('#cm'), name: window.__saved && window.__saved.o.name, bytes: window.__saved && window.__saved.d.length, dir: AS.imgDir, first: window.__saved && window.__saved.o.dir }; });
+  assert(rc.items[0] === 'Download…' && rc.items.includes('Copy picture') && rc.menuGone && /\.(png|jpg|svg)$/.test(rc.name) && rc.bytes > 100 && rc.dir === '/exports', 'right-click Download saves the picture where chosen: ' + JSON.stringify(rc));
+  const rc2 = await pg.evaluate(async () => { document.querySelector('#p-img img').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); document.querySelector('#cm [data-ci="0"]').click(); await new Promise(r => setTimeout(r, 300)); return window.__saved.o.dir; });
+  assert.strictEqual(rc2, '/exports', 'the next Save dialog opens in the same folder');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');

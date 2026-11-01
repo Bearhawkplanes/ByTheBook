@@ -138,7 +138,8 @@ body.dragging{user-select:none;cursor:col-resize}
 .hfoot{display:flex;justify-content:center;gap:34px}
 #hprof label:not(.chk){display:grid;grid-template-columns:210px minmax(0,320px);align-items:center;column-gap:12px;margin:10px 0}#hprof label:not(.chk) input{width:100%;margin:0}
 #pie{width:24px;height:24px;border-radius:50%;flex:none;border:2px solid var(--line);background:conic-gradient(var(--ok) calc(var(--p,0)*1%),var(--bg) 0)}
-#wf .wfinfo{position:relative}#wf .wfjump{position:absolute;right:18px;bottom:14px}.big.sm{padding:10px 16px;font-size:14px;align-self:center}
+#wf .wfinfo{position:relative}#wf .wfbtns{position:absolute;right:18px;bottom:14px;display:flex;gap:8px}
+#cm{position:fixed;z-index:120;min-width:200px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.45)}#cm button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;color:var(--fg)}#cm button:hover{background:color-mix(in srgb,var(--acc) 14%,transparent)}.big.sm{padding:10px 16px;font-size:14px;align-self:center}
 .prof{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:14px 0 16px;color:var(--fg);font-size:13px}
 .avatar{width:58px;height:58px;border-radius:50%;background:var(--panel);border:2px solid var(--line);display:flex;align-items:flex-end;justify-content:center;overflow:hidden;color:var(--mut);transition:border-color .12s,color .12s}
 .prof:hover .avatar,.prof.on .avatar{border-color:var(--acc);color:var(--acc)}
@@ -580,13 +581,30 @@ $('#wgbody').addEventListener('click',e=>{const t=e.target.closest('.wtile');if(
 function wfOpen(list,k){WF={list,k};wfShow()}
 function wfClose(){WF=null;const el=$('#wf');if(el)el.remove()}
 function wfShow(){const o=WF&&WF.list[WF.k],p=o&&wpL(o.it)[o.i],w=o&&wpWhere(o.it);if(!p||!w)return wfClose();let el=$('#wf');
- if(!el){el=document.createElement('div');el.id='wf';document.body.appendChild(el);el.addEventListener('click',e=>{const b=e.target.closest('[data-wf]');if(!b)return;if(b.dataset.wf==='x')wfClose();else if(b.dataset.wf==='jump')wfJump();else wfStep(+b.dataset.wf)})}
+ if(!el){el=document.createElement('div');el.id='wf';document.body.appendChild(el);el.addEventListener('click',e=>{const b=e.target.closest('[data-wf]');if(!b)return;if(b.dataset.wf==='x')wfClose();else if(b.dataset.wf==='jump')wfJump();else if(b.dataset.wf==='dl'){const o=WF.list[WF.k],p=o&&wpL(o.it)[o.i];if(p)imgSave({id:p.id,name:p.name},false)}else wfStep(+b.dataset.wf)})}
  el.innerHTML=`<div class="wfimg"><img data-mid="${p.id}" src="${urls[p.tid]||''}" alt="${esc(p.name||'')}"><button class="x" data-wf="x" title="Close (Esc)">✕</button>${WF.list.length>1?'<button class="nav l" data-wf="-1" title="Previous (←)">◀</button><button class="nav r" data-wf="1" title="Next (→)">▶</button>':''}</div>
- <div class="wfinfo"><button class="wfjump pri" data-wf="jump" title="Go to this item in the checklist">Jump to</button><div><b>Logged:</b> ${esc(fmt(p.at))}</div><div><b>Section:</b> ${esc(w.s.title||'Untitled section')} &nbsp;·&nbsp; <b>Main item:</b> ${esc(w.c.text||'(untitled)')} &nbsp;·&nbsp; <b>Step:</b> ${w.st?esc(w.st.text||'(untitled)'):'none (on the main item)'}</div><div><b>Added by:</b> ${esc(p.by||'unknown')}</div><div style="opacity:.7">${WF.k+1} of ${WF.list.length}${p.name?' · '+esc(p.name):''}</div></div>`;hydrate()}
+ <div class="wfinfo"><div class="wfbtns"><button data-wf="dl" title="Save this photo somewhere on the computer">Download…</button><button class="wfjump pri" data-wf="jump" title="Go to this item in the checklist">Jump to</button></div><div><b>Logged:</b> ${esc(fmt(p.at))}</div><div><b>Section:</b> ${esc(w.s.title||'Untitled section')} &nbsp;·&nbsp; <b>Main item:</b> ${esc(w.c.text||'(untitled)')} &nbsp;·&nbsp; <b>Step:</b> ${w.st?esc(w.st.text||'(untitled)'):'none (on the main item)'}</div><div><b>Added by:</b> ${esc(p.by||'unknown')}</div><div style="opacity:.7">${WF.k+1} of ${WF.list.length}${p.name?' · '+esc(p.name):''}</div></div>`;hydrate()}
 // back to the checklist with the photo's step (or main item) selected and in view
 function wfJump(){const o=WF&&WF.list[WF.k],w=o&&wpWhere(o.it);wfClose();wgClose();if(!w)return;const si=S.sections.indexOf(w.s),ci=w.s.cards.indexOf(w.c),j=w.st?w.c.steps.indexOf(w.st):null;
  if(j!=null&&!w.c.open){w.c.open=true;save()}mountNear(si);renderCard(si,ci);select(o.it);setTab('wp');
  const r=L.querySelector(`.row[data-s="${si}"][data-c="${ci}"]`+(j==null?':not([data-j])':`[data-j="${j}"]`));if(r){r.classList.add('sel');r.scrollIntoView({block:'center'})}}
+// right-click on a picture: download it (Save dialog, remembers the folder) or copy it. Work photo tiles save the full photo, not the
+// preview; a picture with drawings or text can be saved as shown or as the original.
+function imgTarget(el){const img=el.closest&&el.closest('img');if(!img||img.closest('.vth'))return null;const t=img.closest('.wtile');
+ if(t){const o=(t.closest('#wgbody')?WPG:WPP)[+t.dataset.wi],p=o&&wpL(o.it)[o.i];return p?{id:p.id,name:p.name,img}:null}
+ const id=img.dataset.mid;if(!id||!MEDIA[id])return /^(data:image|blob:|https?:)/.test(img.src)?{src:img.src,name:img.closest('#p-img')&&SEL&&SEL.text||'picture',img}:null;const m=SEL&&SEL.media.find(x=>x.id===id);return{id,name:MEDIA[id].name,img,drawn:!!(m&&(hasDraw(m)||hasText(m))&&!DHIDE.has(id))}}
+async function imgBlob(t,shown){try{return t.src?await(await fetch(t.src)).blob():shown&&t.img?await(await fetch(t.img.src)).blob():await mBlob(MEDIA[t.id])}catch(e){return null}}
+async function imgSave(t,shown){const b=await imgBlob(t,shown);if(!b)return toast('Could not read that picture');const ext=((b.type||'image/jpeg').split('/')[1]||'jpg').replace('jpeg','jpg').replace('svg+xml','svg');
+ const name=(t.name||'picture').replace(/\.[^.]+$/,'')+(shown?' (with drawings)':'')+'.'+ext;
+ try{const f=await FS.saveFile({title:'Save picture',name,dir:AS.imgDir||'',filters:[{name:'Picture',extensions:[ext]}]},new Uint8Array(await b.arrayBuffer()));if(f){AS.imgDir=f.replace(/[\\/][^\\/]*$/,'');saveApp();toast('Saved: '+f)}}catch(e){toast('Could not save the picture')}}
+async function imgCopy(t){const b=await imgBlob(t,t.drawn);if(!b)return toast('Could not read that picture');try{const bm=await createImageBitmap(b),c=document.createElement('canvas');c.width=bm.width;c.height=bm.height;c.getContext('2d').drawImage(bm,0,0);bm.close();
+ await navigator.clipboard.write([new ClipboardItem({'image/png':await new Promise(r=>c.toBlob(r,'image/png'))})]);toast('Picture copied')}catch(e){toast('Could not copy the picture')}}
+function cmClose(){const m=$('#cm');if(m)m.remove()}
+function cmShow(x,y,items){cmClose();const m=document.createElement('div');m.id='cm';m.innerHTML=items.map(([t],i)=>`<button data-ci="${i}">${esc(t)}</button>`).join('');document.body.appendChild(m);
+ m.style.left=Math.min(x,innerWidth-m.offsetWidth-6)+'px';m.style.top=Math.min(y,innerHeight-m.offsetHeight-6)+'px';m.onclick=e=>{const b=e.target.closest('[data-ci]');if(b){cmClose();items[+b.dataset.ci][1]()}}}
+document.addEventListener('contextmenu',e=>{const t=imgTarget(e.target);if(!t)return;e.preventDefault();
+ cmShow(e.clientX,e.clientY,[[t.drawn?'Download with drawings…':'Download…',()=>imgSave(t,t.drawn)],...(t.drawn?[['Download original…',()=>imgSave(t,false)]]:[]),['Copy picture',()=>imgCopy(t)]])});
+document.addEventListener('mousedown',e=>{if(!e.target.closest('#cm'))cmClose()},true);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#cm')){cmClose();e.stopImmediatePropagation()}},true);addEventListener('blur',cmClose);
 const wfStep=d=>{if(!WF)return;const n=WF.list.length;WF.k=(WF.k+d+n)%n;wfShow()};
 document.addEventListener('keydown',e=>{if([...document.querySelectorAll('.overlay')].some(o=>!o.hidden))return;if(WF){if(e.key==='Escape')wfClose();else if(e.key==='ArrowRight')wfStep(1);else if(e.key==='ArrowLeft')wfStep(-1);else return}
  else if(!$('#wg').hidden&&e.key==='Escape'&&$('#modal').hidden)wgClose();else return;e.preventDefault();e.stopImmediatePropagation()},true);
