@@ -117,8 +117,13 @@ Photos that prove the work was done (for example for a customer), kept apart fro
 - The **Work Photos** button at the top right opens a page with every work photo in the checklist, in a grid grouped by section, each captioned with its main item. Click one to see it full screen with when it was logged, its section, main item and step, and who added it; **Jump to** (bottom right) goes back to the checklist with that step selected. ← / → go through them, Esc closes.
 - Photos are shrunk like other photos (Settings) and stored in the checklist file with a small preview for the grids, so they count toward its storage limit. A Fresh copy or a new job starts without them.
 
-## PDF Viewer page list
-The right side of the PDF Viewer lists the open PDF's pages. If the PDF has its own chapters (bookmarks, like Adobe Acrobat shows), they are listed with their page numbers and can be folded open and shut (▾ / ▸); "Pages" switches to the plain list. A plain scan without bookmarks shows every page number, plus the PDF's own page labels (like "iv") and the page names you gave in this checklist. Click a row to go to that page; the page shown is highlighted. Drag the bar on its left edge to make the list wider or narrower (remembered).
+## PDF Viewer
+- **Top bar (always there):** search page names and words, page number and ◀ ▶, zoom − +, and naming the page shown.
+- **Page list (right):** every page reads "p.N", followed by the PDF's own page label (like "(iv)") and any names given here, for example "p.60 crankshaft torque specs". Click a row to go there; the page shown is highlighted. Long names end in "…"; hover to read all of it. Drag the bar on its left edge to make the list wider or narrower (remembered).
+- **Chapters:** Options > "Add chapter at this page…" asks for a title; the chapter starts at the page shown and runs until the next chapter, and is listed as "Chapter 1: Assembling Engine Casing" (numbered by page order, words capitalised). Chapters are header rows with an arrow (▾ / ▸) that folds their pages away; Options also folds or unfolds all. Right-click a chapter to rename it, move it to the page shown, or delete it. Without chapters of your own, a PDF's built-in bookmarks (top level, as Adobe Acrobat shows them) are used as the chapters.
+- **Highlights:** Options > "Highlight this page": yellow, red, blue, green or pinkish purple (✕ removes it). Only the row in the page list is coloured; the page itself is not changed.
+- **PDFs list (left):** ◀ next to its title folds it to a slim strip; ▶ opens it again (remembered).
+- Chapters, highlights and page names are saved in the checklist, per PDF. Like other edits they are locked in a master file, in worker mode, or while editing needs a PIN.
 
 ## Video Player
 Top bar > Video Player (next to PDF Viewer). The player shows the videos of the open checklist.

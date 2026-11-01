@@ -735,17 +735,32 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
       let out = '%PDF-1.4\n'; const off = {}, ids = Object.keys(o).map(Number).sort((a, b) => a - b); for (const k of ids) { off[k] = out.length; out += k + ' 0 obj\n' + o[k] + '\nendobj\n'; }
       const max = ids.at(-1), x = out.length; out += 'xref\n0 ' + (max + 1) + '\n0000000000 65535 f \n'; for (let k = 1; k <= max; k++) out += off[k] != null ? String(off[k]).padStart(10, '0') + ' 00000 n \n' : '0000000000 65535 f \n';
       out += 'trailer\n<< /Size ' + (max + 1) + ' /Root 1 0 R >>\nstartxref\n' + x + '\n%%EOF'; return new TextEncoder().encode(out).buffer; };
-    pvOpen(); await new Promise(r => setTimeout(r, 1500)); const r = {}; const rows = () => [...document.querySelectorAll('#pvtoc .pgi')];
-    r.plain = { n: rows().length, pages: pdf.numPages, first: rows()[0].textContent, modes: $('#pvmode').textContent, grip: !!$('#pvgrip') };
-    rows()[1].click(); await new Promise(r => setTimeout(r, 100)); r.plain.cur = cur; r.plain.on = document.querySelector('#pvtoc .pgi.on').dataset.pg;
+    PR.req.edit = false; S.locked = false; S.worker = false; pvOpen(); await new Promise(r => setTimeout(r, 1500)); const r = {}; const rows = () => [...document.querySelectorAll('#pvtoc .pgi')].map(x => x.textContent), heads = () => [...document.querySelectorAll('#pvtoc .pch .tt')].map(x => x.textContent);
+    r.plain = { rows: rows(), heads: heads(), pages: pdf.numPages, grip: !!$('#pvgrip') };
+    document.querySelectorAll('#pvtoc .pgi')[1].click(); await new Promise(r => setTimeout(r, 100)); r.plain.cur = cur; r.plain.on = document.querySelector('#pvtoc .on').dataset.pg;
+    $('#pvname').value = 'crankshaft torque specs'; $('#pvmap').click(); r.plain.named = rows()[1]; r.plain.hover = document.querySelectorAll('#pvtoc .pgi')[1].title;
+    // the PDF's own bookmarks become the chapters (top level), with their pages under them
     PDFS.ol = { buf: mkPdf() }; S.pdfs.push({ id: 'ol', name: 'Book', offset: 0, map: {} }); renderPdfUI(); await openP('ol', 1); await new Promise(r => setTimeout(r, 800));
-    r.book = { rows: rows().map(x => x.querySelector('.tt').textContent + '|' + x.dataset.pg), modes: $('#pvmode').textContent };
-    rows().find(x => /Chapter 2/.test(x.textContent)).click(); await new Promise(r => setTimeout(r, 100)); r.book.cur = cur; r.book.on = document.querySelector('#pvtoc .pgi.on .tt').textContent;
-    document.querySelector('#pvtoc [data-tk="0"]').click(); r.book.collapsed = rows().length;
-    document.querySelector('#pvmode [data-tm=pages]').click(); r.book.pages = rows().length; pvClose(); return r; });
-  assert(toc.plain.n === toc.plain.pages && /^Page 1/.test(toc.plain.first) && toc.plain.modes === '' && toc.plain.grip && toc.plain.cur === 2 && toc.plain.on === '2', 'plain PDF: every page listed, click goes there: ' + JSON.stringify(toc.plain));
-  assert.deepStrictEqual(toc.book.rows, ['Chapter 1|1', 'Section 1.1|2', 'Chapter 2|4'], 'bookmarked PDF: its chapters with their pages');
-  assert(toc.book.modes === 'ChaptersPages' && toc.book.cur === 4 && toc.book.on === 'Chapter 2' && toc.book.collapsed === 2 && toc.book.pages === 5, 'chapters: click, highlight, collapse; Pages shows all pages: ' + JSON.stringify(toc.book));
+    r.book = { heads: heads(), rows: rows() };
+    document.querySelector('#pvtoc .pch[data-pg="4"] .tt').click(); await new Promise(r => setTimeout(r, 100)); r.book.cur = cur;
+    document.querySelector('#pvtoc .pch [data-tk]').click(); r.book.folded = rows();
+    // Options: add our own chapter (replaces the bookmarks), highlight a page, fold the PDFs list
+    show(3); $('#pvopts').click(); r.opts = [...document.querySelectorAll('#pvom > button')].map(b => b.textContent); r.swatches = document.querySelectorAll('#pvom .sw').length;
+    document.querySelector('#pvom [data-po=ch]').click(); await new Promise(r => setTimeout(r, 50)); $('#cht').value = 'assembling engine casing'; document.querySelector('#modal [data-d=ok]').click(); await new Promise(r => setTimeout(r, 50));
+    r.own = { heads: heads(), saved: JSON.stringify(AP().ch.map(c => [c.t, c.p])) };
+    $('#pvopts').click(); document.querySelector('#pvom [data-ph=yellow]').click(); const hr = document.querySelector('#pvtoc .pgi[data-pg="3"]'); r.hl = { cls: hr.classList.contains('hl'), col: hr.style.getPropertyValue('--hl'), saved: AP().hl[3] };
+    $('#pvhide').click(); r.side = { shut: $('#pvside').classList.contains('shut'), btn: $('#pvhide').textContent, w: $('#pvside').offsetWidth }; $('#pvhide').click(); r.side.open = !$('#pvside').classList.contains('shut');
+    S.locked = true; $('#pvopts').click(); r.lockedCh = document.querySelector('#pvom [data-po=ch]').classList.contains('dis'); $('#pvopts').click(); S.locked = false;
+    pvClose(); return r; });
+  assert(toc.plain.rows.length === toc.plain.pages && toc.plain.rows[0] === 'p.1' && !toc.plain.heads.length && toc.plain.grip && toc.plain.cur === 2 && toc.plain.on === '2', 'plain PDF: every page as p.N, click goes there: ' + JSON.stringify(toc.plain));
+  assert(toc.plain.named === 'p.2 crankshaft torque specs' && toc.plain.hover === 'p.2 crankshaft torque specs', 'a named page reads "p.2 name", full text on hover');
+  assert.deepStrictEqual(toc.book.heads, ['Chapter 1', 'Chapter 2'], 'the PDF\'s own bookmarks are the chapters');
+  assert(toc.book.rows.join() === 'p.1,p.2,p.3,p.4,p.5' && toc.book.cur === 4 && toc.book.folded.join() === 'p.4,p.5', 'pages under their chapters; a chapter header goes to its page and folds: ' + JSON.stringify(toc.book));
+  assert(toc.opts[0].startsWith('Add chapter at this page (p.3)') && toc.swatches === 6, 'Options: add chapter, 5 highlight colours and none: ' + JSON.stringify(toc.opts));
+  assert(toc.own.heads.join() === 'Chapter 1: Assembling Engine Casing' && toc.own.saved === '[["assembling engine casing",3]]', 'own chapter "Chapter 1: Title", starting at the page shown: ' + JSON.stringify(toc.own));
+  assert(toc.hl.cls && toc.hl.col && toc.hl.saved === 'yellow', 'highlighted page coloured in the list: ' + JSON.stringify(toc.hl));
+  assert(toc.side.shut && toc.side.btn === '▶' && toc.side.w < 60 && toc.side.open, 'the PDFs list folds to a slim strip and opens again: ' + JSON.stringify(toc.side));
+  assert(toc.lockedCh, 'chapters and highlights are greyed out when editing is locked');
 
   await b.close();
   assert.deepStrictEqual(errors, [], 'no page errors');
