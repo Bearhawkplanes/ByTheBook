@@ -717,6 +717,14 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   const hdr = await pg.evaluate(() => { S.name = 'A very long checklist name '.repeat(6); renderTitle(); const t = $('#ptitle'); return { opts: [...$('#autos').options].map(o => o.value).join(), label: $('.autol span').textContent, cut: t.scrollWidth > t.clientWidth, hover: t.title === S.name }; });
   assert(hdr.opts === 'stay,img,desc,pdf,wp' && hdr.label === 'On click,' && hdr.cut && hdr.hover, 'header: no Auto option, short label, long title cut with … and full name on hover: ' + JSON.stringify(hdr));
 
+  // ---- a PDF built like real ones, imported the normal way: chapters from its bookmarks, sub-bookmarks and page labels on the pages ----
+  const wb = await pg.evaluate(async b => { PR.req.edit = false; S.locked = false; S.worker = false; pvOpen(); await new Promise(r => setTimeout(r, 300));
+    await addPdf(new File([new Uint8Array(b)], 'Engine workbook.pdf', { type: 'application/pdf' })); await new Promise(r => setTimeout(r, 1200));
+    const rows = [...document.querySelectorAll('#pvtoc .pch,#pvtoc .pgi')].map(x => (x.classList.contains('pch') ? '# ' : '') + x.querySelector('.tt').textContent);
+    $('#pvq').value = 'bearing'; await new Promise(r => setTimeout(r, 1500)); pvSearch(); const found = [...document.querySelectorAll('#pvres .frow')].map(x => x.textContent); await openP(S.pdfs[0].id, 1); $('#pvq').value = ''; pvClose(); return { rows, found }; }, [...require('./make-workbook-pdf.js')]);
+  assert.deepStrictEqual(wb.rows, ['# Introduction', 'p.1 (i)', 'p.2 (ii)', '# Engine Block', 'p.3 (1)', 'p.4 (2) Crankshaft torque specs', 'p.5 (3) Bearing clearances', '# Cylinder Heads', 'p.6 (4)', 'p.7 (5)', 'p.8 (6)'], 'imported workbook: chapters, page labels and sub-bookmarks');
+  assert(wb.found.some(t => /p\.5.*Bookmark: Bearing clearances/.test(t)), 'bookmarks are found by the PDF search: ' + JSON.stringify(wb.found));
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);
@@ -755,7 +763,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(toc.plain.rows.length === toc.plain.pages && toc.plain.rows[0] === 'p.1' && !toc.plain.heads.length && toc.plain.grip && toc.plain.cur === 2 && toc.plain.on === '2', 'plain PDF: every page as p.N, click goes there: ' + JSON.stringify(toc.plain));
   assert(toc.plain.named === 'p.2 crankshaft torque specs' && toc.plain.hover === 'p.2 crankshaft torque specs', 'a named page reads "p.2 name", full text on hover');
   assert.deepStrictEqual(toc.book.heads, ['Chapter 1', 'Chapter 2'], 'the PDF\'s own bookmarks are the chapters');
-  assert(toc.book.rows.join() === 'p.1,p.2,p.3,p.4,p.5' && toc.book.cur === 4 && toc.book.folded.join() === 'p.4,p.5', 'pages under their chapters; a chapter header goes to its page and folds: ' + JSON.stringify(toc.book));
+  assert(toc.book.rows.join() === 'p.1,p.2 Section 1.1,p.3,p.4,p.5' && toc.book.cur === 4 && toc.book.folded.join() === 'p.4,p.5', 'pages under their chapters, sub-bookmarks as page names; a chapter header goes to its page and folds: ' + JSON.stringify(toc.book));
   assert(toc.opts[0].startsWith('Add chapter at this page (p.3)') && toc.swatches === 6, 'Options: add chapter, 5 highlight colours and none: ' + JSON.stringify(toc.opts));
   assert(toc.own.heads.join() === 'Chapter 1: Assembling Engine Casing' && toc.own.saved === '[["assembling engine casing",3]]', 'own chapter "Chapter 1: Title", starting at the page shown: ' + JSON.stringify(toc.own));
   assert(toc.hl.cls && toc.hl.col && toc.hl.saved === 'yellow', 'highlighted page coloured in the list: ' + JSON.stringify(toc.hl));

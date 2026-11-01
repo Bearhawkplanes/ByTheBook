@@ -897,7 +897,7 @@ $('#p-img').addEventListener('pointerdown',e=>{if(!TX)return;const lay=e.target.
 $('#p-img').addEventListener('input',e=>{const b=TX&&e.target.closest&&e.target.closest('.txb'),m=b&&txItem();if(m&&m.text[+b.dataset.i]){m.text[+b.dataset.i].t=b.innerText.replace(/\n$/,'');save()}});
 addEventListener('resize',()=>{if(TX&&TX.place)TX.place()});
 // ---------- PDF (several per checklist, loaded only when needed) ----------
-let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
+const BMK={};let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
 try{pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'}catch(e){}
 const pr=id=>S.pdfs.find(p=>p.id===id),AP=()=>pr(ACT)||{name:'',offset:0,map:{}};
 const resolveIn=(P,l)=>{const k=String(l).trim();return P.map[k]||(/^\d+$/.test(k)?+k+P.offset:null)};
@@ -948,15 +948,17 @@ let TOC={doc:null,out:null,shut:new Set()};
 // chapter titles in title case; short joining words stay small ("Preparing the Parts")
 const SMALLW=new Set(['a','an','the','and','or','but','of','to','in','on','at','for','with','by','from','as','into','per']);
 const tcase=t=>String(t).replace(/[A-Za-z][\w']*/g,(w,i)=>i&&SMALLW.has(w.toLowerCase())&&w===w.toLowerCase()?w:w===w.toLowerCase()?w[0].toUpperCase()+w.slice(1):w);
+// every bookmark of a PDF, at every level, with the page it points to (named destinations and "go to" actions included)
+async function bookmarks(doc){const out=[];const walk=async(items,lvl)=>{for(const it of items||[]){let d=it.dest,p=null;try{if(typeof d==='string')d=await doc.getDestination(d);if(Array.isArray(d)&&d[0]!=null)p=typeof d[0]==='number'?d[0]+1:await doc.getPageIndex(d[0])+1}catch(e){}
+  if(p)out.push({t:it.title||'(untitled)',p,lvl});await walk(it.items,lvl+1)}};try{await walk(await doc.getOutline(),0)}catch(e){}return out}
 async function tocBuild(){const doc=pdf;if(!doc||TOC.doc===doc)return tocRender();TOC={doc,out:null,shut:new Set(),labels:null};tocRender();
  try{TOC.labels=await doc.getPageLabels()}catch(e){}
- try{const o=[];for(const it of await doc.getOutline()||[]){let d=it.dest,p=null;try{if(typeof d==='string')d=await doc.getDestination(d);if(Array.isArray(d)&&d[0])p=typeof d[0]==='number'?d[0]+1:await doc.getPageIndex(d[0])+1}catch(e){}if(p)o.push({id:'o'+o.length,t:it.title||'(untitled)',p})}
-  if(TOC.doc===doc&&o.length)TOC.out=o}catch(e){}
+ const bm=await bookmarks(doc);if(TOC.doc===doc){TOC.bm=bm;const o=bm.filter(b=>!b.lvl).map((b,i)=>({...b,id:'o'+i}));if(o.length)TOC.out=o}
  if(TOC.doc===doc)tocRender()}
 const myCh=()=>(AP().ch||[]).slice().sort((a,b)=>a.p-b.p);
 function tocRender(){const box=$('#pvtoc');if(!box)return;if(!pdf){box.innerHTML='<div class="mut">No PDF open.</div>';return}
  const P=AP(),own=myCh(),chs=own.length?own.map((c,i)=>({...c,n:'Chapter '+(i+1)+': '+tcase(c.t),own:1})):(TOC.out||[]).map(c=>({...c,n:c.t})),N=pdf.numPages,lb=TOC.labels,names={},hl=P.hl||{};
- for(const[n,p]of Object.entries(P.map||{}))(names[p]=names[p]||[]).push(n);
+ for(const b of TOC.bm||[])if(own.length||b.lvl)(names[b.p]=names[b.p]||[]).push(b.t);for(const[n,p]of Object.entries(P.map||{}))(names[p]=names[p]||[]).push(n);
  const pageRow=p=>{const l=lb&&lb[p-1]&&lb[p-1]!==String(p)?` (${lb[p-1]})`:'',t=`p.${p}${l}${names[p]?' '+names[p].join(', '):''}`,c=HLC[hl[p]];return `<div class="pgi${c?' hl':''}" data-pg="${p}" title="${esc(t)}"${c?` style="--hl:${c[1]}"`:''}><span class="tt">${esc(t)}</span></div>`};
  const pages=(a,b)=>{let h='';for(let p=a;p<=b;p++)h+=pageRow(p);return h};
  let h=chs.length&&chs[0].p>1?pages(1,chs[0].p-1):chs.length?'':pages(1,N);
@@ -996,11 +998,11 @@ async function indexAll(){const tk=++IXB;
   try{if(!doc){const b=await pdfBuf(rec,tick);doc=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise}
    const out=[];for(let i=1;i<=doc.numPages;i++){if(tk!==IXB)return;const t=await(await doc.getPage(i)).getTextContent();out.push(t.items.map(x=>x.str).join(' ').toLowerCase());
     if(i%4===0){$('#pvidx').textContent=`Indexing ${P.name}: ${i}/${doc.numPages}`;await tick()}}
-   PIDX[P.id]=out;if(PV2)pvSearch()}catch(e){}}
+   PIDX[P.id]=out;BMK[P.id]=await bookmarks(doc);if(PV2)pvSearch()}catch(e){}}
  if(tk===IXB)$('#pvidx').textContent='Indexed'}
 function pvSearch(){const q=$('#pvq').value.trim().toLowerCase(),box=$('#pvres'),res=[];
  if(!q){box.innerHTML='<div class="mut">Search page names and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
- for(const P of S.pdfs){for(const k in P.map)if(k.toLowerCase().includes(q))res.push({p:P,n:P.map[k],t:'Named page: '+k});
+ for(const P of S.pdfs){for(const k in P.map)if(k.toLowerCase().includes(q))res.push({p:P,n:P.map[k],t:'Named page: '+k});for(const c of P.ch||[])if(c.t.toLowerCase().includes(q))res.push({p:P,n:c.p,t:'Chapter: '+c.t});for(const b of BMK[P.id]||[])if(b.t.toLowerCase().includes(q))res.push({p:P,n:b.p,t:'Bookmark: '+b.t});
   (PIDX[P.id]||[]).forEach((tx,i)=>{const at=tx.indexOf(q);if(at>=0)res.push({p:P,n:i+1,t:'…'+tx.slice(Math.max(0,at-30),at+q.length+40)+'…'})})}
  pvSearch.r=res;box.innerHTML=res.slice(0,150).map((r,i)=>`<div class="frow" data-i="${i}"><span class="fn"><b>${esc(r.p.name)}</b> · p.${r.n}<br><span class="mut">${esc(r.t)}</span></span></div>`).join('')||'<div class="mut">No matches.</div>'}
 $('#pdfBtn').onclick=pvOpen;$('#pvBack').onclick=pvClose;$('#pvadd').onclick=()=>{if(isLocked())toast('Editing is locked');else $('#file').click()};$('#pvq').oninput=pvSearch;
@@ -1107,7 +1109,7 @@ async function openProject(id){let r;
  // RO above: saved by a newer version, so view-only and never saved here
  LQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}UORD.length=0;
- for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
+ for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS,BMK])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
  renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();wgClose();afterOpen()}
 async function deleteProject(id){clearTimeout(save.t);if(CUR===id)DIRTY=false;try{await FS.remove(id+'.bcl')}catch(e){toast('Could not delete the file');return}
