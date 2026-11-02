@@ -162,12 +162,13 @@ body.dragging{user-select:none;cursor:col-resize}
 #pvbody{flex:1;min-height:0;display:flex}#pvside{width:300px;max-width:40%;border-right:1px solid var(--line);background:var(--panel);padding:14px;overflow:auto}
 #pvmain{flex:1;min-width:0;padding:12px 16px;display:flex;flex-direction:column}#pvbox{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 #pvres .frow{padding:6px 8px;font-size:12px}#pvlist .frow button{padding:0 6px}#pvadd{margin-top:8px}
+#pvwrap{position:relative;width:fit-content;margin:0 auto}#pvhl{position:absolute;inset:0;pointer-events:none}#pvhl i{position:absolute;background:rgba(255,214,10,.42);border-radius:2px;mix-blend-mode:multiply}#pvhl i.cur{background:rgba(255,128,0,.75);outline:2px solid #e65c00;mix-blend-mode:normal;opacity:.6}
 #pvnav{display:inline-flex;align-items:center;gap:5px}#pvnav[hidden]{display:none}#pvri{width:52px;text-align:center;padding:4px}#pvrt{white-space:nowrap}#pvres .frow.cur{background:color-mix(in srgb,var(--acc) 20%,transparent);box-shadow:inset 3px 0 0 var(--acc)}
 #pvgrip{width:6px;flex:none;cursor:col-resize;background:var(--line);touch-action:none}#pvgrip:hover,#pvgrip.drag{background:var(--acc)}
 #pvpages{width:300px;flex:none;min-width:180px;background:var(--panel);display:flex;flex-direction:column;min-height:0}.pvph{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 14px 6px;margin:0}
 #pvtoc{flex:1;min-height:0;overflow:auto;padding:4px 8px 14px}.pgi{display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13px}.pgi:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 .pgi.on,.pch.on{background:color-mix(in srgb,var(--acc) 20%,transparent);box-shadow:inset 3px 0 0 var(--acc)}.pgi .tt,.pch .tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pgi.hl{background:color-mix(in srgb,var(--hl) 26%,transparent);box-shadow:inset 4px 0 0 var(--hl)}.pgi.hl.on{outline:2px solid var(--acc);outline-offset:-2px}.pchp .pgi{margin-left:14px}
+.pgi.hl{background:color-mix(in srgb,var(--hl) 26%,transparent);box-shadow:inset 4px 0 0 var(--hl)}.pgi.hl.on{outline:2px solid var(--acc);outline-offset:-2px}.pchp .pgi{margin-left:14px}.pgi.dim,.pch.dim{opacity:.35}.pvph .chk{font-size:12px;font-weight:400;margin:0}
 .pch{display:flex;align-items:center;gap:6px;margin:10px 0 3px;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-weight:600;font-size:13.5px;cursor:pointer}.pch:hover{border-color:var(--acc)}.pch .tg{border:0;background:none;padding:0 2px;width:18px;color:var(--fg)}
 #pvmain .tb{flex-wrap:wrap}.pvow{position:relative;margin-left:auto}#pvom{position:absolute;right:0;top:calc(100% + 4px);z-index:5;min-width:260px;padding:4px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
 #pvom>button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;color:var(--fg)}#pvom>button:hover:not(.dis){background:color-mix(in srgb,var(--acc) 14%,transparent)}#pvom .dis{opacity:.4;cursor:not-allowed}#pvom hr{border:0;border-top:1px solid var(--line);margin:4px 0}
@@ -300,7 +301,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <div id="pv" hidden><div id="pvtop"><button id="pvBack">← Return</button><b id="pvt"></b></div><div id="pvbody"><aside id="pvside"><div class="hh pvsh"><span>PDFs in this checklist</span><button id="pvhide" title="Hide the PDFs list">◀</button></div><div id="pvlist"></div><button id="pvadd">+ Import PDF…</button><div class="hh" style="margin-top:16px">Search results</div><div id="pvres"></div></aside>
 <section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page numbers, names and words…" title="Finds the PDF's own page numbers (like 2, p.2 or page ii), page names, chapters, bookmarks and words on the pages. The page box below counts the pages of the file." style="flex:1;min-width:180px"><span id="pvnav" hidden><button id="pvrp" title="Previous result (Shift+Enter)">◀</button><input id="pvri" title="Type a result number and press Enter"><span id="pvrt" class="mut"></span><button id="pvrx" title="Next result (Enter)">▶</button></span><span id="pvidx" class="mut" title="Reading the words on every PDF page so the search box can find them"></span></div>
 <div class="tb"><button id="pvprev">◀</button><input id="pvpg" type="number" min="1" placeholder="Page #" style="width:84px" title="Go to PDF page number"><button id="pvgo">Go</button><button id="pvnext">▶</button><button id="pvzo">−</button><button id="pvzi">+</button><input id="pvname" placeholder="Name this page" style="width:140px"><button id="pvmap">Name</button><span class="pvow"><button id="pvopts" title="Chapters, highlights and lists">Options ▾</button><div id="pvom" hidden></div></span></div>
-<div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><canvas id="cv2"></canvas></div></section><div id="pvgrip" title="Drag to make the page list wider or narrower"></div><aside id="pvpages"><div class="hh pvph"><span>Pages</span></div><div id="pvtoc"></div></aside></div></div>
+<div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><div id="pvwrap"><canvas id="cv2"></canvas><div id="pvhl"></div></div></div></section><div id="pvgrip" title="Drag to make the page list wider or narrower"></div><aside id="pvpages"><div class="hh pvph"><span>Pages</span><label class="chk" id="pvonlyw" hidden title="While searching, show only the pages and chapters with a match"><input type="checkbox" id="pvonly"> Only matches</label></div><div id="pvtoc"></div></aside></div></div>
 <div id="wg" hidden><div id="wgtop"><button id="wgBack">← Return</button><b>Work Photos</b><span id="wgt"></span></div><div id="wgbody"></div></div>
 <div id="vp" hidden><div id="vptop"><button id="vpBack">← Return</button><b id="vpt"></b><span id="vpfor"></span></div><div id="vpbody"><aside id="vpside"><div class="hh">Videos in this checklist</div><div id="vplist"></div><button id="vpadd">+ Add video…</button><p class="mut" style="margin-top:14px">Select Timestamps, then Assign to… to put that part of the video on a step.</p></aside>
 <section id="vpmain"><div id="vpbox"><video id="vpv" playsinline></video><div id="vpmsg" hidden></div></div>
@@ -908,7 +909,7 @@ function label(){if(pdf)vmsg(`${AP().name} · PDF page ${cur}/${pdf.numPages} ·
 const noPdf=()=>{pdf=null;ACT=null;$('#cv').width=$('#cv2').width=1;label()};
 async function draw(){if(!pdf||!(PV2||tab==='pdf'))return;if(busy){pend=true;return}busy=true;
  try{const pg=await pdf.getPage(cur),vp=pg.getViewport({scale:zoom}),c=$(PV2?'#cv2':'#cv');c.width=vp.width;c.height=vp.height;await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise}catch(e){}
- busy=false;if(pend){pend=false;draw()}}
+ busy=false;if(pend){pend=false;draw()}else if(PV2)pvHL()}
 function show(n){if(!pdf)return;cur=Math.max(1,Math.min(pdf.numPages,Math.round(n)||1));$('#pn').value=$('#pvpg').value=cur;label();draw();$('#vbox').scrollTop=$('#pvbox').scrollTop=0;if(PV2)tocMark(true)}
 // base64 -> bytes in 3 MB slices so the loading bar is accurate and ESC can interrupt
 async function d2u(d,prog){const i=d.indexOf(',')+1,n=d.length-i,u=new Uint8Array(Math.floor(n*3/4)-(d.endsWith('==')?2:d.endsWith('=')?1:0)),CH=3145728;let o=0;
@@ -967,17 +968,21 @@ function tocRender(){const box=$('#pvtoc');if(!box)return;if(!pdf){box.innerHTML
  const P=AP(),own=myCh(),chs=own.length?own.map((c,i)=>({...c,n:'Chapter '+(i+1)+': '+tcase(c.t),own:1})):(TOC.out||[]).map(c=>({...c,n:c.t})),N=pdf.numPages,lb=TOC.labels,pn=pvNum(),names={},hl=P.hl||{};
  for(const b of TOC.bm||[])if(own.length||b.lvl)(names[b.p]=names[b.p]||[]).push(b.t);for(const[n,p]of Object.entries(P.map||{}))(names[p]=names[p]||[]).push(n);
  const pnum=p=>{const b=lb&&lb[p-1]&&lb[p-1]!==String(p)?lb[p-1]:'';return pn==='book'&&b?'p.'+b:'p.'+p+(pn==='both'&&b?` (${b})`:'')};
- const pageRow=p=>{const t=`${pnum(p)}${names[p]?' '+names[p].join(', '):''}`,c=HLC[hl[p]];return `<div class="pgi${c?' hl':''}" data-pg="${p}" title="${esc(t)}"${c?` style="--hl:${c[1]}"`:''}><span class="tt">${esc(t)}</span></div>`};
+ const sq=pvSearch.q||'',hitP=sq?new Set((pvSearch.r||[]).filter(r=>r.p.id===ACT).map(r=>r.n)):null,only=hitP&&AS.pvonly;
+ if(sq&&TOC.sq!==sq){TOC.sq=sq;TOC.ss=new Set()}const ss=TOC.ss||new Set();
+ $('#pvonlyw').hidden=!sq;$('#pvonly').checked=!!AS.pvonly;
+ const pageRow=p=>{if(only&&!hitP.has(p))return '';const t=`${pnum(p)}${names[p]?' '+names[p].join(', '):''}`,dim=hitP&&!hitP.has(p)?' dim':'',c=HLC[hl[p]];return `<div class="pgi${c?' hl':''}${dim}" data-pg="${p}" title="${esc(t)}"${c?` style="--hl:${c[1]}"`:''}><span class="tt">${esc(t)}</span></div>`};
  const pages=(a,b)=>{let h='';for(let p=a;p<=b;p++)h+=pageRow(p);return h};
  let h=chs.length&&chs[0].p>1?pages(1,chs[0].p-1):chs.length?'':pages(1,N);
- chs.forEach((c,i)=>{const end=i+1<chs.length?Math.max(c.p,chs[i+1].p-1):N,open=!TOC.shut.has(c.id);
-  h+=`<div class="pch${c.own?' own':''}" data-pg="${c.p}" data-cid="${c.id}" title="${esc(c.n)} (${esc(pnum(c.p))})"><button class="tg" data-tk="${c.id}" title="${open?'Fold':'Unfold'} this chapter">${open?'▾':'▸'}</button><span class="tt">${esc(c.n)}</span><span class="n">${esc(pnum(c.p))}</span></div>`+(open?`<div class="pchp">${pages(c.p,end)}</div>`:'')});
- box.innerHTML=h;tocMark(true)}
+ chs.forEach((c,i)=>{const end=i+1<chs.length?Math.max(c.p,chs[i+1].p-1):N;let hasHit=false;if(hitP)for(let p=c.p;p<=end&&!hasHit;p++)hasHit=hitP.has(p);if(only&&!hasHit)return;
+  const open=hitP?hasHit!==ss.has(c.id):!TOC.shut.has(c.id);
+  h+=`<div class="pch${c.own?' own':''}${hitP&&!hasHit?' dim':''}" data-pg="${c.p}" data-cid="${c.id}" title="${esc(c.n)} (${esc(pnum(c.p))})"><button class="tg" data-tk="${c.id}" title="${open?'Fold':'Unfold'} this chapter">${open?'▾':'▸'}</button><span class="tt">${esc(c.n)}</span><span class="n">${esc(pnum(c.p))}</span></div>`+(open?`<div class="pchp">${pages(c.p,end)}</div>`:'')});
+ box.innerHTML=h||(only?'<div class="mut">No matches in this PDF.</div>':'');tocMark(true)}
 // the row of the page shown, or its folded chapter
 function tocMark(scroll){const box=$('#pvtoc');if(!box||!pdf)return;box.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));let on=box.querySelector(`.pgi[data-pg="${cur}"]`);
  if(!on){let best=null;for(const c of box.querySelectorAll('.pch'))if(+c.dataset.pg<=cur)best=c;on=best}
  if(on){on.classList.add('on');if(scroll){const b=box.getBoundingClientRect(),r=on.getBoundingClientRect();if(r.top<b.top||r.bottom>b.bottom)on.scrollIntoView({block:'center'})}}}
-$('#pvtoc').addEventListener('click',e=>{const t=e.target.closest('[data-tk]');if(t){const k=t.dataset.tk;TOC.shut.has(k)?TOC.shut.delete(k):TOC.shut.add(k);tocRender();return}const r=e.target.closest('[data-pg]');if(r)show(+r.dataset.pg)});
+$('#pvtoc').addEventListener('click',e=>{const t=e.target.closest('[data-tk]');if(t){const k=t.dataset.tk,set=pvSearch.q?TOC.ss:TOC.shut;set.has(k)?set.delete(k):set.add(k);tocRender();return}const r=e.target.closest('[data-pg]');if(r)show(+r.dataset.pg)});
 // this checklist's chapters: right-click to rename, move to the page shown, or delete
 $('#pvtoc').addEventListener('contextmenu',e=>{const r=e.target.closest('.pch.own');if(!r)return;e.preventDefault();const c=(AP().ch||[]).find(x=>x.id===r.dataset.cid);if(!c)return;
  cmShow(e.clientX,e.clientY,[['Rename chapter…',()=>chAsk(c)],['Start this chapter at page '+cur,()=>{if(pvEdit()){c.p=cur;save();tocRender()}}],['Delete chapter',()=>{if(pvEdit())ask(`Delete the chapter "${esc(c.t)}"? The pages stay as they are.`,'Delete',()=>{const P=AP();P.ch=P.ch.filter(x=>x!==c);save();tocRender()},1)}]])});
@@ -994,7 +999,7 @@ $('#pvom').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
  if(b.dataset.ph!=null)return hlSet(b.dataset.ph);const k=b.dataset.po;if(k==='ch')chAsk(null);else if(k==='fold'||k==='unfold'){TOC.shut=new Set(k==='fold'?[...$('#pvtoc').querySelectorAll('.pch')].map(x=>x.dataset.cid):[]);tocRender()}else if(k==='side')pvSide()});
 document.addEventListener('click',e=>{if(!e.target.closest('#pvom,#pvopts'))$('#pvom').hidden=true});
 function pvSide(shut){const sd=$('#pvside');shut=shut==null?!sd.classList.contains('shut'):shut;sd.classList.toggle('shut',shut);$('#pvhide').textContent=shut?'▶':'◀';$('#pvhide').title=shut?'Show the PDFs list':'Hide the PDFs list';AS.pvshut=shut;saveApp()}
-$('#pvhide').onclick=()=>pvSide();
+$('#pvhide').onclick=()=>pvSide();$('#pvonly').onchange=e=>{AS.pvonly=e.target.checked;saveApp();tocRender()};
 {const g=$('#pvgrip'),pane=$('#pvpages'),setW=w=>{w=Math.max(180,Math.min(innerWidth*.5,w));pane.style.width=w+'px';return w};
  g.onpointerdown=e=>{e.preventDefault();g.setPointerCapture(e.pointerId);g.classList.add('drag');const x0=e.clientX,w0=pane.offsetWidth;
   g.onpointermove=m=>setW(w0+(x0-m.clientX));g.onpointerup=()=>{g.onpointermove=g.onpointerup=null;g.classList.remove('drag');AS.pvw=pane.offsetWidth;saveApp()}}}
@@ -1010,22 +1015,39 @@ async function indexAll(){const tk=++IXB;
    PIDX[P.id]=out;BMK[P.id]=await bookmarks(doc);if(PV2)pvSearch()}catch(e){}}
  if(tk===IXB){const x=$('#pvidx');x.textContent='Indexed';x.title='Indexed: the words on every page of these PDFs can be found with the search box. Scanned pages without a text layer (not run through OCR) can only be found by page names, chapters, bookmarks and page numbers.'}}
 function pvSearch(){const q=$('#pvq').value.trim().toLowerCase(),box=$('#pvres'),res=[];
- if(!q){pvSearch.r=[];pvSearch.q='';pvNav();box.innerHTML='<div class="mut">Search the PDFs\' own page numbers, page names, chapters and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
+ if(!q){pvSearch.r=[];pvSearch.h=[];pvSearch.q='';HLCUR=null;pvNav();if(PV2){tocRender();pvHL()}box.innerHTML='<div class="mut">Search the PDFs\' own page numbers, page names, chapters and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
  // the PDF's own page numbers (when it has them): "2", "p.2", "page ii" find the page printed with that number
  const pq=q.replace(/^(page|pg\.?|p\.?)\s*/,'');if(pq)for(const P of S.pdfs){const l=LABS[P.id]||(P.id===ACT&&TOC.doc===pdf?TOC.labels:null);if(l)l.forEach((x,i)=>{if(String(x).toLowerCase()===pq)res.push({p:P,n:i+1,t:'Page numbered '+x+' in this PDF'})})}
  for(const P of S.pdfs){for(const k in P.map)if(k.toLowerCase().includes(q))res.push({p:P,n:P.map[k],t:'Named page: '+k});for(const c of P.ch||[])if(c.t.toLowerCase().includes(q))res.push({p:P,n:c.p,t:'Chapter: '+c.t});for(const b of BMK[P.id]||[])if(b.t.toLowerCase().includes(q))res.push({p:P,n:b.p,t:'Bookmark: '+b.t});
-  (PIDX[P.id]||[]).forEach((tx,i)=>{const at=tx.indexOf(q);if(at>=0)res.push({p:P,n:i+1,t:'…'+tx.slice(Math.max(0,at-30),at+q.length+40)+'…'})})}
- if(pvSearch.q!==q||!(pvSearch.k<res.length))pvSearch.k=-1;pvSearch.q=q;pvSearch.r=res;box.innerHTML=res.slice(0,150).map((r,i)=>`<div class="frow" data-i="${i}"><span class="fn"><b>${esc(r.p.name)}</b> · p.${r.n}<br><span class="mut">${esc(r.t)}</span></span></div>`).join('')||'<div class="mut">No matches.</div>';pvNav()}
+  (PIDX[P.id]||[]).forEach((tx,i)=>{const at=tx.indexOf(q);if(at<0)return;let c=0;for(let a=at;a>=0;a=tx.indexOf(q,a+q.length))c++;res.push({p:P,n:i+1,w:1,c,t:'…'+tx.slice(Math.max(0,at-30),at+q.length+40)+'…'+(c>1?` (${c} on this page)`:'')})})}
+ // hits: every single word found (several per page), plus one for each page number, name, chapter or bookmark found
+ const hits=res.flatMap((r,i)=>r.w?Array.from({length:r.c},(_,j)=>({r:i,j})):[{r:i,j:-1}]);
+ if(pvSearch.q!==q||!(pvSearch.k<hits.length))pvSearch.k=-1;pvSearch.q=q;pvSearch.r=res;pvSearch.h=hits;box.innerHTML=res.slice(0,150).map((r,i)=>`<div class="frow" data-i="${i}"><span class="fn"><b>${esc(r.p.name)}</b> · p.${r.n}<br><span class="mut">${esc(r.t)}</span></span></div>`).join('')||'<div class="mut">No matches.</div>';pvNav();if(PV2){tocRender();pvHL()}}
 $('#pdfBtn').onclick=pvOpen;$('#pvBack').onclick=pvClose;$('#pvadd').onclick=()=>{if(isLocked())toast('Editing is locked');else $('#file').click()};$('#pvq').oninput=pvSearch;
-$('#pvres').onclick=e=>{const r=e.target.closest('[data-i]');if(r)pvRes(+r.dataset.i)};
+$('#pvres').onclick=e=>{const r=e.target.closest('[data-i]');if(r)pvRes((pvSearch.h||[]).findIndex(h=>h.r===+r.dataset.i))};
 // "3 of 60" beside the search box, like Ctrl+F in a browser: ◀ ▶, Enter / Shift+Enter in the search box, or type a result number
-function pvNav(){const r=pvSearch.r||[],k=pvSearch.k;$('#pvnav').hidden=!r.length;$('#pvri').value=k>=0?k+1:'';$('#pvrt').textContent='of '+r.length;
- document.querySelectorAll('#pvres .frow').forEach(x=>x.classList.toggle('cur',+x.dataset.i===k))}
-function pvRes(k){const r=pvSearch.r||[];if(!r.length)return;k=(k%r.length+r.length)%r.length;pvSearch.k=k;pvNav();const x=r[k];openP(x.p.id,x.n);const row=document.querySelector(`#pvres .frow[data-i="${k}"]`);if(row)row.scrollIntoView({block:'nearest'})}
-const pvStep=d=>pvRes(pvSearch.k<0?(d>0?0:-1):pvSearch.k+d);
+function pvNav(){const h=pvSearch.h||[],k=pvSearch.k,cr=k>=0&&h[k]?h[k].r:-1;$('#pvnav').hidden=!h.length;$('#pvri').value=k>=0?k+1:'';$('#pvrt').textContent='of '+h.length;
+ document.querySelectorAll('#pvres .frow').forEach(x=>x.classList.toggle('cur',+x.dataset.i===cr))}
+let HLCUR=null;
+async function pvRes(k){const h=pvSearch.h||[],r=pvSearch.r||[];if(!h.length)return;k=(k%h.length+h.length)%h.length;pvSearch.k=k;pvNav();const hit=h[k],x=r[hit.r];HLCUR={pid:x.p.id,n:x.n,j:hit.j};
+ const row=document.querySelector(`#pvres .frow[data-i="${hit.r}"]`);if(row)row.scrollIntoView({block:'nearest'});if(ACT===x.p.id&&pdf&&cur===x.n)pvHL(true);else openP(x.p.id,x.n)}
+// the words found, marked on the page shown (all yellow, the current one orange and scrolled into view), like a browser's Ctrl+F.
+// Positions come from pdf.js text items; the page text is joined the same way as the index, so the n-th hit is the same word.
+// letters are placed by measuring them in the PDF's font family, so a mark covers the word itself, not just its share of the letters
+const MC=document.createElement('canvas').getContext('2d');
+async function pvHL(scroll){const box=$('#pvhl');if(!box)return;const q=pvSearch.q,pg0=cur,doc=pdf;if(!q||!doc||!PV2){box.innerHTML='';return}
+ let page,tc;try{page=await doc.getPage(pg0);tc=await page.getTextContent()}catch(e){return}if(pdf!==doc||cur!==pg0)return;
+ const vp=page.getViewport({scale:zoom}),its=tc.items,offs=[];let txt='';its.forEach((it,i)=>{if(i)txt+=' ';offs.push(txt.length);txt+=it.str});txt=txt.toLowerCase();
+ const want=HLCUR&&HLCUR.pid===ACT&&HLCUR.n===pg0?HLCUR.j:-1;let h='',j=0;
+ for(let a=txt.indexOf(q);a>=0;a=txt.indexOf(q,a+q.length),j++){const b=a+q.length;its.forEach((it,i)=>{const s0=offs[i],s1=s0+it.str.length;if(s1<=a||s0>=b||!it.str.length)return;
+   const t=pdfjsLib.Util.transform(vp.transform,it.transform),fh=Math.hypot(t[2],t[3]),w=it.width*zoom,st=tc.styles&&tc.styles[it.fontName];MC.font='100px '+(st&&st.fontFamily||'sans-serif');
+   const full=MC.measureText(it.str).width||1,fr=n=>MC.measureText(it.str.slice(0,n)).width/full,x0=t[4]+w*fr(Math.max(a,s0)-s0),x1=t[4]+w*fr(Math.min(b,s1)-s0);
+   h+=`<i class="${j===want?'cur':''}" style="left:${x0-1}px;top:${t[5]-fh*.95}px;width:${x1-x0+2}px;height:${fh*1.2}px"></i>`})}
+ box.innerHTML=h;const c=box.querySelector('.cur');if(c&&scroll!==false)c.scrollIntoView({block:'center',inline:'nearest'})}
+const pvStep=d=>pvRes(pvSearch.k<0?(d>0?0:(pvSearch.h||[]).length-1):pvSearch.k+d);
 $('#pvrp').onclick=()=>pvStep(-1);$('#pvrx').onclick=()=>pvStep(1);
 $('#pvq').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();pvStep(e.shiftKey?-1:1)}};
-$('#pvri').onkeydown=e=>{if(e.key==='Enter'){const n=parseInt(e.target.value,10);if(n>=1&&n<=(pvSearch.r||[]).length)pvRes(n-1);else pvNav()}};
+$('#pvri').onkeydown=e=>{if(e.key==='Enter'){const n=parseInt(e.target.value,10);if(n>=1&&n<=(pvSearch.h||[]).length)pvRes(n-1);else pvNav()}};
 $('#pvlist').onclick=e=>{const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id;
  if(e.target.closest('[data-a=rm]')){if(isLocked())return toast('Editing is locked');ask(`Remove "${esc(pr(id).name)}" from this checklist?`,'Remove',()=>{S.pdfs=S.pdfs.filter(p=>p.id!==id);delete PDFS[id];delete PIDX[id];if(ACT===id)noPdf();save();renderPdfUI();pvSearch()},1);return}openP(id,1)};
 $('#pvgo').onclick=()=>{const n=+$('#pvpg').value;if(!n)return;pdf?show(n):openP(ACT||(S.pdfs[0]||{}).id,n)};$('#pvpg').onkeydown=e=>{if(e.key==='Enter')$('#pvgo').click()};

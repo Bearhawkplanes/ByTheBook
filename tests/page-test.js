@@ -728,14 +728,27 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(wb.found.some(t => /p\.5.*Bookmark: Bearing clearances/.test(t)), 'bookmarks are found by the PDF search: ' + JSON.stringify(wb.found));
   assert(wb.found.includes('2 => Engine workbook · p.4Page numbered 2 in this PDF') && wb.found.includes('page ii => Engine workbook · p.2Page numbered ii in this PDF') && wb.found.includes('p.6 => Engine workbook · p.8Page numbered 6 in this PDF'), 'the search finds the PDF\'s own page numbers (and not in PDFs without them): ' + JSON.stringify(wb.found));
   // result counter like Ctrl+F: ◀ ▶, Enter / Shift+Enter, typed number; current result marked in the list
-  const nav = await pg.evaluate(async () => { pvOpen(); await new Promise(r => setTimeout(r, 1500)); $('#pvq').value = 'page'; pvSearch(); const n = pvSearch.r.length, r = { n, txt: $('#pvrt').textContent, shown: !$('#pvnav').hidden, box0: $('#pvri').value };
+  const nav = await pg.evaluate(async () => { pvOpen(); await new Promise(r => setTimeout(r, 1500)); $('#pvq').value = 'page'; pvSearch(); const n = pvSearch.h.length, r = { n, txt: $('#pvrt').textContent, shown: !$('#pvnav').hidden, box0: $('#pvri').value };
     const key = (el, k, sh) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: !!sh, bubbles: true }));
     key($('#pvq'), 'Enter'); await new Promise(r => setTimeout(r, 300)); r.first = [$('#pvri').value, cur, document.querySelector('#pvres .frow.cur').dataset.i];
     $('#pvrx').click(); await new Promise(r => setTimeout(r, 300)); r.second = $('#pvri').value; key($('#pvq'), 'Enter', true); r.back = $('#pvri').value; $('#pvrp').click(); await new Promise(r => setTimeout(r, 300)); r.wrap = $('#pvri').value;
-    $('#pvri').value = '3'; key($('#pvri'), 'Enter'); await new Promise(r => setTimeout(r, 300)); r.typed = [$('#pvri').value, cur === pvSearch.r[2].n];
-    await openP(S.pdfs.find(p => p.name === 'Engine workbook').id, 1); pvRes(0); pvRes(1); pvRes(2); await new Promise(r => setTimeout(r, 1200)); r.race = [ACT === pvSearch.r[2].p.id, cur === pvSearch.r[2].n];
-    $('#pvq').value = ''; pvSearch(); r.hiddenEmpty = $('#pvnav').hidden; r.idxTip = $('#pvidx').title; pvClose(); return r; });
+    $('#pvri').value = '3'; key($('#pvri'), 'Enter'); await new Promise(r => setTimeout(r, 300)); r.typed = [$('#pvri').value, cur === pvSearch.r[pvSearch.h[2].r].n];
+    await openP(S.pdfs.find(p => p.name === 'Engine workbook').id, 1); pvRes(0); pvRes(1); pvRes(2); await new Promise(r => setTimeout(r, 1200)); r.race = [ACT === pvSearch.r[pvSearch.h[2].r].p.id, cur === pvSearch.r[pvSearch.h[2].r].n];
+    // every word on the page is marked, the current one stands out; the arrows walk word by word, also within one page
+    const wbId = S.pdfs[0].id; await openP(wbId, 1); $('#pvq').value = 'a'; pvSearch(); await new Promise(r => setTimeout(r, 300));
+    const onPage = pvSearch.h.filter(h => pvSearch.r[h.r].p.id === wbId && pvSearch.r[h.r].n === 1), k0 = pvSearch.h.indexOf(onPage[0]);
+    pvRes(k0); await new Promise(r => setTimeout(r, 500)); const m1 = [...document.querySelectorAll('#pvhl i')], c1 = document.querySelector('#pvhl i.cur'); const x1 = c1 && c1.style.left;
+    pvStep(1); await new Promise(r => setTimeout(r, 500)); const c2 = document.querySelector('#pvhl i.cur');
+    r.marks = { perPage: onPage.length, shown: m1.length, cur1: !!c1, moved: !!c2 && c2.style.left !== x1, samePage: cur === 1, cnt: $('#pvrt').textContent, row: /\(\d+ on this page\)/.test(document.querySelector('#pvres .frow.cur').textContent) || onPage.length === 1 };
+    // the page list: pages without a match fade, "Only matches" hides them
+    await openP(S.pdfs.find(p => p.name === 'Engine workbook').id, 1); await new Promise(r => setTimeout(r, 300));
+    $('#pvq').value = 'page 5'; pvSearch(); await new Promise(r => setTimeout(r, 200)); r.fade = { dim: document.querySelectorAll('#pvtoc .pgi.dim').length, bright: [...document.querySelectorAll('#pvtoc .pgi:not(.dim)')].map(x => x.dataset.pg), onlyShown: !$('#pvonlyw').hidden };
+    $('#pvonly').checked = true; $('#pvonly').dispatchEvent(new Event('change')); r.fade.only = [...document.querySelectorAll('#pvtoc .pgi')].map(x => x.dataset.pg); r.fade.heads = [...document.querySelectorAll('#pvtoc .pch .tt')].map(x => x.textContent);
+    $('#pvonly').checked = false; $('#pvonly').dispatchEvent(new Event('change'));
+    $('#pvq').value = ''; pvSearch(); r.hiddenEmpty = $('#pvnav').hidden; r.idxTip = $('#pvidx').title; await openP(S.pdfs[0].id, 1); pvClose(); return r; });
   assert(nav.n > 3 && nav.shown && nav.txt === 'of ' + nav.n && nav.box0 === '' && nav.first.join() === '1,' + nav.first[1] + ',0' && nav.second === '2' && nav.back === '1' && nav.wrap === String(nav.n) && nav.typed.join() === '3,true' && nav.race.join() === 'true,true' && nav.hiddenEmpty, 'search result counter: ' + JSON.stringify(nav));
+  assert(nav.marks.perPage >= 2 && nav.marks.shown === nav.marks.perPage && nav.marks.cur1 && nav.marks.moved && nav.marks.samePage, 'every word found on the page is marked and the arrows step word by word: ' + JSON.stringify(nav.marks));
+  assert(nav.fade.onlyShown && nav.fade.bright.join() === '5,7' && nav.fade.dim === 4 && nav.fade.only.join() === '5,7' && nav.fade.heads.join() === 'Engine Block,Cylinder Heads', 'page list: other pages fade, Only matches hides them and their chapters: ' + JSON.stringify(nav.fade));
   assert(/Indexed: the words on every page/.test(nav.idxTip), 'hovering "Indexed" explains it');
 
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
