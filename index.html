@@ -162,6 +162,7 @@ body.dragging{user-select:none;cursor:col-resize}
 #pvbody{flex:1;min-height:0;display:flex}#pvside{width:300px;max-width:40%;border-right:1px solid var(--line);background:var(--panel);padding:14px;overflow:auto}
 #pvmain{flex:1;min-width:0;padding:12px 16px;display:flex;flex-direction:column}#pvbox{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 #pvres .frow{padding:6px 8px;font-size:12px}#pvlist .frow button{padding:0 6px}#pvadd{margin-top:8px}
+#pvnav{display:inline-flex;align-items:center;gap:5px}#pvnav[hidden]{display:none}#pvri{width:52px;text-align:center;padding:4px}#pvrt{white-space:nowrap}#pvres .frow.cur{background:color-mix(in srgb,var(--acc) 20%,transparent);box-shadow:inset 3px 0 0 var(--acc)}
 #pvgrip{width:6px;flex:none;cursor:col-resize;background:var(--line);touch-action:none}#pvgrip:hover,#pvgrip.drag{background:var(--acc)}
 #pvpages{width:300px;flex:none;min-width:180px;background:var(--panel);display:flex;flex-direction:column;min-height:0}.pvph{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 14px 6px;margin:0}
 #pvtoc{flex:1;min-height:0;overflow:auto;padding:4px 8px 14px}.pgi{display:flex;align-items:baseline;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13px}.pgi:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
@@ -297,7 +298,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <div id="hdel" hidden><button class="delbtn" id="hdelb">DELETE</button><small>or DEL</small></div></section><div id="updbar" hidden></div></div>
 <div id="ld" hidden><div class="ldc"><div id="ldt"></div><div class="ldb"><i id="ldf"></i></div><div class="ldh">ESC to cancel</div></div></div>
 <div id="pv" hidden><div id="pvtop"><button id="pvBack">← Return</button><b id="pvt"></b></div><div id="pvbody"><aside id="pvside"><div class="hh pvsh"><span>PDFs in this checklist</span><button id="pvhide" title="Hide the PDFs list">◀</button></div><div id="pvlist"></div><button id="pvadd">+ Import PDF…</button><div class="hh" style="margin-top:16px">Search results</div><div id="pvres"></div></aside>
-<section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page numbers, names and words…" title="Finds the PDF's own page numbers (like 2, p.2 or page ii), page names, chapters, bookmarks and words on the pages. The page box below counts the pages of the file." style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
+<section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page numbers, names and words…" title="Finds the PDF's own page numbers (like 2, p.2 or page ii), page names, chapters, bookmarks and words on the pages. The page box below counts the pages of the file." style="flex:1;min-width:180px"><span id="pvnav" hidden><button id="pvrp" title="Previous result (Shift+Enter)">◀</button><input id="pvri" title="Type a result number and press Enter"><span id="pvrt" class="mut"></span><button id="pvrx" title="Next result (Enter)">▶</button></span><span id="pvidx" class="mut" title="Reading the words on every PDF page so the search box can find them"></span></div>
 <div class="tb"><button id="pvprev">◀</button><input id="pvpg" type="number" min="1" placeholder="Page #" style="width:84px" title="Go to PDF page number"><button id="pvgo">Go</button><button id="pvnext">▶</button><button id="pvzo">−</button><button id="pvzi">+</button><input id="pvname" placeholder="Name this page" style="width:140px"><button id="pvmap">Name</button><span class="pvow"><button id="pvopts" title="Chapters, highlights and lists">Options ▾</button><div id="pvom" hidden></div></span></div>
 <div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><canvas id="cv2"></canvas></div></section><div id="pvgrip" title="Drag to make the page list wider or narrower"></div><aside id="pvpages"><div class="hh pvph"><span>Pages</span></div><div id="pvtoc"></div></aside></div></div>
 <div id="wg" hidden><div id="wgtop"><button id="wgBack">← Return</button><b>Work Photos</b><span id="wgt"></span></div><div id="wgbody"></div></div>
@@ -912,12 +913,16 @@ function show(n){if(!pdf)return;cur=Math.max(1,Math.min(pdf.numPages,Math.round(
 // base64 -> bytes in 3 MB slices so the loading bar is accurate and ESC can interrupt
 async function d2u(d,prog){const i=d.indexOf(',')+1,n=d.length-i,u=new Uint8Array(Math.floor(n*3/4)-(d.endsWith('==')?2:d.endsWith('=')?1:0)),CH=3145728;let o=0;
  for(let p=i;p<d.length;p+=CH){const b=atob(d.slice(p,p+CH));for(let k=0;k<b.length;k++)u[o++]=b.charCodeAt(k);prog&&await prog((p-i)/n)}return u}
-async function openP(id,page){const rec=PDFS[id],P=pr(id);if(!rec||!P)return false;
+// the last request wins: clicks while a PDF is loading are remembered (openP.want) and followed once it has loaded
+let OPQ=0;
+async function openP(id,page){const rec=PDFS[id],P=pr(id);if(!rec||!P)return false;const tk=++OPQ;openP.want=[id,page];
  if(ACT===id&&pdf){page?show(page):draw();return true}
+ if(LD)return false;
  let doc;try{doc=await load('Loading '+P.name,async step=>{let b=rec.buf;
   if(!b){await step(0,'Reading '+P.name+'…');b=await pdfBuf(rec,f=>step(f*.8))}
   await step(.85,'Opening PDF…');const d=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise;await step(1);return d})}
  catch(e){vmsg('Could not read PDF: '+(e&&e.message||e),true);return false}
+ if(tk!==OPQ){const[wid,wp]=openP.want;if(doc&&doc!=='cancelled'&&wid===id){pdf=doc;ACT=id;renderPdfUI();show(wp||1);if(PV2)tocBuild();return true}return openP(wid,wp)}
  if(!doc||doc==='cancelled')return false;pdf=doc;ACT=id;renderPdfUI();show(page||1);if(PV2)tocBuild();return true}
 async function addPdf(f){if(!CUR)return toast('Open a checklist first');if(isLocked())return toast('Editing is locked');if(!await roomFor(f.size))return;let r;
  try{r=await load('Importing '+f.name,async step=>{await step(.1,'Reading '+f.name+'…');const b=await f.arrayBuffer();await step(.6,'Checking PDF…');const d=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise;await step(1);return{b,d}})}
@@ -1003,16 +1008,24 @@ async function indexAll(){const tk=++IXB;
    const out=[];for(let i=1;i<=doc.numPages;i++){if(tk!==IXB)return;const t=await(await doc.getPage(i)).getTextContent();out.push(t.items.map(x=>x.str).join(' ').toLowerCase());
     if(i%4===0){$('#pvidx').textContent=`Indexing ${P.name}: ${i}/${doc.numPages}`;await tick()}}
    PIDX[P.id]=out;BMK[P.id]=await bookmarks(doc);if(PV2)pvSearch()}catch(e){}}
- if(tk===IXB)$('#pvidx').textContent='Indexed'}
+ if(tk===IXB){const x=$('#pvidx');x.textContent='Indexed';x.title='Indexed: the words on every page of these PDFs can be found with the search box. Scanned pages without a text layer (not run through OCR) can only be found by page names, chapters, bookmarks and page numbers.'}}
 function pvSearch(){const q=$('#pvq').value.trim().toLowerCase(),box=$('#pvres'),res=[];
- if(!q){box.innerHTML='<div class="mut">Search the PDFs\' own page numbers, page names, chapters and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
+ if(!q){pvSearch.r=[];pvSearch.q='';pvNav();box.innerHTML='<div class="mut">Search the PDFs\' own page numbers, page names, chapters and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
  // the PDF's own page numbers (when it has them): "2", "p.2", "page ii" find the page printed with that number
  const pq=q.replace(/^(page|pg\.?|p\.?)\s*/,'');if(pq)for(const P of S.pdfs){const l=LABS[P.id]||(P.id===ACT&&TOC.doc===pdf?TOC.labels:null);if(l)l.forEach((x,i)=>{if(String(x).toLowerCase()===pq)res.push({p:P,n:i+1,t:'Page numbered '+x+' in this PDF'})})}
  for(const P of S.pdfs){for(const k in P.map)if(k.toLowerCase().includes(q))res.push({p:P,n:P.map[k],t:'Named page: '+k});for(const c of P.ch||[])if(c.t.toLowerCase().includes(q))res.push({p:P,n:c.p,t:'Chapter: '+c.t});for(const b of BMK[P.id]||[])if(b.t.toLowerCase().includes(q))res.push({p:P,n:b.p,t:'Bookmark: '+b.t});
   (PIDX[P.id]||[]).forEach((tx,i)=>{const at=tx.indexOf(q);if(at>=0)res.push({p:P,n:i+1,t:'…'+tx.slice(Math.max(0,at-30),at+q.length+40)+'…'})})}
- pvSearch.r=res;box.innerHTML=res.slice(0,150).map((r,i)=>`<div class="frow" data-i="${i}"><span class="fn"><b>${esc(r.p.name)}</b> · p.${r.n}<br><span class="mut">${esc(r.t)}</span></span></div>`).join('')||'<div class="mut">No matches.</div>'}
+ if(pvSearch.q!==q||!(pvSearch.k<res.length))pvSearch.k=-1;pvSearch.q=q;pvSearch.r=res;box.innerHTML=res.slice(0,150).map((r,i)=>`<div class="frow" data-i="${i}"><span class="fn"><b>${esc(r.p.name)}</b> · p.${r.n}<br><span class="mut">${esc(r.t)}</span></span></div>`).join('')||'<div class="mut">No matches.</div>';pvNav()}
 $('#pdfBtn').onclick=pvOpen;$('#pvBack').onclick=pvClose;$('#pvadd').onclick=()=>{if(isLocked())toast('Editing is locked');else $('#file').click()};$('#pvq').oninput=pvSearch;
-$('#pvres').onclick=e=>{const r=e.target.closest('[data-i]');if(!r)return;const x=pvSearch.r[+r.dataset.i];openP(x.p.id,x.n)};
+$('#pvres').onclick=e=>{const r=e.target.closest('[data-i]');if(r)pvRes(+r.dataset.i)};
+// "3 of 60" beside the search box, like Ctrl+F in a browser: ◀ ▶, Enter / Shift+Enter in the search box, or type a result number
+function pvNav(){const r=pvSearch.r||[],k=pvSearch.k;$('#pvnav').hidden=!r.length;$('#pvri').value=k>=0?k+1:'';$('#pvrt').textContent='of '+r.length;
+ document.querySelectorAll('#pvres .frow').forEach(x=>x.classList.toggle('cur',+x.dataset.i===k))}
+function pvRes(k){const r=pvSearch.r||[];if(!r.length)return;k=(k%r.length+r.length)%r.length;pvSearch.k=k;pvNav();const x=r[k];openP(x.p.id,x.n);const row=document.querySelector(`#pvres .frow[data-i="${k}"]`);if(row)row.scrollIntoView({block:'nearest'})}
+const pvStep=d=>pvRes(pvSearch.k<0?(d>0?0:-1):pvSearch.k+d);
+$('#pvrp').onclick=()=>pvStep(-1);$('#pvrx').onclick=()=>pvStep(1);
+$('#pvq').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();pvStep(e.shiftKey?-1:1)}};
+$('#pvri').onkeydown=e=>{if(e.key==='Enter'){const n=parseInt(e.target.value,10);if(n>=1&&n<=(pvSearch.r||[]).length)pvRes(n-1);else pvNav()}};
 $('#pvlist').onclick=e=>{const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id;
  if(e.target.closest('[data-a=rm]')){if(isLocked())return toast('Editing is locked');ask(`Remove "${esc(pr(id).name)}" from this checklist?`,'Remove',()=>{S.pdfs=S.pdfs.filter(p=>p.id!==id);delete PDFS[id];delete PIDX[id];if(ACT===id)noPdf();save();renderPdfUI();pvSearch()},1);return}openP(id,1)};
 $('#pvgo').onclick=()=>{const n=+$('#pvpg').value;if(!n)return;pdf?show(n):openP(ACT||(S.pdfs[0]||{}).id,n)};$('#pvpg').onkeydown=e=>{if(e.key==='Enter')$('#pvgo').click()};

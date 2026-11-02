@@ -727,6 +727,16 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.deepStrictEqual(wb.rows, ['# Introduction', 'p.1 (i)', 'p.2 (ii)', '# Engine Block', 'p.3 (1)', 'p.4 (2) Crankshaft torque specs', 'p.5 (3) Bearing clearances', '# Cylinder Heads', 'p.6 (4)', 'p.7 (5)', 'p.8 (6)', 'book:p.i', 'book:p.ii', 'book:p.1', 'book:p.2 Crankshaft torque specs', 'bookhead:p.1', 'file:p.1', 'file:p.2', 'file:p.3', 'file:p.4 Crankshaft torque specs'], 'imported workbook: chapters, page labels and sub-bookmarks; Options > Page numbers: Book / File');
   assert(wb.found.some(t => /p\.5.*Bookmark: Bearing clearances/.test(t)), 'bookmarks are found by the PDF search: ' + JSON.stringify(wb.found));
   assert(wb.found.includes('2 => Engine workbook · p.4Page numbered 2 in this PDF') && wb.found.includes('page ii => Engine workbook · p.2Page numbered ii in this PDF') && wb.found.includes('p.6 => Engine workbook · p.8Page numbered 6 in this PDF'), 'the search finds the PDF\'s own page numbers (and not in PDFs without them): ' + JSON.stringify(wb.found));
+  // result counter like Ctrl+F: ◀ ▶, Enter / Shift+Enter, typed number; current result marked in the list
+  const nav = await pg.evaluate(async () => { pvOpen(); await new Promise(r => setTimeout(r, 1500)); $('#pvq').value = 'page'; pvSearch(); const n = pvSearch.r.length, r = { n, txt: $('#pvrt').textContent, shown: !$('#pvnav').hidden, box0: $('#pvri').value };
+    const key = (el, k, sh) => el.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey: !!sh, bubbles: true }));
+    key($('#pvq'), 'Enter'); await new Promise(r => setTimeout(r, 300)); r.first = [$('#pvri').value, cur, document.querySelector('#pvres .frow.cur').dataset.i];
+    $('#pvrx').click(); await new Promise(r => setTimeout(r, 300)); r.second = $('#pvri').value; key($('#pvq'), 'Enter', true); r.back = $('#pvri').value; $('#pvrp').click(); await new Promise(r => setTimeout(r, 300)); r.wrap = $('#pvri').value;
+    $('#pvri').value = '3'; key($('#pvri'), 'Enter'); await new Promise(r => setTimeout(r, 300)); r.typed = [$('#pvri').value, cur === pvSearch.r[2].n];
+    await openP(S.pdfs.find(p => p.name === 'Engine workbook').id, 1); pvRes(0); pvRes(1); pvRes(2); await new Promise(r => setTimeout(r, 1200)); r.race = [ACT === pvSearch.r[2].p.id, cur === pvSearch.r[2].n];
+    $('#pvq').value = ''; pvSearch(); r.hiddenEmpty = $('#pvnav').hidden; r.idxTip = $('#pvidx').title; pvClose(); return r; });
+  assert(nav.n > 3 && nav.shown && nav.txt === 'of ' + nav.n && nav.box0 === '' && nav.first.join() === '1,' + nav.first[1] + ',0' && nav.second === '2' && nav.back === '1' && nav.wrap === String(nav.n) && nav.typed.join() === '3,true' && nav.race.join() === 'true,true' && nav.hiddenEmpty, 'search result counter: ' + JSON.stringify(nav));
+  assert(/Indexed: the words on every page/.test(nav.idxTip), 'hovering "Indexed" explains it');
 
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
