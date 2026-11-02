@@ -172,6 +172,7 @@ For torque patterns, bolt numbering and the like.
 
 ## Around the screen
 - Under the checklist name: **Items** = main items checked off / all main items, **Sections** = sections complete (all their main items done, shown green) / all sections. The small pie right of the name fills by main items done (hover for the numbers).
+- When there are more section tabs than fit, the mouse wheel over them scrolls them sideways (down = right, up = left); the same in the step picker.
 - Right panel tabs: Images, Description, PDF, Work Photos (the selected one is highlighted). "On click," at the top left picks what the right panel shows when you click an item: stay on the current tab, or always Images, Description, PDF or Work Photos.
 - On small screens a long checklist name is shortened with … (hover to see all of it), and an item's tags (quantity, page, pictures) move under its name when they don't fit beside it.
 - **Saving a picture elsewhere:** right-click any picture (Images tab, Work Photos tab and page, full-screen work photo) for **Download…** (a Save window: pick the folder and name; the next one opens in the same folder) and **Copy picture**. A picture with drawings or text offers "Download with drawings…" and "Download original…". The full-screen work photo also has a **Download…** button next to Jump to; work photo tiles always save the full photo, not the small preview.

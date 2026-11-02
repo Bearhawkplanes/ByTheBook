@@ -440,6 +440,9 @@ function markTab(){const tb=$('#L .stabs');if(!tb)return;const top=L.getBounding
  document.querySelectorAll('#L .secw').forEach((b,i)=>{if(b.getBoundingClientRect().top<=top)act=i});if(FT!=null)act=FT;
  tb.querySelectorAll('.stab[data-s]').forEach(x=>x.classList.toggle('on',+x.dataset.s===act));
  const on=tb.querySelector('.on');if(on&&MT!==act){MT=act;const l=on.offsetLeft,w=on.offsetWidth;if(l<tb.scrollLeft||l+w>tb.scrollLeft+tb.clientWidth)tb.scrollLeft=Math.max(0,l-24)}}
+// over a row of section tabs that does not fit, the mouse wheel scrolls it sideways (down = right, up = left) instead of the page
+document.addEventListener('wheel',e=>{const t=e.target.closest&&e.target.closest('.stabs,.pktabs');if(!t||t.scrollWidth<=t.clientWidth||e.ctrlKey)return;const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;
+ const max=t.scrollWidth-t.clientWidth;if(d<0&&t.scrollLeft<=0||d>0&&t.scrollLeft>=max-1){e.preventDefault();return}e.preventDefault();t.scrollLeft=Math.max(0,Math.min(max,t.scrollLeft+(e.deltaMode===1?d*40:d)))},{passive:false});
 L.addEventListener('scroll',()=>{if(markTab.q)return;markTab.q=1;requestAnimationFrame(()=>{markTab.q=0;markTab()})});
 const editTitle=()=>{const ti=$('#L .tedit');if(ti){ti.focus();ti.select()}};
 L.addEventListener('click',e=>{

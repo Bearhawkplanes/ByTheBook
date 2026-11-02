@@ -692,6 +692,10 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     return { drawn, waiting, prog, same: document.querySelector('.card[data-ck="0-1"]') === keep, ticked: S.sections[0].cards[0].steps[0].done, prog2: $('#prog').textContent }; });
   assert(big.drawn >= 1 && big.waiting >= 5 && big.prog === 'Items 0/240 · Sections 0/12', 'only sections near the view are drawn: ' + JSON.stringify(big));
   assert(big.same && big.ticked && big.prog2 === 'Items 0/240 · Sections 0/12', 'a tick redraws only its own main item and the totals');
+  const whl = await pg.evaluate(() => { const t = $('#L .stabs'), x0 = t.scrollLeft, top0 = L.scrollTop; const r = t.getBoundingClientRect(); return { fits: t.scrollWidth > t.clientWidth, x0, top0, cx: r.left + 50, cy: r.top + r.height / 2 }; });
+  await pg.mouse.move(whl.cx, whl.cy); await pg.mouse.wheel(0, 300); await pg.waitForTimeout(200);
+  const whl2 = await pg.evaluate(() => ({ x: $('#L .stabs').scrollLeft, top: L.scrollTop })); await pg.mouse.wheel(0, -300); await pg.waitForTimeout(200); const whl3 = await pg.evaluate(() => $('#L .stabs').scrollLeft);
+  assert(whl.fits && whl2.x > whl.x0 && whl2.top === whl.top0 && whl3 < whl2.x, 'wheel over the section tabs scrolls them sideways, not the list: ' + JSON.stringify([whl, whl2, whl3]));
   const zs = await pg.evaluate(async () => { $('#lsearch').value = 'zebra'; lsearch(0); await new Promise(r => setTimeout(r, 50)); const r = document.querySelector('#L .row.hit'); return { count: $('#lcount').textContent, txt: r && r.textContent.includes('zebra Step 9'), seen: r && r.getBoundingClientRect().top < innerHeight && r.getBoundingClientRect().bottom > 0 }; });
   assert(zs.count === '1/1' && zs.txt && zs.seen, 'search finds and shows a hit in a section that was not drawn: ' + JSON.stringify(zs));
   const tabj = await pg.evaluate(async () => { $('#lsearch').value = ''; lsearch(0); L.scrollTop = 0; await new Promise(r => setTimeout(r, 50)); scrollToSec(7); await new Promise(r => setTimeout(r, 100)); const b = document.querySelector('.secband[data-si="7"]'); return b ? b.getBoundingClientRect().top - L.getBoundingClientRect().top : null; });
