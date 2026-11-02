@@ -770,6 +770,21 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     S.locked = true; IM.mode = 'fit'; renderR(); r.locked = $('#p-img .mcap').readOnly; S.locked = false; IM.mode = 'fit'; renderR(); r.packed = (await pack()).includes('Line up the two dowel pins'); return r; });
   assert(cap.fitBelow && /Description of this/.test(cap.ph) && /^Line up/.test(cap.saved) && cap.stack && cap.grid === 'Line up the two dowel pins before fitting the cover,…' && cap.gridHover && cap.locked && cap.packed, 'picture descriptions in Fit, Stack and Grid; read-only when locked; saved: ' + JSON.stringify(cap));
 
+  // ---- arrow keys on the checklist page: ↑ ↓ rows, ← → ktabs (no wrap); after clicking the picture or PDF page they turn those ----
+  await pg.evaluate(() => { PR.req.edit = false; S.locked = false; S.worker = false; AS.auto = 'stay'; S.sections.forEach(s => s.cards.forEach(c => c.open = true)); renderL(); select(S.sections[0].cards[0]); setTab('img'); KF = 'list'; document.activeElement.blur(); });
+  const kk = async key => { await pg.keyboard.press(key); await pg.waitForTimeout(60); return pg.evaluate(() => ({ sel: SEL && SEL.text, tab, img: IM.i, page: cur })); };
+  const ka1 = await kk('ArrowDown'), ka2 = await kk('ArrowDown'), ka3 = await kk('ArrowUp');
+  const kwant = await pg.evaluate(() => [S.sections[0].cards[0].steps[0].text, S.sections[0].cards[0].steps[1].text]);
+  const ktabs = []; for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowLeft']) ktabs.push((await kk(key)).tab);
+  assert(ka1.sel === kwant[0] && ka2.sel === kwant[1] && ka3.sel === kwant[0], 'down / up move through the list rows: ' + JSON.stringify([ka1.sel, ka2.sel, ka3.sel]));
+  assert.deepStrictEqual(ktabs, ['img', 'desc', 'pdf', 'wp', 'wp', 'pdf'], 'left / right move through the ktabs and stop at the ends');
+  // the PDF tab: after clicking the page, left / right turn pages; a click elsewhere gives the keys back to the list
+  await pg.evaluate(async () => { setTab('pdf'); await openP(S.pdfs[0].id, 1); }); await pg.waitForTimeout(400);
+  const kvb = await pg.evaluate(() => { const r = $('#vbox').getBoundingClientRect(); return [r.left + 40, r.top + 40]; }); await pg.mouse.click(kvb[0], kvb[1]);
+  const kp1 = await kk('ArrowRight'), kp2 = await kk('ArrowLeft'); const kout = await pg.evaluate(() => { const r = $('#sel').getBoundingClientRect(); return [r.left + 5, r.top + 5]; }); await pg.mouse.click(kout[0], kout[1]); const kp3 = await kk('ArrowRight');
+  assert(kp1.page === 2 && kp1.tab === 'pdf' && kp2.page === 1 && kp3.tab === 'wp' && kp3.page === 1, 'clicked PDF page: arrows turn pages; after clicking elsewhere they switch ktabs again: ' + JSON.stringify([kp1, kp2, kp3]));
+  assert(await pg.evaluate(() => !/📌|📷/.test($('#pin').textContent + $('#snap').textContent) && $('#pin').textContent === 'Assign to item'), 'no emojis on the PDF tab buttons');
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);

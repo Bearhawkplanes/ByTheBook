@@ -52,6 +52,7 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 .tile img,.tile video{display:block;width:100%}.tile img{cursor:zoom-in}.tile a{display:block;padding:8px;word-break:break-all}
 .tile button{position:absolute;top:6px;right:6px;padding:0 7px}
 .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+#p-img.kf .fit,#p-pdf.kf #vbox{outline:2px solid color-mix(in srgb,var(--acc) 70%,transparent);outline-offset:2px}
 #vbox{overflow:auto;max-height:calc(100vh - 250px);min-height:300px;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 canvas{display:block;margin:0 auto}
 @media(max-width:900px){#vbox{max-height:70vh}}
@@ -284,7 +285,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <div id="p-desc"></div>
 <div id="p-pdf" hidden>
 <div class="tb"><select id="psel" hidden></select><button id="prev">◀</button><input id="pn" type="number" style="width:70px" title="PDF page"><button id="next">▶</button>
-<button id="zo">−</button><button id="zi">+</button><button class="ed" id="pin" title="Assign the page shown to the selected item">📌 Assign to item</button><button class="ed" id="snap" title="Attach what is shown as an image on the selected item">📷 Attach snapshot</button></div>
+<button id="zo">−</button><button id="zi">+</button><button class="ed" id="pin" title="Assign the page shown to the selected item">Assign to item</button><button class="ed" id="snap" title="Attach what is shown as an image on the selected item">Attach snapshot</button></div>
 <details style="margin-bottom:6px"><summary class="mut" style="cursor:pointer">Page numbering (advanced)</summary><div class="tb"><span class="mut">Page offset</span><input id="off" type="number" style="width:64px" title="PDF page = book page number + offset (plain numeric labels only)">
 <span class="mut">Name this page</span><input id="mlab" placeholder="e.g. 7-12" style="width:90px"><button id="mmap">Map</button></div></details>
 <div id="vlab" class="mut" style="margin-bottom:6px">No PDF loaded</div>
@@ -546,8 +547,24 @@ function imgPane(it){const n=it.media.length;IM.i=Math.max(0,Math.min(n-1,IM.i))
  if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>${capBox(it.media[IM.i],IM.i,'')}`;
  else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile${IM.mode!=='grid'&&(m.cap||!lk)?' wcap':''}" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button>${IM.mode==='grid'?(m.cap?`<span class="gcap" title="${esc(m.cap)}">${esc(short(m.cap))}</span>`:''):capBox(m,k,'att')}</div>`).join('')}</div>`;
  return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick" title="Videos open in the Video Player, to import or link them and pick the part to show">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
-document.addEventListener('keydown',e=>{if(tab!=='img'||!SEL||IM.mode!=='fit'||TX||e.target.isContentEditable||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const n=SEL.media.length;if(n<2)return;
- if(e.key==='ArrowRight'){IM.i=(IM.i+1)%n;renderR()}else if(e.key==='ArrowLeft'){IM.i=(IM.i-1+n)%n;renderR()}});
+// arrow keys on the checklist page: ↑ / ↓ the previous / next row of the list, ← / → the previous / next tab on the right (stopping
+// at the ends). After a click on the picture (Fit view) or on the PDF page, ← / → turn pictures or pages instead (↑ / ↓ scroll the PDF);
+// a click anywhere else goes back. KF = what the keys act on: 'list', 'img' or 'pdf'.
+let KF='list';const TABS=['img','desc','pdf','wp'];
+const kfMark=()=>{$('#p-img').classList.toggle('kf',KF==='img');$('#p-pdf').classList.toggle('kf',KF==='pdf')};
+document.addEventListener('mousedown',e=>{KF=e.target.closest('#p-img .fit')?'img':e.target.closest('#vbox')?'pdf':'list';kfMark()},true);
+const vis=s=>{const el=$(s);return !!el&&!el.hidden};
+const mainFree=()=>CUR&&$('#home').hidden&&!PV2&&!PV3&&$('#wg').hidden&&!$('#wf')&&$('#modal').hidden&&!vis('#pk')&&!vis('#iw')&&!vis('#xp')&&!vis('#dw')&&!TX&&$('#menu').hidden&&![...document.querySelectorAll('.overlay')].some(o=>!o.hidden);
+function listStep(d){const L1=[];S.sections.forEach((s,si)=>s.cards.forEach((c,ci)=>{L1.push([c,si,ci,null]);if(c.open)c.steps.forEach((x,j)=>L1.push([x,si,ci,j]))}));if(!L1.length)return;
+ const i=L1.findIndex(r=>r[0]===SEL),k=i<0?(d>0?0:L1.length-1):Math.max(0,Math.min(L1.length-1,i+d));if(k===i)return;const[it,si,ci,j]=L1[k];
+ mountNear(si);select(it);const r=L.querySelector(`.row[data-s="${si}"][data-c="${ci}"]`+(j==null?':not([data-j])':`[data-j="${j}"]`));if(r){r.classList.add('sel');r.scrollIntoView({block:'nearest'})}}
+document.addEventListener('keydown',e=>{if(!/^Arrow/.test(e.key)||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.defaultPrevented||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable||!mainFree())return;
+ const h=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;
+ if(h){if(KF==='img'&&tab==='img'&&SEL&&IM.mode==='fit'&&SEL.media.length>1){const n=SEL.media.length,k=Math.max(0,Math.min(n-1,IM.i+h));if(k!==IM.i){IM.i=k;renderR()}}
+  else if(KF==='pdf'&&tab==='pdf'&&pdf)show(cur+h);
+  else{const i=TABS.indexOf(tab),j=Math.max(0,Math.min(TABS.length-1,i+h));if(j!==i)setTab(TABS[j])}
+  e.preventDefault();return}
+ if(KF==='pdf'&&tab==='pdf')return;e.preventDefault();listStep(e.key==='ArrowUp'?-1:1)});
 const R=$('#R');
 R.addEventListener('input',e=>{if(e.target.dataset.cap!=null){const m=SEL&&SEL.media[+e.target.dataset.cap];if(m&&!isLocked()){m.cap=e.target.value;save()}return}const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
