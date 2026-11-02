@@ -45,6 +45,8 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 #R label input,#R label textarea,#R label select{width:100%}textarea{font-family:inherit;line-height:1.5}
 [data-f=spec],[data-f=page],[data-f=qty],[data-f=size]{font-family:'IBM Plex Mono',monospace}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mcap{display:block;width:100%;margin:8px 0 0;resize:vertical;min-height:56px;font:inherit;line-height:1.4}.mcap[readonly]{background:transparent;resize:none}
+.tile .mcap.att{margin:0;border:0;border-top:1px solid var(--line);border-radius:0;background:var(--panel);min-height:48px}.tile .gcap{position:absolute;left:0;right:0;bottom:0;padding:6px 9px;background:rgba(0,0,0,.66);color:#fff;font-size:12px;line-height:1.35;pointer-events:auto}
 .g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:10px}
 .tile{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
 .tile img,.tile video{display:block;width:100%}.tile img{cursor:zoom-in}.tile a{display:block;padding:8px;word-break:break-all}
@@ -538,13 +540,16 @@ function imgPane(it){const n=it.media.length;IM.i=Math.max(0,Math.min(n-1,IM.i))
  let body='<div class="mut">No images or videos on this item yet. Add files, paste a screenshot (Ctrl+V), or use the camera button on the PDF tab.</div>';
  if(TX&&(IM.mode!=='fit'||!it.media[IM.i]||it.media[IM.i].id!==TX.mid))txEnd();   // text mode belongs to one image
  if(n&&TX)return txOpts()+`<div class="fit tx-on">${mediaEl(it.media[IM.i])}<div id="txl"></div><div class="txside">${[['sel','Select text: click a text to edit it',TICON.sel],['move','Move text: drag any text',TICON.move],['new','New text: click on the image to add text',TICON.add]].map(([k,t,i])=>`<button data-tt="${k}" class="${TX.tool===k?'on':''}" title="${t}">${i}</button>`).join('')}</div><button id="txdel" title="Delete the selected text box">${ICON.trash} Delete text</button></div>`;
- if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>`;
- else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button></div>`).join('')}</div>`;
+ // each picture or video can carry a description (m.cap): a box under it in Fit and Stack, the first words over its bottom in Grid
+ const lk=isLocked(),capBox=(m,k,cls)=>lk&&!m.cap?'':`<textarea class="mcap ${cls}" data-cap="${k}" rows="${cls?2:3}" placeholder="Description of this ${isVid(m)?'video':'image'}…" ${lk?'readonly':''}>${esc(m.cap||'')}</textarea>`;
+ const short=t=>{const w=String(t||'').trim().split(/\s+/).filter(Boolean);return w.length>10?w.slice(0,10).join(' ')+'…':w.join(' ')};
+ if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>${capBox(it.media[IM.i],IM.i,'')}`;
+ else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile${IM.mode!=='grid'&&(m.cap||!lk)?' wcap':''}" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button>${IM.mode==='grid'?(m.cap?`<span class="gcap" title="${esc(m.cap)}">${esc(short(m.cap))}</span>`:''):capBox(m,k,'att')}</div>`).join('')}</div>`;
  return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick" title="Videos open in the Video Player, to import or link them and pick the part to show">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
 document.addEventListener('keydown',e=>{if(tab!=='img'||!SEL||IM.mode!=='fit'||TX||e.target.isContentEditable||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const n=SEL.media.length;if(n<2)return;
  if(e.key==='ArrowRight'){IM.i=(IM.i+1)%n;renderR()}else if(e.key==='ArrowLeft'){IM.i=(IM.i-1+n)%n;renderR()}});
 const R=$('#R');
-R.addEventListener('input',e=>{const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
+R.addEventListener('input',e=>{if(e.target.dataset.cap!=null){const m=SEL&&SEL.media[+e.target.dataset.cap];if(m&&!isLocked()){m.cap=e.target.value;save()}return}const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
  if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL()}
  if(t.id==='txf'){AS.tf=t.value;saveApp();txSet(x=>x.f=AS.tf)}

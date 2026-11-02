@@ -761,6 +761,15 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(/Indexed: the words on every page/.test(nav.idxTip), 'hovering "Indexed" explains it');
   assert(nav.sw.q === 'cover' && nav.sw.wbLit.length === 0 && nav.sw.demoLit.join() === '2' && nav.sw.marks >= 1 && /Search results \(all PDFs\)/.test(nav.sw.label), 'switching PDFs keeps the search; list and marks follow the open PDF: ' + JSON.stringify(nav.sw));
 
+  // ---- a description on each picture: box under it in Fit and Stack, first words over it in Grid ----
+  const cap = await pg.evaluate(async () => { PR.req.edit = false; S.locked = false; S.worker = false; const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); IM.mode = 'fit'; renderR();
+    const t = $('#p-img .mcap'); const r = { fitBelow: !!t && t.compareDocumentPosition($('#mpick')) & Node.DOCUMENT_POSITION_FOLLOWING, ph: t.placeholder };
+    t.value = 'Line up the two dowel pins before fitting the cover, then tighten the screws in a cross pattern'; t.dispatchEvent(new Event('input', { bubbles: true })); r.saved = it.media[IM.i].cap;
+    IM.mode = 'stack'; renderR(); const st = document.querySelector('#p-img .stack .tile .mcap.att'); r.stack = st && st.value === r.saved && st.closest('.tile').contains(st);
+    IM.mode = 'grid'; renderR(); const g = document.querySelector('#p-img .g3 .tile .gcap'); r.grid = g && g.textContent; r.gridHover = g && g.title === r.saved;
+    S.locked = true; IM.mode = 'fit'; renderR(); r.locked = $('#p-img .mcap').readOnly; S.locked = false; IM.mode = 'fit'; renderR(); r.packed = (await pack()).includes('Line up the two dowel pins'); return r; });
+  assert(cap.fitBelow && /Description of this/.test(cap.ph) && /^Line up/.test(cap.saved) && cap.stack && cap.grid === 'Line up the two dowel pins before fitting the cover,…' && cap.gridHover && cap.locked && cap.packed, 'picture descriptions in Fit, Stack and Grid; read-only when locked; saved: ' + JSON.stringify(cap));
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);

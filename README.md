@@ -109,6 +109,9 @@ One window: the kinds of export on the left, their settings on the right, and Ex
   - Options (remembered): paper size Letter or A4; Contents page (fill-in fields and where each section starts); Qty / size column; Values / Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
   - No images, videos, PDFs, descriptions or progress: it is always a blank copy.
 
+## Picture descriptions (Images tab)
+Every picture or video on an item can have a description. **Fit** view: a box under the picture (above "+ Add image / video files"). **Stack** view: a box attached under each picture. **Grid** view: the first 10 words on a dark strip at the bottom of the picture (hover for all of it). Descriptions are part of the checklist's content: saved in it, kept in fresh copies and new jobs, and read-only in a master file, in worker mode or while editing needs a PIN.
+
 ## Work Photos
 Photos that prove the work was done (for example for a customer), kept apart from the instruction images on the Images tab.
 - Every main item and step has a **Work Photos** tab (after Images, Description and PDF): + Add work photos picks photos from the computer (photos only, no videos, to keep checklists small). Each one records who added it (the name tied to the PIN when PINs are in use, otherwise a name typed once and remembered) and when, and the activity log notes it. A main item's tab also shows its steps' photos.
