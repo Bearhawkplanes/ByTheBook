@@ -297,7 +297,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <div id="hdel" hidden><button class="delbtn" id="hdelb">DELETE</button><small>or DEL</small></div></section><div id="updbar" hidden></div></div>
 <div id="ld" hidden><div class="ldc"><div id="ldt"></div><div class="ldb"><i id="ldf"></i></div><div class="ldh">ESC to cancel</div></div></div>
 <div id="pv" hidden><div id="pvtop"><button id="pvBack">← Return</button><b id="pvt"></b></div><div id="pvbody"><aside id="pvside"><div class="hh pvsh"><span>PDFs in this checklist</span><button id="pvhide" title="Hide the PDFs list">◀</button></div><div id="pvlist"></div><button id="pvadd">+ Import PDF…</button><div class="hh" style="margin-top:16px">Search results</div><div id="pvres"></div></aside>
-<section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page names and words…" style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
+<section id="pvmain"><div class="tb"><input id="pvq" placeholder="Search page numbers, names and words…" title="Finds the PDF's own page numbers (like 2, p.2 or page ii), page names, chapters, bookmarks and words on the pages. The page box below counts the pages of the file." style="flex:1;min-width:180px"><span id="pvidx" class="mut"></span></div>
 <div class="tb"><button id="pvprev">◀</button><input id="pvpg" type="number" min="1" placeholder="Page #" style="width:84px" title="Go to PDF page number"><button id="pvgo">Go</button><button id="pvnext">▶</button><button id="pvzo">−</button><button id="pvzi">+</button><input id="pvname" placeholder="Name this page" style="width:140px"><button id="pvmap">Name</button><span class="pvow"><button id="pvopts" title="Chapters, highlights and lists">Options ▾</button><div id="pvom" hidden></div></span></div>
 <div id="pvlab" class="mut" style="margin-bottom:6px"></div><div id="pvbox"><canvas id="cv2"></canvas></div></section><div id="pvgrip" title="Drag to make the page list wider or narrower"></div><aside id="pvpages"><div class="hh pvph"><span>Pages</span></div><div id="pvtoc"></div></aside></div></div>
 <div id="wg" hidden><div id="wgtop"><button id="wgBack">← Return</button><b>Work Photos</b><span id="wgt"></span></div><div id="wgbody"></div></div>
@@ -897,7 +897,7 @@ $('#p-img').addEventListener('pointerdown',e=>{if(!TX)return;const lay=e.target.
 $('#p-img').addEventListener('input',e=>{const b=TX&&e.target.closest&&e.target.closest('.txb'),m=b&&txItem();if(m&&m.text[+b.dataset.i]){m.text[+b.dataset.i].t=b.innerText.replace(/\n$/,'');save()}});
 addEventListener('resize',()=>{if(TX&&TX.place)TX.place()});
 // ---------- PDF (several per checklist, loaded only when needed) ----------
-const BMK={};let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
+const BMK={},LABS={};let pdf=null,ACT=null,cur=1,zoom=1.3,busy=false,pend=false,PV2=false,IXB=0;
 try{pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js'}catch(e){}
 const pr=id=>S.pdfs.find(p=>p.id===id),AP=()=>pr(ACT)||{name:'',offset:0,map:{}};
 const resolveIn=(P,l)=>{const k=String(l).trim();return P.map[k]||(/^\d+$/.test(k)?+k+P.offset:null)};
@@ -954,7 +954,7 @@ async function bookmarks(doc){const out=[];const walk=async(items,lvl)=>{for(con
 async function tocBuild(){const doc=pdf;if(!doc||TOC.doc===doc)return tocRender();TOC={doc,out:null,shut:new Set(),labels:null};tocRender();
  try{TOC.labels=await doc.getPageLabels()}catch(e){}
  const bm=await bookmarks(doc);if(TOC.doc===doc){TOC.bm=bm;const o=bm.filter(b=>!b.lvl).map((b,i)=>({...b,id:'o'+i}));if(o.length)TOC.out=o}
- if(TOC.doc===doc)tocRender()}
+ if(TOC.doc===doc){if(TOC.labels)LABS[ACT]=TOC.labels;tocRender();pvSearch()}}
 // how page rows are numbered: both (p.4 (2)), the book's own numbers (p.2), or the file's (p.4); the old on/off setting maps to file
 const pvNum=()=>AS.pvnum||(AS.pvnolab?'file':'both');
 const myCh=()=>(AP().ch||[]).slice().sort((a,b)=>a.p-b.p);
@@ -999,12 +999,15 @@ function pvClose(){PV2=false;$('#pv').hidden=true;$('#pvom').hidden=true;IXB++;$
 async function indexAll(){const tk=++IXB;
  for(const P of S.pdfs){const rec=PDFS[P.id];if(PIDX[P.id]||!rec)continue;if(tk!==IXB)return;let doc=P.id===ACT?pdf:null;
   try{if(!doc){const b=await pdfBuf(rec,tick);doc=await pdfjsLib.getDocument({data:new Uint8Array(b.slice(0))}).promise}
+   try{LABS[P.id]=await doc.getPageLabels()}catch(e){}if(PV2)pvSearch();
    const out=[];for(let i=1;i<=doc.numPages;i++){if(tk!==IXB)return;const t=await(await doc.getPage(i)).getTextContent();out.push(t.items.map(x=>x.str).join(' ').toLowerCase());
     if(i%4===0){$('#pvidx').textContent=`Indexing ${P.name}: ${i}/${doc.numPages}`;await tick()}}
    PIDX[P.id]=out;BMK[P.id]=await bookmarks(doc);if(PV2)pvSearch()}catch(e){}}
  if(tk===IXB)$('#pvidx').textContent='Indexed'}
 function pvSearch(){const q=$('#pvq').value.trim().toLowerCase(),box=$('#pvres'),res=[];
- if(!q){box.innerHTML='<div class="mut">Search page names and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
+ if(!q){box.innerHTML='<div class="mut">Search the PDFs\' own page numbers, page names, chapters and words in every PDF of this checklist.</div>';pvSearch.r=[];return}
+ // the PDF's own page numbers (when it has them): "2", "p.2", "page ii" find the page printed with that number
+ const pq=q.replace(/^(page|pg\.?|p\.?)\s*/,'');if(pq)for(const P of S.pdfs){const l=LABS[P.id]||(P.id===ACT&&TOC.doc===pdf?TOC.labels:null);if(l)l.forEach((x,i)=>{if(String(x).toLowerCase()===pq)res.push({p:P,n:i+1,t:'Page numbered '+x+' in this PDF'})})}
  for(const P of S.pdfs){for(const k in P.map)if(k.toLowerCase().includes(q))res.push({p:P,n:P.map[k],t:'Named page: '+k});for(const c of P.ch||[])if(c.t.toLowerCase().includes(q))res.push({p:P,n:c.p,t:'Chapter: '+c.t});for(const b of BMK[P.id]||[])if(b.t.toLowerCase().includes(q))res.push({p:P,n:b.p,t:'Bookmark: '+b.t});
   (PIDX[P.id]||[]).forEach((tx,i)=>{const at=tx.indexOf(q);if(at>=0)res.push({p:P,n:i+1,t:'…'+tx.slice(Math.max(0,at-30),at+q.length+40)+'…'})})}
  pvSearch.r=res;box.innerHTML=res.slice(0,150).map((r,i)=>`<div class="frow" data-i="${i}"><span class="fn"><b>${esc(r.p.name)}</b> · p.${r.n}<br><span class="mut">${esc(r.t)}</span></span></div>`).join('')||'<div class="mut">No matches.</div>'}
@@ -1112,7 +1115,7 @@ async function openProject(id){let r;
  // RO above: saved by a newer version, so view-only and never saved here
  LQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}UORD.length=0;
- for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS,BMK])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
+ for(const k in VEL)vidRelease(k);for(const m of [MEDIA,PDFS,PIDX,VIDS,BMK,LABS])for(const k in m)delete m[k];IXB++;Object.assign(MEDIA,r.files);Object.assign(PDFS,r.P);Object.assign(VIDS,r.V);VP.id=null;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
  renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();wgClose();afterOpen()}
 async function deleteProject(id){clearTimeout(save.t);if(CUR===id)DIRTY=false;try{await FS.remove(id+'.bcl')}catch(e){toast('Could not delete the file');return}
