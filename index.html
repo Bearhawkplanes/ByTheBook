@@ -1058,6 +1058,9 @@ $('#pvq').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();pvStep(e.shiftKey
 $('#pvri').onkeydown=e=>{if(e.key==='Enter'){const n=parseInt(e.target.value,10);if(n>=1&&n<=(pvSearch.h||[]).length)pvRes(n-1);else pvNav()}};
 $('#pvlist').onclick=e=>{const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id;
  if(e.target.closest('[data-a=rm]')){if(isLocked())return toast('Editing is locked');ask(`Remove "${esc(pr(id).name)}" from this checklist?`,'Remove',()=>{S.pdfs=S.pdfs.filter(p=>p.id!==id);delete PDFS[id];delete PIDX[id];if(ACT===id)noPdf();save();renderPdfUI();pvSearch()},1);return}openP(id,1)};
+// ← / → turn the pages in the PDF Viewer (not while typing in a box or with a dialog open)
+document.addEventListener('keydown',e=>{if(!PV2||!pdf||e.altKey||e.ctrlKey||e.metaKey||(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable||!$('#modal').hidden||[...document.querySelectorAll('.overlay')].some(o=>!o.hidden))return;
+ e.preventDefault();show(cur+(e.key==='ArrowRight'?1:-1))});
 $('#pvgo').onclick=()=>{const n=+$('#pvpg').value;if(!n)return;pdf?show(n):openP(ACT||(S.pdfs[0]||{}).id,n)};$('#pvpg').onkeydown=e=>{if(e.key==='Enter')$('#pvgo').click()};
 $('#pvprev').onclick=()=>show(cur-1);$('#pvnext').onclick=()=>show(cur+1);
 $('#pvzi').onclick=$('#zi').onclick;$('#pvzo').onclick=$('#zo').onclick;

@@ -790,7 +790,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
       out += 'trailer\n<< /Size ' + (max + 1) + ' /Root 1 0 R >>\nstartxref\n' + x + '\n%%EOF'; return new TextEncoder().encode(out).buffer; };
     PR.req.edit = false; S.locked = false; S.worker = false; pvOpen(); await new Promise(r => setTimeout(r, 1500)); const r = {}; const rows = () => [...document.querySelectorAll('#pvtoc .pgi')].map(x => x.textContent), heads = () => [...document.querySelectorAll('#pvtoc .pch .tt')].map(x => x.textContent);
     r.plain = { rows: rows(), heads: heads(), pages: pdf.numPages, grip: !!$('#pvgrip') };
-    document.querySelectorAll('#pvtoc .pgi')[1].click(); await new Promise(r => setTimeout(r, 100)); r.plain.cur = cur; r.plain.on = document.querySelector('#pvtoc .on').dataset.pg;
+    document.querySelectorAll('#pvtoc .pgi')[1].click(); await new Promise(r => setTimeout(r, 100)); r.plain.cur = cur; const kb = k => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); kb('ArrowRight'); r.plain.right = cur; kb('ArrowLeft'); kb('ArrowLeft'); r.plain.left = cur; $('#pvq').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); r.plain.typing = cur; $('#pvq').blur(); show(2); r.plain.on = document.querySelector('#pvtoc .on').dataset.pg;
     $('#pvname').value = 'crankshaft torque specs'; $('#pvmap').click(); r.plain.named = rows()[1]; r.plain.hover = document.querySelectorAll('#pvtoc .pgi')[1].title;
     // the PDF's own bookmarks become the chapters (top level), with their pages under them
     PDFS.ol = { buf: mkPdf() }; S.pdfs.push({ id: 'ol', name: 'Book', offset: 0, map: {} }); renderPdfUI(); await openP('ol', 1); await new Promise(r => setTimeout(r, 800));
@@ -805,7 +805,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     $('#pvhide').click(); r.side = { shut: $('#pvside').classList.contains('shut'), btn: $('#pvhide').textContent, w: $('#pvside').offsetWidth }; $('#pvhide').click(); r.side.open = !$('#pvside').classList.contains('shut');
     S.locked = true; $('#pvopts').click(); r.lockedCh = document.querySelector('#pvom [data-po=ch]').classList.contains('dis'); $('#pvopts').click(); S.locked = false;
     pvClose(); return r; });
-  assert(toc.plain.rows.length === toc.plain.pages && toc.plain.rows[0] === 'p.1' && !toc.plain.heads.length && toc.plain.grip && toc.plain.cur === 2 && toc.plain.on === '2', 'plain PDF: every page as p.N, click goes there: ' + JSON.stringify(toc.plain));
+  assert(toc.plain.rows.length === toc.plain.pages && toc.plain.rows[0] === 'p.1' && !toc.plain.heads.length && toc.plain.grip && toc.plain.cur === 2 && toc.plain.on === '2' && toc.plain.right === 3 && toc.plain.left === 1 && toc.plain.typing === 1, 'plain PDF: every page as p.N, click goes there: ' + JSON.stringify(toc.plain));
   assert(toc.plain.named === 'p.2 crankshaft torque specs' && toc.plain.hover === 'p.2 crankshaft torque specs', 'a named page reads "p.2 name", full text on hover');
   assert.deepStrictEqual(toc.book.heads, ['Chapter 1', 'Chapter 2'], 'the PDF\'s own bookmarks are the chapters');
   assert(toc.book.rows.join() === 'p.1,p.2 Section 1.1,p.3,p.4,p.5' && toc.book.cur === 4 && toc.book.folded.join() === 'p.4,p.5', 'pages under their chapters, sub-bookmarks as page names; a chapter header goes to its page and folds: ' + JSON.stringify(toc.book));
