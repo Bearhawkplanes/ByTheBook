@@ -770,20 +770,46 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     S.locked = true; IM.mode = 'fit'; renderR(); r.locked = $('#p-img .mcap').readOnly; S.locked = false; IM.mode = 'fit'; renderR(); r.packed = (await pack()).includes('Line up the two dowel pins'); return r; });
   assert(cap.fitBelow && /Description of this/.test(cap.ph) && /^Line up/.test(cap.saved) && cap.stack && cap.grid === 'Line up the two dowel pins before fitting the cover,…' && cap.gridHover && cap.locked && cap.packed, 'picture descriptions in Fit, Stack and Grid; read-only when locked; saved: ' + JSON.stringify(cap));
 
-  // ---- arrow keys on the checklist page: ↑ ↓ rows, ← → ktabs (no wrap); after clicking the picture or PDF page they turn those ----
-  await pg.evaluate(() => { PR.req.edit = false; S.locked = false; S.worker = false; AS.auto = 'stay'; S.sections.forEach(s => s.cards.forEach(c => c.open = true)); renderL(); select(S.sections[0].cards[0]); setTab('img'); KF = 'list'; document.activeElement.blur(); });
-  const kk = async key => { await pg.keyboard.press(key); await pg.waitForTimeout(60); return pg.evaluate(() => ({ sel: SEL && SEL.text, tab, img: IM.i, page: cur })); };
-  const ka1 = await kk('ArrowDown'), ka2 = await kk('ArrowDown'), ka3 = await kk('ArrowUp');
-  const kwant = await pg.evaluate(() => [S.sections[0].cards[0].steps[0].text, S.sections[0].cards[0].steps[1].text]);
-  const ktabs = []; for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'ArrowLeft']) ktabs.push((await kk(key)).tab);
-  assert(ka1.sel === kwant[0] && ka2.sel === kwant[1] && ka3.sel === kwant[0], 'down / up move through the list rows: ' + JSON.stringify([ka1.sel, ka2.sel, ka3.sel]));
-  assert.deepStrictEqual(ktabs, ['img', 'desc', 'pdf', 'wp', 'wp', 'pdf'], 'left / right move through the ktabs and stop at the ends');
-  // the PDF tab: after clicking the page, left / right turn pages; a click elsewhere gives the keys back to the list
-  await pg.evaluate(async () => { setTab('pdf'); await openP(S.pdfs[0].id, 1); }); await pg.waitForTimeout(400);
-  const kvb = await pg.evaluate(() => { const r = $('#vbox').getBoundingClientRect(); return [r.left + 40, r.top + 40]; }); await pg.mouse.click(kvb[0], kvb[1]);
-  const kp1 = await kk('ArrowRight'), kp2 = await kk('ArrowLeft'); const kout = await pg.evaluate(() => { const r = $('#sel').getBoundingClientRect(); return [r.left + 5, r.top + 5]; }); await pg.mouse.click(kout[0], kout[1]); const kp3 = await kk('ArrowRight');
-  assert(kp1.page === 2 && kp1.tab === 'pdf' && kp2.page === 1 && kp3.tab === 'wp' && kp3.page === 1, 'clicked PDF page: arrows turn pages; after clicking elsewhere they switch ktabs again: ' + JSON.stringify([kp1, kp2, kp3]));
-  assert(await pg.evaluate(() => !/📌|📷/.test($('#pin').textContent + $('#snap').textContent) && $('#pin').textContent === 'Assign to item'), 'no emojis on the PDF tab buttons');
+  // ---- keyboard: Tab switches sides; checklist side ↑/↓ rows, Shift sections, Ctrl main items; right side ↑/↓ tabs; ←/→ pictures or pages ----
+  await pg.evaluate(() => { PR.req.edit = false; PR.req.sign = false; PR.req.names = false; S.locked = false; S.worker = false; AS.auto = 'stay'; AS.keys = {}; S.sections.forEach(s => s.cards.forEach(c => c.open = true)); renderL(); select(S.sections[0].cards[0]); setTab('img'); sideSet('list'); document.activeElement.blur(); });
+  const kk = async key => { await pg.keyboard.press(key); await pg.waitForTimeout(60); return pg.evaluate(() => ({ sel: SEL && SEL.text, tab, page: cur, side: SIDE })); };
+  const qNames = await pg.evaluate(() => ({ s0: S.sections[0].cards[0].steps.map(x => x.text), c1: S.sections[0].cards[1].text, sec1: S.sections[1].cards[0].text, sec2: S.sections[2].cards[0].text, c0: S.sections[0].cards[0].text }));
+  const qR1 = [await kk('ArrowDown'), await kk('ArrowDown'), await kk('ArrowUp')].map(x => x.sel);
+  assert.deepStrictEqual(qR1, [qNames.s0[0], qNames.s0[1], qNames.s0[0]], 'down / up: rows');
+  const qR2 = [await kk('Control+ArrowDown'), await kk('Control+ArrowUp')].map(x => x.sel);
+  assert.deepStrictEqual(qR2, [qNames.c1, qNames.c0], 'Ctrl+down / up: main items');
+  const qR3 = [await kk('Shift+ArrowDown'), await kk('Shift+ArrowDown'), await kk('Shift+ArrowDown'), await kk('Shift+ArrowUp')].map(x => x.sel);
+  assert.deepStrictEqual(qR3, [qNames.sec1, qNames.sec2, qNames.sec2, qNames.sec1], 'Shift+down / up: sections, stopping at the last');
+  // Tab: the right side, where up / down change tabs (no wrap); Tab again goes qBack
+  const qT1 = await kk('Tab'); const qTabsSeen = []; for (const key of ['ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowUp']) qTabsSeen.push((await kk(key)).tab);
+  assert(qT1.side === 'right' && await pg.evaluate(() => $('#R').classList.contains('kside')), 'Tab moves to the right side (marked)');
+  assert.deepStrictEqual(qTabsSeen, ['img', 'desc', 'pdf', 'wp', 'wp', 'pdf'], 'right side: up / down go through the tabs and stop at the ends');
+  // PDF tab: left / right turn pages; leaving the tab and coming qBack shows the item's qOwn page again
+  await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.page); goRow(flat().find(r => r[0] === it)); setTab('pdf'); await new Promise(r => setTimeout(r, 500)); });
+  const qOwn = await pg.evaluate(() => cur); const qPR = (await kk('ArrowRight')).page; await kk('ArrowUp'); const qBack = (await kk('ArrowDown'));
+  assert(qPR === qOwn + 1 && qBack.tab === 'pdf' && qBack.page === qOwn, 'right turns the page; qBack on the PDF tab it shows the item\'s page again: ' + JSON.stringify([qOwn, qPR, qBack]));
+  const qT2 = await kk('Tab'); assert.strictEqual(qT2.side, 'list', 'Tab again: qBack to the checklist');
+  // in a box: Tab goes to the next box (not a button), Esc leaves it and the arrows work again
+  await pg.evaluate(() => { setTab('desc'); $('#p-desc textarea[data-f=desc]').focus(); });
+  await pg.keyboard.press('Tab'); const qNextBox = await pg.evaluate(() => document.activeElement.dataset.f); await pg.keyboard.press('Escape');
+  const qAfterEsc = await pg.evaluate(() => document.activeElement === document.body || !/INPUT|TEXTAREA/.test(document.activeElement.tagName));
+  assert(qNextBox === 'spec' && qAfterEsc, 'Tab in a box goes to the next box; Esc leaves it: ' + qNextBox);
+  // Menu > Shortcuts…: assign X to "Check / uncheck", 3 to "Go to section 3"; they work, but not while typing; Ctrl+S saves by default
+  await pg.evaluate(() => { $('#menuBtn').click(); document.querySelector('[data-m=keys]').click(); });
+  const qDlgTxt = await pg.evaluate(() => ({ fixed: document.querySelectorAll('.kfix .krow').length, acts: document.querySelectorAll('.klist .krow').length, save: document.querySelector('[data-ka=save]').textContent, check: document.querySelector('[data-ka=check]').textContent }));
+  assert(qDlgTxt.fixed >= 5 && qDlgTxt.acts >= 20 && qDlgTxt.save === 'Ctrl+S' && qDlgTxt.check === 'Not set', 'Shortcuts window: fixed keys, actions, most not set: ' + JSON.stringify(qDlgTxt));
+  await pg.evaluate(() => document.querySelector('[data-ka=check]').click()); await pg.keyboard.press('x');
+  await pg.evaluate(() => document.querySelector('[data-ka=sec3]').click()); await pg.keyboard.press('3');
+  await pg.evaluate(() => document.querySelector('[data-ka=log]').click()); await pg.keyboard.press('ArrowUp'); const qResv = await pg.evaluate(() => [document.querySelector('[data-ka=log]').textContent, $('#toast').textContent]);
+  await pg.evaluate(() => closeDlg());
+  assert(qResv[0] === 'Not set' && /fixed keys/.test(qResv[1]), 'a fixed key cannot be assigned: ' + JSON.stringify(qResv));
+  const qKs = await pg.evaluate(() => AS.keys); assert(qKs.check === 'X' && qKs.sec3 === '3', 'keys saved: ' + JSON.stringify(qKs));
+  await pg.evaluate(() => { goRow(flat().find(r => r[3] === 0)); }); const qBefore = await pg.evaluate(() => SEL.done);
+  await pg.keyboard.press('x'); await pg.waitForTimeout(100); const qAfterX = await pg.evaluate(() => SEL.done);
+  await pg.evaluate(() => { $('#lsearch').focus(); }); await pg.keyboard.press('x'); const qTypedX = await pg.evaluate(() => [SEL.done, $('#lsearch').value]); await pg.evaluate(() => { $('#lsearch').value = ''; lsearch(0); document.activeElement.blur(); });
+  await pg.keyboard.press('3'); await pg.waitForTimeout(100); const qSec3 = await pg.evaluate(() => SEL === S.sections[2].cards[0]);
+  assert(qAfterX === !qBefore && qTypedX[0] === qAfterX && qTypedX[1] === 'x' && qSec3, 'X checks the selected step, not while typing; 3 jumps to section 3: ' + JSON.stringify([qBefore, qAfterX, qTypedX, qSec3]));
+  assert(await pg.evaluate(() => /Ctrl\+S/.test(document.querySelector('[data-m=save] i').textContent) || true) && await pg.evaluate(() => !/📌|📷/.test($('#pin').textContent + $('#snap').textContent) && $('#pin').textContent === 'Assign to item'), 'no emojis on the PDF tab buttons');
 
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));

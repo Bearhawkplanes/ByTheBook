@@ -52,7 +52,9 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 .tile img,.tile video{display:block;width:100%}.tile img{cursor:zoom-in}.tile a{display:block;padding:8px;word-break:break-all}
 .tile button{position:absolute;top:6px;right:6px;padding:0 7px}
 .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
-#p-img.kf .fit,#p-pdf.kf #vbox{outline:2px solid color-mix(in srgb,var(--acc) 70%,transparent);outline-offset:2px}
+#L.kside .stabs,#R.kside .tabs{box-shadow:inset 0 3px 0 var(--acc)}
+.kdlg{width:min(640px,94vw)}.krow{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}.krow>span{flex:1}.krow kbd{font:12px 'IBM Plex Mono',monospace;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);white-space:nowrap}
+.kbtn{min-width:150px;font:12px 'IBM Plex Mono',monospace}.kbtn.none{color:var(--mut)}.kbtn.rec{border-color:var(--acc);color:var(--acc)}.kclr{padding:2px 8px}.klist{max-height:46vh;overflow:auto;padding-right:6px}
 #vbox{overflow:auto;max-height:calc(100vh - 250px);min-height:300px;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 canvas{display:block;margin:0 auto}
 @media(max-width:900px){#vbox{max-height:70vh}}
@@ -267,7 +269,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click,</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option><option value="wp">Work Photos</option></select></label><div id="menu" hidden>
 <button data-m="wunlock" hidden>Unlock menu (Boss PIN)…</button><button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button><button data-m="delete">Delete checklist</button>
 <button data-m="loc">Open file location</button><button data-m="export">Export…</button>
-<button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><hr>
+<button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><button data-m="keys">Shortcuts…</button><hr>
 <button data-m="pdf">Open PDF…</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button></div></div>
 <div class="hc"><div class="tline"><span id="savedi" aria-live="polite">Saved!</span><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span><span id="pie" role="img"></span></div><div id="prog"></div></div>
@@ -547,24 +549,79 @@ function imgPane(it){const n=it.media.length;IM.i=Math.max(0,Math.min(n-1,IM.i))
  if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>${capBox(it.media[IM.i],IM.i,'')}`;
  else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile${IM.mode!=='grid'&&(m.cap||!lk)?' wcap':''}" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button>${IM.mode==='grid'?(m.cap?`<span class="gcap" title="${esc(m.cap)}">${esc(short(m.cap))}</span>`:''):capBox(m,k,'att')}</div>`).join('')}</div>`;
  return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick" title="Videos open in the Video Player, to import or link them and pick the part to show">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
-// arrow keys on the checklist page: ↑ / ↓ the previous / next row of the list, ← / → the previous / next tab on the right (stopping
-// at the ends). After a click on the picture (Fit view) or on the PDF page, ← / → turn pictures or pages instead (↑ / ↓ scroll the PDF);
-// a click anywhere else goes back. KF = what the keys act on: 'list', 'img' or 'pdf'.
-let KF='list';const TABS=['img','desc','pdf','wp'];
-const kfMark=()=>{$('#p-img').classList.toggle('kf',KF==='img');$('#p-pdf').classList.toggle('kf',KF==='pdf')};
-document.addEventListener('mousedown',e=>{KF=e.target.closest('#p-img .fit')?'img':e.target.closest('#vbox')?'pdf':'list';kfMark()},true);
+// ---------- keyboard ----------
+// SIDE = which half the keys drive: 'list' (default; ↑/↓ rows, Shift+↑/↓ sections, Ctrl+↑/↓ main items) or 'right' (↑/↓ the tabs,
+// no wrap). On both, ←/→ act on the open tab: pictures (Images, Fit view) or pages (PDF; leaving the tab or the item goes back to
+// its assigned page, as setTab > pdfShow does). Tab / Shift+Tab switch sides, or, in a box of the main screen, move to the next /
+// previous box, buttons skipped; Esc leaves the box. Other keys are the user's shortcuts (ACTS, AS.keys, Menu > Shortcuts…).
+let SIDE='list';const TABS=['img','desc','pdf','wp'];
+const sideSet=v=>{SIDE=v;$('#L').classList.toggle('kside',v==='list');$('#R').classList.toggle('kside',v==='right')};
+document.addEventListener('mousedown',e=>{if(e.target.closest('#L'))sideSet('list');else if(e.target.closest('#R'))sideSet('right')},true);
 const vis=s=>{const el=$(s);return !!el&&!el.hidden};
-const mainFree=()=>CUR&&$('#home').hidden&&!PV2&&!PV3&&$('#wg').hidden&&!$('#wf')&&$('#modal').hidden&&!vis('#pk')&&!vis('#iw')&&!vis('#xp')&&!vis('#dw')&&!TX&&$('#menu').hidden&&![...document.querySelectorAll('.overlay')].some(o=>!o.hidden);
-function listStep(d){const L1=[];S.sections.forEach((s,si)=>s.cards.forEach((c,ci)=>{L1.push([c,si,ci,null]);if(c.open)c.steps.forEach((x,j)=>L1.push([x,si,ci,j]))}));if(!L1.length)return;
- const i=L1.findIndex(r=>r[0]===SEL),k=i<0?(d>0?0:L1.length-1):Math.max(0,Math.min(L1.length-1,i+d));if(k===i)return;const[it,si,ci,j]=L1[k];
- mountNear(si);select(it);const r=L.querySelector(`.row[data-s="${si}"][data-c="${ci}"]`+(j==null?':not([data-j])':`[data-j="${j}"]`));if(r){r.classList.add('sel');r.scrollIntoView({block:'nearest'})}}
-document.addEventListener('keydown',e=>{if(!/^Arrow/.test(e.key)||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.defaultPrevented||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||e.target.isContentEditable||!mainFree())return;
- const h=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0;
- if(h){if(KF==='img'&&tab==='img'&&SEL&&IM.mode==='fit'&&SEL.media.length>1){const n=SEL.media.length,k=Math.max(0,Math.min(n-1,IM.i+h));if(k!==IM.i){IM.i=k;renderR()}}
-  else if(KF==='pdf'&&tab==='pdf'&&pdf)show(cur+h);
-  else{const i=TABS.indexOf(tab),j=Math.max(0,Math.min(TABS.length-1,i+h));if(j!==i)setTab(TABS[j])}
-  e.preventDefault();return}
- if(KF==='pdf'&&tab==='pdf')return;e.preventDefault();listStep(e.key==='ArrowUp'?-1:1)});
+const popOpen=()=>!$('#modal').hidden||[...document.querySelectorAll('.overlay')].some(o=>!o.hidden)||vis('#dw')||!!$('#cm');
+const mainFree=()=>!!CUR&&$('#home').hidden&&!PV2&&!PV3&&$('#wg').hidden&&!$('#wf')&&!popOpen()&&!TX&&$('#menu').hidden;
+const typing=t=>/INPUT|TEXTAREA|SELECT/.test(t.tagName)||t.isContentEditable;
+// the list in order: [item, section, main item, step or null]; steps only of open main items
+const flat=()=>{const o=[];S.sections.forEach((s,si)=>s.cards.forEach((c,ci)=>{o.push([c,si,ci,null]);if(c.open)c.steps.forEach((x,j)=>o.push([x,si,ci,j]))}));return o};
+function goRow(r,top){if(!r)return;const[it,si,ci,j]=r;mountNear(si);select(it);const el=L.querySelector(`.row[data-s="${si}"][data-c="${ci}"]`+(j==null?':not([data-j])':`[data-j="${j}"]`));if(el){el.classList.add('sel');el.scrollIntoView({block:top?'start':'nearest'})}}
+function listStep(d,unit){const all=flat();if(!all.length)return;const i=all.findIndex(r=>r[0]===SEL),here=all[i];
+ if(unit==='card'){const cs=all.filter(r=>r[3]==null),k=here?cs.findIndex(r=>r[1]===here[1]&&r[2]===here[2]):-1;
+  return goRow(k<0?cs[d>0?0:cs.length-1]:(d<0&&here[3]!=null)?cs[k]:cs[Math.max(0,Math.min(cs.length-1,k+d))])}
+ if(unit==='sec'){const firsts=all.filter(r=>r[2]===0&&r[3]==null),k=here?firsts.findIndex(r=>r[1]===here[1]):-1;
+  return goRow(k<0?firsts[d>0?0:firsts.length-1]:(d<0&&here!==firsts[k])?firsts[k]:firsts[Math.max(0,Math.min(firsts.length-1,k+d))],true)}
+ const k=i<0?(d>0?0:all.length-1):Math.max(0,Math.min(all.length-1,i+d));if(k!==i)goRow(all[k])}
+function contentStep(h){if(tab==='img'&&SEL&&IM.mode==='fit'&&SEL.media.length>1){const k=Math.max(0,Math.min(SEL.media.length-1,IM.i+h));if(k!==IM.i){IM.i=k;renderR()}}else if(tab==='pdf'&&pdf)show(cur+h)}
+function tabStep(d){const i=TABS.indexOf(tab),j=Math.max(0,Math.min(TABS.length-1,i+d));if(j!==i)setTab(TABS[j])}
+// Tab inside a box of the main screen: the next / previous box on the same side, skipping buttons and ticks
+function boxStep(t,d){const side=t.closest('#L,#R,header');if(!side)return false;const bx=[...side.querySelectorAll('input:not([type=checkbox]):not([type=file]):not([type=range]),textarea,select')].filter(x=>x.offsetParent&&!x.disabled&&!x.readOnly);
+ const i=bx.indexOf(t);if(i<0||bx.length<2)return false;const n=bx[(i+d+bx.length)%bx.length];n.focus();if(n.select&&n.tagName==='INPUT')n.select();return true}
+// shortcut names like "Ctrl+Shift+S", "Alt+4", "F2"; letters and digits by key position, so Shift+1 is "Shift+1", not "!"
+function comboOf(e){const k=/^Key[A-Z]$/.test(e.code)?e.code.slice(3):/^Digit\d$/.test(e.code)?e.code.slice(5):/^Numpad\d$/.test(e.code)?'Num'+e.code.slice(6):e.key===' '?'Space':e.key.length===1?e.key.toUpperCase():e.key;
+ return [e.ctrlKey||e.metaKey?'Ctrl':'',e.altKey?'Alt':'',e.shiftKey?'Shift':'',k].filter(Boolean).join('+')}
+const FIXED=[['Tab / Shift+Tab','Switch between the checklist and the right-hand side; in a box: the next / previous box'],['Esc','Leave the box you are typing in'],
+ ['↑ / ↓','Checklist side: previous / next row. Right side: previous / next tab'],['Shift+↑ / Shift+↓','Previous / next section'],['Ctrl+↑ / Ctrl+↓','Previous / next main item'],
+ ['← / →','Previous / next picture (Images tab, Fit view) or page (PDF tab)']];
+const RESERVED=new Set(['Tab','Shift+Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Shift+ArrowUp','Shift+ArrowDown','Ctrl+ArrowUp','Ctrl+ArrowDown']);
+const rowEl=()=>L.querySelector('.row.sel'),mItem=m=>()=>{const b=menu.querySelector(`[data-m="${m}"]`);if(b&&!b.classList.contains('dis'))b.click();else if(b)toast(b.title||'Not available here')};
+// the actions that can get a key; only Save, Save as and New checklist have one to start with (owner's choice)
+const ACTS=[['save','Save','Ctrl+S',()=>{if(!CUR)return;DIRTY=true;flush().then(ok=>ok&&toast('Saved'))},1],['saveas','Save as…','Ctrl+Shift+S',()=>{if(CUR&&!wkGate())saveAs()},1],['new','New checklist','Ctrl+N',()=>{if(!wkGate())newCl()},1],
+ ['check','Check / uncheck the selected row','',()=>{const b=rowEl()&&rowEl().querySelector('input[data-a=done]');if(b)b.click()}],['fold','Open / close the selected main item','',()=>{const r=rowEl(),b=r&&(r.closest('.card')||r).querySelector('[data-a=tog]');if(b)b.click()}],
+ ['rename','Rename the selected row','',()=>{const b=rowEl()&&rowEl().querySelector('[data-a=ren]');if(b&&!b.disabled)b.click()}],['search','Search the checklist','',()=>{$('#lsearch').focus();$('#lsearch').select()}],
+ ['tabImg','Show the Images tab','',()=>setTab('img')],['tabDesc','Show the Description tab','',()=>setTab('desc')],['tabPdf','Show the PDF tab (the item\'s page)','',()=>setTab('pdf')],['tabWp','Show the Work Photos tab','',()=>setTab('wp')],
+ ['addImg','Add pictures to the selected row','',()=>{if(!SEL)return;setTab('img');const b=$('#mpick');if(b)b.click()}],['addWp','Add work photos to the selected row','',()=>{if(!SEL)return;setTab('wp');const b=$('#wpadd');if(b&&!b.disabled)b.click()}],
+ ['assign','Assign the PDF page shown to the selected row','',()=>{if(tab==='pdf')$('#pin').click()}],
+ ['pdfv','Open the PDF Viewer','',()=>$('#pdfBtn').click()],['vidv','Open the Video Player','',()=>$('#vidBtn').click()],['wpv','Open the Work Photos page','',()=>$('#wpBtn').click()],
+ ['menu','Open the menu (☰)','',()=>$('#menuBtn').click()],['settings','Open Settings','',()=>$('#cog').click()],['export','Export…','',mItem('export')],['log','Activity log','',mItem('log')],['home','Main menu','',mItem('mainmenu')],
+ ...Array.from({length:10},(_,i)=>['sec'+(i+1),'Go to section '+(i+1),'',()=>{const r=flat().find(x=>x[1]===i);if(r)goRow(r,true)}])].map(([id,t,def,run,any])=>({id,t,def,run,any}));
+const keyOf=a=>AS.keys&&Object.prototype.hasOwnProperty.call(AS.keys,a.id)?AS.keys[a.id]:a.def;
+let KREC=null;
+document.addEventListener('keydown',e=>{if(KREC||e.defaultPrevented||e.isComposing)return;const t=e.target,c=comboOf(e);
+ // a shortcut: on the main screen, not in a pop-up; while typing only those with Ctrl or Alt (so typing letters never triggers one)
+ const a=!popOpen()&&ACTS.find(x=>keyOf(x)===c);
+ if(a&&(!typing(t)||/^(Ctrl|Alt)\+/.test(c))&&(a.any||mainFree())){e.preventDefault();a.run();return}
+ if(!mainFree())return;
+ if(e.key==='Tab'&&!e.ctrlKey&&!e.altKey){e.preventDefault();if(typing(t)){if(!boxStep(t,e.shiftKey?-1:1))t.blur()}else sideSet(SIDE==='list'?'right':'list');return}
+ if(typing(t)){if(e.key==='Escape'&&t.closest('#L,#R,header')){t.blur();e.preventDefault()}return}
+ if(!/^Arrow/.test(e.key)||e.altKey)return;e.preventDefault();
+ const h=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0,v=e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0;
+ if(h)return contentStep(h);
+ if(SIDE==='right'&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey)return tabStep(v);
+ listStep(v,e.shiftKey?'sec':e.ctrlKey||e.metaKey?'card':'row')});
+// Menu > Shortcuts…: the fixed keys, and every action with its key; click a key box, then press the keys (Esc cancels, Delete clears)
+function keysDlg(){const row=a=>{const k=keyOf(a);return `<div class="krow"><span>${esc(a.t)}</span><button class="kbtn${k?'':' none'}" data-ka="${a.id}">${k?esc(k):'Not set'}</button><button class="kclr" data-kx="${a.id}" title="Remove this shortcut" ${k?'':'disabled'}>✕</button></div>`};
+ dlg(`<div class="dh"><b>Shortcuts</b><button data-d="x">✕</button></div><div class="dt">Fixed keys</div><div class="kfix">${FIXED.map(([k,t])=>`<div class="krow"><span>${esc(t)}</span><kbd>${esc(k)}</kbd></div>`).join('')}</div>
+ <div class="dt" style="margin-top:14px">Your shortcuts <span class="mut" style="font-weight:400">(click a box, then press the keys; saved on this computer)</span></div><div class="klist">${ACTS.map(row).join('')}</div>
+ <p class="mut" style="font-size:12px">Shortcuts without Ctrl or Alt do nothing while you type in a box. They never work in pop-ups.</p><div class="dbtn"><button data-kreset>Reset to defaults</button><button data-d="x" class="pri">Done</button></div>`);$('#modal .dlg').classList.add('kdlg')}
+$('#modal').addEventListener('click',e=>{const b=e.target.closest('[data-ka],[data-kx],[data-kreset]');if(!b)return;
+ if(b.dataset.kreset!=null){AS.keys={};saveApp();return keysDlg()}
+ if(b.dataset.kx){(AS.keys=AS.keys||{})[b.dataset.kx]='';saveApp();return keysDlg()}
+ document.querySelectorAll('.kbtn.rec').forEach(x=>x.classList.remove('rec'));KREC=b.dataset.ka;b.classList.add('rec');b.textContent='Press the keys… (Esc cancels)'});
+document.addEventListener('keydown',e=>{if(!KREC)return;if(['Control','Shift','Alt','Meta'].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();const id=KREC;KREC=null;
+ if(e.key==='Escape')return keysDlg();const c=comboOf(e);AS.keys=AS.keys||{};
+ if(e.key==='Delete'||e.key==='Backspace'){AS.keys[id]='';saveApp();return keysDlg()}
+ if(RESERVED.has(c.replace('Ctrl+Shift+','Shift+'))||RESERVED.has(c)){toast(c+' is one of the fixed keys');return keysDlg()}
+ const other=ACTS.find(a=>a.id!==id&&keyOf(a)===c);if(other){AS.keys[other.id]='';toast(c+' moved from "'+other.t+'"')}
+ AS.keys[id]=c;saveApp();keysDlg()},true);
 const R=$('#R');
 R.addEventListener('input',e=>{if(e.target.dataset.cap!=null){const m=SEL&&SEL.media[+e.target.dataset.cap];if(m&&!isLocked()){m.cap=e.target.value;save()}return}const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
@@ -1136,7 +1193,8 @@ const WKFREE=['save','export','wunlock'];
 // greyed-out items are not disabled buttons (those show no tooltip): class .dis, the reason in the tooltip, and clicks are ignored
 const delWhy=()=>S.worker?'Disabled: worker mode is on in this checklist':S.locked?'Disabled: this is a master file (turn off the master file lock in Settings to delete it)':'';
 const menuOpen=unl=>{const wk=wkGate()&&!unl;menu.querySelectorAll('button[data-m]').forEach(b=>{if(b.dataset.t0==null)b.dataset.t0=b.title;const why=b.dataset.m==='delete'&&delWhy()||(wk&&!WKFREE.includes(b.dataset.m)?'Locked in worker mode: use "Unlock menu (Boss PIN)…" at the top':'');b.disabled=false;b.classList.toggle('dis',!!why);b.title=why||b.dataset.t0});
- menu.querySelector('[data-m=wunlock]').hidden=!wk;menu.hidden=false};
+ menu.querySelector('[data-m=wunlock]').hidden=!wk;
+ Object.entries({save:'save',saveas:'saveas',new:'new',export:'export',log:'log',mainmenu:'home'}).forEach(([m,id])=>{const b=menu.querySelector(`[data-m="${m}"]`),k=keyOf(ACTS.find(a=>a.id===id));if(!b)return;let i=b.querySelector('i');if(!i){i=document.createElement('i');b.appendChild(i)}i.textContent=k||''});menu.hidden=false};
 // worker mode (S.worker): locks editing like a master file and puts the menu and Settings behind a main/Boss PIN, so whoever opens
 // the checklist stays in it. Not without a profile or under E-4417/18/19: then nobody could enter a PIN, and exports must stay possible.
 let WKW=null;const wkGate=()=>!!(CUR&&S.worker&&PR.hash&&!TAMPER&&$('#home').hidden);
@@ -1151,6 +1209,7 @@ menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(
  else if(m==='delete'&&!(S.locked||S.worker))ask(`Delete "${esc(S.name||'unnamed')}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',async()=>{await deleteProject(CUR);openHome()},1);
  else if(m==='pdf'){if(isLocked())toast('Editing is locked');else $('#file').click()}
  else if(m==='demo')loadDemo()
+ else if(m==='keys')keysDlg()
  else if(m==='uncheck')ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
 // ---------- file library / main menu ----------
 function uniqueName(base,self){base=(base||'').trim().replace(/[\\/:*?"<>|]+/g,'_')||'unnamed';const used=new Set(LIB.filter(x=>x.id!==self).map(x=>x.name.toLowerCase()));let n=base,k=2;while(used.has(n.toLowerCase()))n=base+' '+k++;return n}
@@ -1486,9 +1545,6 @@ $('#lsearch').oninput=()=>{LH=0;clearTimeout(lsearch.t);lsearch.t=setTimeout(()=
 $('#lsearch').onkeydown=e=>{if(e.key==='Enter')lsearch(e.shiftKey?-1:1);else if(e.key==='Escape'){e.target.value='';LH=0;lsearch(0)}};
 // ---------- shortcuts ----------
 async function newCl(){if(!$('#modal').hidden)return;if(CUR&&DIRTY)await flush();ask('Your work is saved. Create new checklist?','Create new',()=>addEntry(norm(),'unnamed').then(openProject))}
-document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey||!$('#modal').hidden)return;const k=e.key.toLowerCase();
- if(k==='s'){e.preventDefault();if(!CUR)return;if(e.shiftKey){if(!wkGate())saveAs()}else{DIRTY=true;flush().then(ok=>ok&&toast('Saved'))}}
- else if(k==='n'&&!e.shiftKey){e.preventDefault();if(!wkGate())newCl()}});
 // ---------- updates: a bar at the bottom of the menu page; Settings > Updates switches automatic checks on (off by default) ----------
 let UPD=null,APPV='';
 const verNewer=(a,b)=>{const p=v=>String(v||'').replace(/^v/i,'').split(/[-+]/)[0].split('.').map(n=>parseInt(n,10)||0),x=p(a),y=p(b);for(let i=0;i<3;i++)if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0);return false};
