@@ -745,11 +745,17 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     $('#pvq').value = 'page 5'; pvSearch(); await new Promise(r => setTimeout(r, 200)); r.fade = { dim: document.querySelectorAll('#pvtoc .pgi.dim').length, bright: [...document.querySelectorAll('#pvtoc .pgi:not(.dim)')].map(x => x.dataset.pg), onlyShown: !$('#pvonlyw').hidden };
     $('#pvonly').checked = true; $('#pvonly').dispatchEvent(new Event('change')); r.fade.only = [...document.querySelectorAll('#pvtoc .pgi')].map(x => x.dataset.pg); r.fade.heads = [...document.querySelectorAll('#pvtoc .pch .tt')].map(x => x.textContent);
     $('#pvonly').checked = false; $('#pvonly').dispatchEvent(new Event('change'));
+    // switching PDFs keeps the search: the page list and the marks follow the PDF that is open
+    $('#pvonly').checked = false; $('#pvonly').dispatchEvent(new Event('change')); $('#pvq').value = 'cover'; pvSearch(); const demoId = S.pdfs[0].id;
+    document.querySelector(`#pvlist .frow[data-id="${S.pdfs.find(p => p.name === 'Engine workbook').id}"]`).click(); await new Promise(r => setTimeout(r, 700)); const wbLit = [...document.querySelectorAll('#pvtoc .pgi:not(.dim)')].map(x => x.dataset.pg);
+    document.querySelector(`#pvlist .frow[data-id="${demoId}"]`).click(); await new Promise(r => setTimeout(r, 700)); show(2); await new Promise(r => setTimeout(r, 600));
+    r.sw = { q: $('#pvq').value, wbLit, demoLit: [...document.querySelectorAll('#pvtoc .pgi:not(.dim)')].map(x => x.dataset.pg), marks: document.querySelectorAll('#pvhl i').length, head: document.querySelector('#pvside .hh:nth-of-type(2)') ? '' : '', label: [...document.querySelectorAll('#pvside .hh')].map(h => h.textContent).join('|') };
     $('#pvq').value = ''; pvSearch(); r.hiddenEmpty = $('#pvnav').hidden; r.idxTip = $('#pvidx').title; await openP(S.pdfs[0].id, 1); pvClose(); return r; });
   assert(nav.n > 3 && nav.shown && nav.txt === 'of ' + nav.n && nav.box0 === '' && nav.first.join() === '1,' + nav.first[1] + ',0' && nav.second === '2' && nav.back === '1' && nav.wrap === String(nav.n) && nav.typed.join() === '3,true' && nav.race.join() === 'true,true' && nav.hiddenEmpty, 'search result counter: ' + JSON.stringify(nav));
   assert(nav.marks.perPage >= 2 && nav.marks.shown === nav.marks.perPage && nav.marks.cur1 && nav.marks.moved && nav.marks.samePage, 'every word found on the page is marked and the arrows step word by word: ' + JSON.stringify(nav.marks));
   assert(nav.fade.onlyShown && nav.fade.bright.join() === '5,7' && nav.fade.dim === 4 && nav.fade.only.join() === '5,7' && nav.fade.heads.join() === 'Engine Block,Cylinder Heads', 'page list: other pages fade, Only matches hides them and their chapters: ' + JSON.stringify(nav.fade));
   assert(/Indexed: the words on every page/.test(nav.idxTip), 'hovering "Indexed" explains it');
+  assert(nav.sw.q === 'cover' && nav.sw.wbLit.length === 0 && nav.sw.demoLit.join() === '2' && nav.sw.marks >= 1 && /Search results \(all PDFs\)/.test(nav.sw.label), 'switching PDFs keeps the search; list and marks follow the open PDF: ' + JSON.stringify(nav.sw));
 
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
