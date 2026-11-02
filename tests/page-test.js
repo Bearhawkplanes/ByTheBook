@@ -811,6 +811,36 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(qAfterX === !qBefore && qTypedX[0] === qAfterX && qTypedX[1] === 'x' && qSec3, 'X checks the selected step, not while typing; 3 jumps to section 3: ' + JSON.stringify([qBefore, qAfterX, qTypedX, qSec3]));
   assert(await pg.evaluate(() => /Ctrl\+S/.test(document.querySelector('[data-m=save] i').textContent) || true) && await pg.evaluate(() => !/📌|📷/.test($('#pin').textContent + $('#snap').textContent) && $('#pin').textContent === 'Assign to item'), 'no emojis on the PDF tab buttons');
 
+  // ---- building with the keyboard: R rename, Ctrl+B / Ctrl+N / Ctrl+M add, Delete (asks unless empty, Enter confirms), Ctrl+Z / Ctrl+Shift+Z ----
+  await pg.evaluate(() => { AS.keys = {}; closeDlg(); PR.req.edit = false; PR.req.sign = false; PR.req.names = false; S.locked = false; S.worker = false; uclear(); goRow(flat().find(r => r[1] === 0 && r[2] === 0 && r[3] === 0)); document.activeElement.blur(); });
+  const bst = () => pg.evaluate(() => ({ sel: SEL && SEL.text, path: JSON.stringify(selPath()), typing: document.activeElement.classList.contains('tin') || document.activeElement.classList.contains('tedit'), modal: !$('#modal').hidden, steps: S.sections[0].cards[0].steps.map(x => x.text), secs: S.sections.map(x => x.title) }));
+  await pg.keyboard.press('r'); const wb1 = await bst(); await pg.keyboard.press('Control+a'); await pg.keyboard.type('Renamed step'); await pg.keyboard.press('Enter'); const wb2 = await bst();
+  assert(wb1.typing && wb2.sel === 'Renamed step' && !wb2.typing, 'R renames the selected row; Enter finishes: ' + JSON.stringify([wb1, wb2]));
+  await pg.keyboard.press('Control+m'); const wb3 = await bst(); await pg.keyboard.type('Brand new step'); await pg.keyboard.press('Enter'); const wb4 = await bst();
+  assert(wb3.typing && wb3.path === '[0,0,1]' && wb4.steps[1] === 'Brand new step', 'Ctrl+M adds a step after the selected one, ready to name: ' + JSON.stringify([wb3.path, wb4.steps]));
+  await pg.keyboard.press('Delete'); const wb5 = await bst(); await pg.keyboard.press('Enter'); await pg.waitForTimeout(50); const wb6 = await bst();
+  assert(wb5.modal && !wb6.modal && !wb6.steps.includes('Brand new step'), 'Delete asks first for a row with a name; Enter confirms: ' + JSON.stringify([wb5.modal, wb6.steps]));
+  await pg.keyboard.press('Control+z'); const wb7 = await bst(); await pg.keyboard.press('Control+Shift+Z'); const wb8 = await bst(); await pg.keyboard.press('Control+z'); const wb9 = await bst();
+  assert(wb7.steps.includes('Brand new step') && !wb8.steps.includes('Brand new step') && wb9.steps.includes('Brand new step'), 'Ctrl+Z brings it back, Ctrl+Shift+Z deletes it again: ' + JSON.stringify([wb7.steps, wb8.steps]));
+  await pg.keyboard.press('Control+m'); await pg.keyboard.press('Escape'); const wn0 = (await bst()).steps.length; await pg.keyboard.press('Backspace'); const wb10 = await bst();
+  assert(!wb10.modal && wb10.steps.length === wn0 - 1, 'a new empty step is deleted without asking');
+  await pg.keyboard.press('Control+n'); await pg.keyboard.type('New main item'); await pg.keyboard.press('Enter');
+  const wb11 = await pg.evaluate(() => [S.sections[0].cards[1].text, JSON.stringify(selPath())]);
+  assert(wb11[0] === 'New main item' && wb11[1] === '[0,1,null]', 'Ctrl+N adds a main item after the current one: ' + JSON.stringify(wb11));
+  await pg.keyboard.press('Control+b'); await pg.keyboard.type('Wiring'); await pg.keyboard.press('Enter'); await pg.keyboard.press('Control+n'); await pg.keyboard.type('Route the harness'); await pg.keyboard.press('Enter');
+  const wb12 = await pg.evaluate(() => [S.sections[1].title, S.sections[1].cards.map(c => c.text).join()]);
+  assert(wb12[0] === 'Wiring' && wb12[1] === 'Route the harness', 'Ctrl+B adds a section after the current one; Ctrl+N then adds into it: ' + JSON.stringify(wb12));
+  await pg.keyboard.press('Control+b'); await pg.keyboard.press('Enter'); const wns = (await bst()).secs.length; await pg.keyboard.press('Delete'); const wb13 = await bst();
+  assert(!wb13.modal && wb13.secs.length === wns - 1, 'an untouched new section is deleted without asking');
+  // a check-off is evidence: it is not undone, and it clears the history
+  await pg.evaluate(() => { goRow(flat().find(r => r[3] === 0)); document.activeElement.blur(); }); const wb14a = await pg.evaluate(() => SEL.done); await pg.evaluate(() => L.querySelector('.row.sel input[data-a=done]').click());
+  await pg.keyboard.press('Control+z'); const wb14 = await pg.evaluate(() => [SEL.done, $('#toast').textContent]);
+  assert(wb14[0] === !wb14a && /Nothing to undo/.test(wb14[1]), 'check-offs are not undone: ' + JSON.stringify(wb14));
+  // recording Shift+N and a three-key combination
+  await pg.evaluate(() => keysDlg()); await pg.evaluate(() => document.querySelector('[data-ka=search]').click()); await pg.keyboard.press('Shift+N');
+  await pg.evaluate(() => document.querySelector('[data-ka=vidv]').click()); await pg.keyboard.press('Control+Alt+K'); const wks2 = await pg.evaluate(() => [AS.keys.search, AS.keys.vidv, document.querySelector('[data-ka=rename]').textContent, document.querySelector('[data-ka=new]').textContent]); await pg.evaluate(() => closeDlg());
+  assert.deepStrictEqual(wks2, ['Shift+N', 'Ctrl+Alt+K', 'R', 'Not set'], 'Shift+N and three-key shortcuts can be recorded; defaults R and (none) for New checklist');
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);

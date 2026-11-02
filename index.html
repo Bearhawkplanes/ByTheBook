@@ -53,7 +53,7 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 .tile button{position:absolute;top:6px;right:6px;padding:0 7px}
 .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 #L.kside .stabs,#R.kside .tabs{box-shadow:inset 0 3px 0 var(--acc)}
-.kdlg{width:min(640px,94vw)}.krow{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}.krow>span{flex:1}.krow kbd{font:12px 'IBM Plex Mono',monospace;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);white-space:nowrap}
+.kdlg{width:min(640px,94vw)}.secband.ssel h3{text-decoration:underline 3px var(--acc);text-underline-offset:6px}.krow{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}.krow>span{flex:1}.krow kbd{font:12px 'IBM Plex Mono',monospace;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);white-space:nowrap}
 .kbtn{min-width:150px;font:12px 'IBM Plex Mono',monospace}.kbtn.none{color:var(--mut)}.kbtn.rec{border-color:var(--acc);color:var(--acc)}.kclr{padding:2px 8px}.klist{max-height:46vh;overflow:auto;padding-right:6px}
 #vbox{overflow:auto;max-height:calc(100vh - 250px);min-height:300px;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 canvas{display:block;margin:0 auto}
@@ -405,7 +405,7 @@ const cardHTML=(si,ci)=>{const t=S.sections[si].cards[ci],d=t.steps.filter(s=>s.
  ${t.open?`<div class="steps">${t.steps.map((s,j)=>rowL(si,ci,j,s)).join('')}<button class="ed" data-a="addstep" data-s="${si}" data-c="${ci}" ${t.done?'disabled':''} style="margin:6px 0">+ Add step</button></div>`:''}</div>`};
 const secDone=sec=>sec.cards.length>0&&sec.cards.every(c=>c.done);
 function secHTML(si){const sec=S.sections[si],cards=sec.cards.map((t,ci)=>cardHTML(si,ci)).join('');const title=ES===si?`<input class="tedit" value="${esc(sec.title)}">`:`<h3>${esc(sec.title)||'(untitled)'}</h3>`;
- return `<div class="secband${secDone(sec)?' complete':''}" data-si="${si}"><div class="sectitle">${title}<button class="pencil ed" data-a="edit" data-s="${si}" title="Rename section">✎</button></div>
+ return `<div class="secband${secDone(sec)?' complete':''}${SSEC===si&&!SEL?' ssel':''}" data-si="${si}"><div class="sectitle">${title}<button class="pencil ed" data-a="edit" data-s="${si}" title="Rename section">✎</button></div>
   <div class="secctl ed"><label title="Main items in this section need a sign-off"><input type="checkbox" data-a="sign" data-s="${si}" ${sec.sign?'checked':''}> Sign-off</label><button data-a="secup" data-s="${si}" title="Move section up">↑</button><button data-a="secdn" data-s="${si}" title="Move section down">↓</button><button data-a="secdel" data-s="${si}" title="Delete section">✕</button></div></div>
   ${cards||'<div class="mut" style="margin-bottom:8px;text-align:center">Nothing here yet.</div>'}<button class="ed" data-a="addcard" data-s="${si}">+ Add main item</button>`}
 const secEst=si=>{const s=S.sections[si];return 90+s.cards.reduce((a,c)=>a+48+(c.open?c.steps.length*44+40:0),0)};
@@ -423,6 +423,8 @@ function renderL(){
  const keep=new Set([...L.querySelectorAll('.secw[data-on]')].filter(w=>{const r=w.getBoundingClientRect(),v=L.getBoundingClientRect();return r.bottom>v.top-1200&&r.top<v.bottom+1200}).map(w=>+w.dataset.sw));
  [secOf(SEL),secOf(ER),ES==null?-1:ES].forEach(i=>i>=0&&keep.add(i));
  const stabs=`<div class="stabs">${S.sections.map((s,i)=>`<button class="stab${secDone(s)?' complete':''}" data-a="gosec" data-s="${i}" title="${esc(s.title)}">${esc(s.title)||'Untitled'}</button>`).join('')}<button class="stab add ed" data-a="addsec" title="Add section">+</button></div>`;
+ // a name being typed keeps its cursor when the list is redrawn underneath it
+ const fo=document.activeElement,ft=fo&&L.contains(fo)&&(fo.classList.contains('tin')?'.tin':fo.classList.contains('tedit')?'.tedit':''),fc=ft&&fo.selectionStart;
  const top=L.scrollTop;
  L.innerHTML=stabs+S.sections.map((s,si)=>keep.has(si)?`<div class="secw" data-sw="${si}" data-on="1">${secHTML(si)}</div>`:`<div class="secw" data-sw="${si}" style="min-height:${SECH[si]||secEst(si)}px"></div>`).join('')+`<div class="addsec ed"><button data-a="addsec">+ Add section</button></div>`;
  L.scrollTop=top;
@@ -430,6 +432,7 @@ function renderL(){
  const v=L.getBoundingClientRect();for(const w of L.querySelectorAll('.secw')){if(w.dataset.on){SECH[w.dataset.sw]=w.offsetHeight;continue}const r=w.getBoundingClientRect();if(r.bottom>v.top-800&&r.top<v.bottom+800)mountSec(+w.dataset.sw)}
  if(LIO)LIO.disconnect();LIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)mountSec(+e.target.dataset.sw)}),{root:L,rootMargin:'800px 0px'});
  L.querySelectorAll('.secw:not([data-on])').forEach(w=>LIO.observe(w));
+ if(ft){const n=L.querySelector(ft);if(n){n.focus();try{n.setSelectionRange(fc,fc)}catch(e){}}}
  renderCounts();markTab()}
 // one main item and its steps, after a tick, a sign-off or opening it; falls back to the whole list if it is not on screen
 function renderCard(si,ci){const el=L.querySelector(`.card[data-ck="${si}-${ci}"]`);if(!el)return renderL();renderTitle();document.body.classList.toggle('locked',isLocked());el.outerHTML=cardHTML(si,ci);
@@ -437,7 +440,7 @@ function renderCard(si,ci){const el=L.querySelector(`.card[data-ck="${si}-${ci}"
 function loc(row){const si=+row.dataset.s,ci=+row.dataset.c,j=row.dataset.j!=null?+row.dataset.j:null,sec=S.sections[si],card=sec.cards[ci];
  const arr=j!=null?card.steps:sec.cards,idx=j!=null?j:ci;return{arr,idx,item:arr[idx],card,sec,isCard:j==null}}
 function autoTab(it){const m=AS.auto;setTab(m==='stay'||!m?tab:m)}
-function select(it){if(TX&&it!==SEL)txEnd();SEL=it;document.querySelectorAll('#L .row.sel').forEach(x=>x.classList.remove('sel'));renderR();autoTab(it)}
+function select(it){if(TX&&it!==SEL)txEnd();SEL=it;if(it&&SSEC!=null){SSEC=null;L.querySelectorAll('.secband.ssel').forEach(b=>b.classList.remove('ssel'))}document.querySelectorAll('#L .row.sel').forEach(x=>x.classList.remove('sel'));renderR();autoTab(it)}
 const L=$('#L');
 let MT=-1;
 function scrollToSec(i){const el=mountNear(i);if(!el)return;const tb=$('#L .stabs');L.scrollTop=el.getBoundingClientRect().top-L.getBoundingClientRect().top+L.scrollTop-(tb?tb.offsetHeight:0)-8}
@@ -453,19 +456,19 @@ const editTitle=()=>{const ti=$('#L .tedit');if(ti){ti.focus();ti.select()}};
 L.addEventListener('click',e=>{
  const b=e.target.closest('button[data-a]'),row=e.target.closest('.row');
  if(b&&!row){const a=b.dataset.a,si=+b.dataset.s;let it;if(a==='gosec'){FT=si;setTimeout(()=>{FT=null;markTab()},500);scrollToSec(si);markTab();return}if(isLocked())return;
-  if(a==='addsec'){S.sections.push({title:'New section',sign:true,cards:[]});ES=S.sections.length-1;save();renderL();editTitle();return}
+  if(a==='addsec'){umark();S.sections.push({title:'New section',sign:true,cards:[]});ES=S.sections.length-1;save();renderL();editTitle();return}
   if(a==='edit'){ES=si;renderL();editTitle();return}
-  if(a==='secup'||a==='secdn'){const k=a==='secup'?si-1:si+1;if(k<0||k>=S.sections.length)return;[S.sections[si],S.sections[k]]=[S.sections[k],S.sections[si]];ES=null;save();renderL();return}
+  if(a==='secup'||a==='secdn'){const k=a==='secup'?si-1:si+1;if(k<0||k>=S.sections.length)return;umark();[S.sections[si],S.sections[k]]=[S.sections[k],S.sections[si]];ES=null;save();renderL();return}
   if(a==='secdel'){if(pendDel!==si){pendDel=si;b.textContent='Delete?';b.style.color='var(--warn)';setTimeout(()=>{if(pendDel===si){pendDel=null;renderL()}},3000);return}
-   pendDel=null;ES=null;S.sections[si].cards.forEach(c=>[c,...c.steps].forEach(x=>x.media.forEach(m=>m.id&&idbDel('m',m.id))));S.sections.splice(si,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR();return}
-  if(a==='addcard'){it=mk({open:true,steps:[]});S.sections[si].cards.push(it)}
-  else if(a==='addstep'){const c=S.sections[si].cards[+b.dataset.c];it=mk();c.steps.push(it);voidIfNeeded(c)}
+   pendDel=null;ES=null;umark();S.sections.splice(si,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR();return}
+  if(a==='addcard'){umark();it=mk({open:true,steps:[]});S.sections[si].cards.push(it)}
+  else if(a==='addstep'){umark();const c=S.sections[si].cards[+b.dataset.c];it=mk();c.steps.push(it);voidIfNeeded(c)}
   else return;
   SEL=it;save();renderL();renderR();autoTab(it);L.querySelector('.row.sel .t')?.focus();return}
  if(!row)return;const{arr,idx,item,card}=loc(row);const a=b&&b.dataset.a;if((card.done||isLocked())&&(a==='del'||a==='up'||a==='dn'||a==='ren'))return;
- if(a==='del'){[item,...(item.steps||[])].forEach(x=>{x.media.forEach(m=>m.id&&idbDel('m',m.id));(x.wp||[]).forEach(p=>{idbDel('m',p.id);idbDel('m',p.tid)})});arr.splice(idx,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR()}
- else if(a==='up'&&idx>0){[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];save();renderL()}
- else if(a==='dn'&&idx<arr.length-1){[arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]];save();renderL()}
+ if(a==='del'){umark();arr.splice(idx,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR()}
+ else if(a==='up'&&idx>0){umark();[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];save();renderL()}
+ else if(a==='dn'&&idx<arr.length-1){umark();[arr[idx+1],arr[idx]]=[arr[idx],arr[idx+1]];save();renderL()}
  else if(a==='tog'){item.open=!item.open;save();renderCard(+row.dataset.s,+row.dataset.c)}
  else if(a==='ren'){ER=item;renderL();const t=$('#L .tin');if(t){t.focus();t.select()}}
  else if(a==='go'){SEL=item;renderL();renderR();goPage()}
@@ -475,17 +478,18 @@ L.addEventListener('click',e=>{
 L.addEventListener('dblclick',e=>{const t=e.target.closest('span.t');if(!t)return;const row=t.closest('.row');if(!row)return;const{item,card}=loc(row);if(card.done||isLocked())return;ER=item;renderL();const i=$('#L .tin');if(i){i.focus();i.select()}});
 L.addEventListener('keydown',e=>{if(!e.target.classList.contains('tedit')&&!e.target.classList.contains('tin'))return;if(e.key==='Enter')e.target.blur();else if(e.key==='Escape'){e.target.dataset.cancel=1;e.target.blur()}});
 L.addEventListener('focusout',e=>{if(e.target.classList.contains('tin')&&ER){const it=ER;ER=null;if(!e.target.dataset.cancel)it.text=e.target.value;save();renderL();if(it===SEL)$('#sel').textContent=it.text||'(untitled)';return}
- if(!e.target.classList.contains('tedit')||ES==null)return;const si=ES;ES=null;if(!e.target.dataset.cancel)S.sections[si].title=e.target.value.trim()||'Untitled section';save();renderL()});
+ if(!e.target.classList.contains('tedit')||ES==null)return;const si=ES;ES=null;const nt=e.target.value.trim()||'Untitled section';if(!e.target.dataset.cancel&&nt!==S.sections[si].title){umark();S.sections[si].title=nt}save();renderL()});
 L.addEventListener('input',e=>{const a=e.target.dataset.a;if(a!=='text'&&a!=='sig'&&a!=='init')return;const{item}=loc(e.target.closest('.row'));
+ if(a==='sig'||a==='init')uclear();else umark(item);
  if((a==='sig'||a==='init')&&pinOn('sign'))return;
  if(a==='sig'){item.sigDraft=e.target.value;e.target.classList.remove('need')}else if(a==='init'){item.init=e.target.value}else{item.text=e.target.value;if(item===SEL)$('#sel').textContent=item.text||'(untitled)'}save()});
 L.addEventListener('change',e=>{const a=e.target.dataset.a;
- if(a==='sign'){S.sections[+e.target.dataset.s].sign=e.target.checked;save();renderL();return}
+ if(a==='sign'){umark();S.sections[+e.target.dataset.s].sign=e.target.checked;save();renderL();return}
  if(a!=='done')return;
  if(errNow()){e.target.checked=!e.target.checked;showErr(errNow());return}
  const row=e.target.closest('.row'),{item,sec,card,isCard}=loc(row),want=e.target.checked,pn=pinOn('sign');
  if(isCard&&want&&!item.steps.every(s=>s.done)){e.target.checked=false;return}
- const go=(who,uid)=>{   // who = name tied to the PIN that was entered, or null when PINs are not in use
+ const go=(who,uid)=>{uclear();   // who = name tied to the PIN that was entered, or null when PINs are not in use
   if(isCard){
    if(want){if(sec.sign){item.sig={by:who!=null?who:(item.sigDraft||'').trim(),uid:uid||'',at:now()};item.sigDraft=''}
     item.done=true;logEv(sec.sign?'signed off':'checked',item,item.sig?item.sig.by:'',uid)}
@@ -517,7 +521,7 @@ async function shrinkImg(blob,type){if(AS.shrink===false||!/^image\/(jpeg|png|we
  const out=await new Promise(r=>c.toBlob(r,jpg?'image/jpeg':'image/png',.86));return out&&out.size<blob.size?{blob:out,type:jpg?'image/jpeg':'image/png'}:{blob,type}}
 async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.startsWith('video');if(vid&&blob.size>MAXCOPY)return toast('Videos over 300 MB are too big to copy into a checklist: use Video Player to link it');
  if(!vid)({blob,type}=await shrinkImg(blob,type));if(!await roomFor(blob.size))return;
- const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
+ umark();const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
 function renderR(){
  const it=SEL;$('#sel').textContent=it?(it.text||'(untitled)'):'Select a checklist item on the left';
@@ -549,6 +553,35 @@ function imgPane(it){const n=it.media.length;IM.i=Math.max(0,Math.min(n-1,IM.i))
  if(n&&IM.mode==='fit')body=`<div class="fit">${mediaEl(it.media[IM.i])}${n>1?'<button class="nav l" data-a="nav" data-k="-1">◀</button><button class="nav r" data-a="nav" data-k="1">▶</button>':''}<button class="ed x" data-a="mdel" data-k="${IM.i}">✕</button></div>${capBox(it.media[IM.i],IM.i,'')}`;
  else if(n)body=`<div class="${IM.mode==='grid'?'g3':'stack'}">${it.media.map((m,k)=>`<div class="tile${IM.mode!=='grid'&&(m.cap||!lk)?' wcap':''}" data-k="${k}">${mediaEl(m)}<button class="ed" data-a="mdel" data-k="${k}">✕</button>${IM.mode==='grid'?(m.cap?`<span class="gcap" title="${esc(m.cap)}">${esc(short(m.cap))}</span>`:''):capBox(m,k,'att')}</div>`).join('')}</div>`;
  return bar+body+`<div class="tb ed" style="margin-top:10px"><button id="mpick" title="Videos open in the Video Player, to import or link them and pick the part to show">+ Add image / video files</button><input id="mfile" type="file" accept="image/*,video/*" multiple hidden><input id="murl" placeholder="or paste an image / video link" style="flex:1;min-width:140px"><button data-a="maddurl">Add link</button></div>`}
+// ---------- undo / redo of building the checklist ----------
+// Snapshots of the sections (with the selected row) taken just before a change: adding, deleting, moving or renaming sections, main
+// items and steps, their fields and picture descriptions (typing: once per box). Check-offs, initials, sign-offs and work photos are
+// evidence: they are never undone and they clear the history. Media of deleted rows stay in memory, so undo can bring them back.
+const UNDO=[],REDO=[];let UKEY=null,SSEC=null;
+function selPath(){for(let si=0;si<S.sections.length;si++)for(let ci=0;ci<S.sections[si].cards.length;ci++){const c=S.sections[si].cards[ci];if(c===SEL)return[si,ci,null];const j=c.steps.indexOf(SEL);if(j>=0)return[si,ci,j]}return null}
+const usnap=()=>({s:JSON.stringify(S.sections),p:selPath(),q:SSEC});
+function umark(key){if(key&&key===UKEY)return;UKEY=key||null;UNDO.push(usnap());REDO.length=0;let tot=UNDO.reduce((a,x)=>a+x.s.length,0);while(UNDO.length>1&&(UNDO.length>60||tot>40e6))tot-=UNDO.shift().s.length}
+const uclear=()=>{UNDO.length=REDO.length=0;UKEY=null};
+function urestore(redo){const from=redo?REDO:UNDO,to=redo?UNDO:REDO;if(!from.length)return toast(redo?'Nothing to redo':'Nothing to undo');if(isLocked())return toast('Editing is locked');
+ to.push(usnap());const x=from.pop();S.sections=JSON.parse(x.s);UKEY=null;ER=null;ES=null;SSEC=x.q;const p=x.p,c=p&&S.sections[p[0]]&&S.sections[p[0]].cards[p[1]];SEL=c?(p[2]==null?c:c.steps[p[2]]||c):null;
+ save();renderL();renderR();if(SEL)goRow(flat().find(r=>r[0]===SEL));toast(redo?'Redone':'Undone')}
+// a row or section with nothing in it yet (just added): deleting it needs no confirmation
+const blankIt=x=>!x.text&&!x.desc&&!x.spec&&!x.qty&&!x.size&&!x.page&&!x.media.length&&!(x.wp||[]).length&&!x.done&&(x.steps||[]).every(blankIt);
+// the section to add to: the selected row's, else the one just added, else the last
+const curSec=()=>{const p=selPath();return p?p[0]:SSEC!=null&&S.sections[SSEC]?SSEC:S.sections.length-1};
+function addSection(){if(isLocked())return toast('Editing is locked');umark();const at=S.sections.length?curSec()+1:0;S.sections.splice(at,0,{title:'New section',sign:true,cards:[]});SEL=null;SSEC=at;ES=at;save();renderL();renderR();editTitle()}
+function addItem(){if(isLocked())return toast('Editing is locked');if(!S.sections.length)return addSection();const si=curSec(),p=selPath(),sec=S.sections[si],at=p&&p[0]===si?p[1]+1:sec.cards.length;
+ umark();const it=mk({open:true,steps:[]});sec.cards.splice(at,0,it);SSEC=null;SEL=it;ER=it;save();renderL();renderR();const t=$('#L .tin');if(t){t.focus();t.select()}}
+function addStep(){if(isLocked())return toast('Editing is locked');const p=selPath();if(!p)return toast('Select a main item or step first');const c=S.sections[p[0]].cards[p[1]];if(c.done)return toast('This main item is signed off');
+ umark();const it=mk();c.steps.splice(p[2]==null?c.steps.length:p[2]+1,0,it);c.open=true;voidIfNeeded(c);SEL=it;ER=it;save();renderL();renderR();const t=$('#L .tin');if(t){t.focus();t.select()}}
+// Delete / Backspace: the selected row (or the section just added), asking first unless it is still empty; Enter confirms
+function delSel(){if(isLocked())return toast('Editing is locked');const p=selPath();
+ if(p){const sec=S.sections[p[0]],c=sec.cards[p[1]],step=p[2]!=null,arr=step?c.steps:sec.cards,idx=step?p[2]:p[1],it=arr[idx];if(c.done)return toast('This main item is signed off');
+  const go=()=>{umark();arr.splice(idx,1);if(step)voidIfNeeded(c);SEL=arr[Math.min(idx,arr.length-1)]||(step?c:null);save();renderL();renderR();if(SEL)goRow(flat().find(r=>r[0]===SEL))};
+  if(blankIt(it))return go();const n=(it.steps||[]).length;return ask(`Delete ${step?'the step':'the main item'} "${esc(it.text||'Untitled')}"${n?` and its ${n} step${n>1?'s':''}`:''}? Ctrl+Z (undo) brings it back.`,'Delete',go,1)}
+ if(SSEC!=null&&S.sections[SSEC])return delSection(SSEC);toast('Select a row to delete')}
+function delSection(si){if(isLocked())return toast('Editing is locked');const sec=S.sections[si];if(!sec)return;const go=()=>{umark();S.sections.splice(si,1);SSEC=null;if(SEL&&!inTree(SEL))SEL=null;ES=null;save();renderL();renderR()};
+ if(!sec.cards.length&&sec.title==='New section')return go();ask(`Delete the section "${esc(sec.title)}"${sec.cards.length?` with its ${sec.cards.length} main item${sec.cards.length>1?'s':''}`:''}? Ctrl+Z (undo) brings it back.`,'Delete',go,1)}
 // ---------- keyboard ----------
 // SIDE = which half the keys drive: 'list' (default; ↑/↓ rows, Shift+↑/↓ sections, Ctrl+↑/↓ main items) or 'right' (↑/↓ the tabs,
 // no wrap). On both, ←/→ act on the open tab: pictures (Images, Fit view) or pages (PDF; leaving the tab or the item goes back to
@@ -580,28 +613,31 @@ function comboOf(e){const k=/^Key[A-Z]$/.test(e.code)?e.code.slice(3):/^Digit\d$
  return [e.ctrlKey||e.metaKey?'Ctrl':'',e.altKey?'Alt':'',e.shiftKey?'Shift':'',k].filter(Boolean).join('+')}
 const FIXED=[['Tab / Shift+Tab','Switch between the checklist and the right-hand side; in a box: the next / previous box'],['Esc','Leave the box you are typing in'],
  ['↑ / ↓','Checklist side: previous / next row. Right side: previous / next tab'],['Shift+↑ / Shift+↓','Previous / next section'],['Ctrl+↑ / Ctrl+↓','Previous / next main item'],
- ['← / →','Previous / next picture (Images tab, Fit view) or page (PDF tab)']];
-const RESERVED=new Set(['Tab','Shift+Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Shift+ArrowUp','Shift+ArrowDown','Ctrl+ArrowUp','Ctrl+ArrowDown']);
+ ['← / →','Previous / next picture (Images tab, Fit view) or page (PDF tab)'],['Delete / Backspace','Delete the selected row (asks first unless it is still empty; Enter confirms)']];
+const RESERVED=new Set(['Delete','Backspace','Tab','Shift+Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Shift+ArrowUp','Shift+ArrowDown','Ctrl+ArrowUp','Ctrl+ArrowDown']);
 const rowEl=()=>L.querySelector('.row.sel'),mItem=m=>()=>{const b=menu.querySelector(`[data-m="${m}"]`);if(b&&!b.classList.contains('dis'))b.click();else if(b)toast(b.title||'Not available here')};
 // the actions that can get a key; only Save, Save as and New checklist have one to start with (owner's choice)
-const ACTS=[['save','Save','Ctrl+S',()=>{if(!CUR)return;DIRTY=true;flush().then(ok=>ok&&toast('Saved'))},1],['saveas','Save as…','Ctrl+Shift+S',()=>{if(CUR&&!wkGate())saveAs()},1],['new','New checklist','Ctrl+N',()=>{if(!wkGate())newCl()},1],
+const ACTS=[['save','Save','Ctrl+S',()=>{if(!CUR)return;DIRTY=true;flush().then(ok=>ok&&toast('Saved'))},1],['saveas','Save as…','Ctrl+Shift+S',()=>{if(CUR&&!wkGate())saveAs()},1],['new','New checklist','',()=>{if(!wkGate())newCl()},1],
+ ['undo','Undo (building the checklist)','Ctrl+Z',()=>urestore(false),0,1],['redo','Redo','Ctrl+Shift+Z',()=>urestore(true),0,1],
+ ['addsec','New section (after the current one)','Ctrl+B',addSection],['additem','New main item (in the current section)','Ctrl+N',addItem],['addstep','New step (in the selected main item)','Ctrl+M',addStep],['delsec','Delete the current section','',()=>{const p=selPath();delSection(p?p[0]:SSEC)}],
  ['check','Check / uncheck the selected row','',()=>{const b=rowEl()&&rowEl().querySelector('input[data-a=done]');if(b)b.click()}],['fold','Open / close the selected main item','',()=>{const r=rowEl(),b=r&&(r.closest('.card')||r).querySelector('[data-a=tog]');if(b)b.click()}],
- ['rename','Rename the selected row','',()=>{const b=rowEl()&&rowEl().querySelector('[data-a=ren]');if(b&&!b.disabled)b.click()}],['search','Search the checklist','',()=>{$('#lsearch').focus();$('#lsearch').select()}],
+ ['rename','Rename the selected row','R',()=>{const b=rowEl()&&rowEl().querySelector('[data-a=ren]');if(b&&!b.disabled)b.click()}],['search','Search the checklist','',()=>{$('#lsearch').focus();$('#lsearch').select()}],
  ['tabImg','Show the Images tab','',()=>setTab('img')],['tabDesc','Show the Description tab','',()=>setTab('desc')],['tabPdf','Show the PDF tab (the item\'s page)','',()=>setTab('pdf')],['tabWp','Show the Work Photos tab','',()=>setTab('wp')],
  ['addImg','Add pictures to the selected row','',()=>{if(!SEL)return;setTab('img');const b=$('#mpick');if(b)b.click()}],['addWp','Add work photos to the selected row','',()=>{if(!SEL)return;setTab('wp');const b=$('#wpadd');if(b&&!b.disabled)b.click()}],
  ['assign','Assign the PDF page shown to the selected row','',()=>{if(tab==='pdf')$('#pin').click()}],
  ['pdfv','Open the PDF Viewer','',()=>$('#pdfBtn').click()],['vidv','Open the Video Player','',()=>$('#vidBtn').click()],['wpv','Open the Work Photos page','',()=>$('#wpBtn').click()],
  ['menu','Open the menu (☰)','',()=>$('#menuBtn').click()],['settings','Open Settings','',()=>$('#cog').click()],['export','Export…','',mItem('export')],['log','Activity log','',mItem('log')],['home','Main menu','',mItem('mainmenu')],
- ...Array.from({length:10},(_,i)=>['sec'+(i+1),'Go to section '+(i+1),'',()=>{const r=flat().find(x=>x[1]===i);if(r)goRow(r,true)}])].map(([id,t,def,run,any])=>({id,t,def,run,any}));
+ ...Array.from({length:10},(_,i)=>['sec'+(i+1),'Go to section '+(i+1),'',()=>{const r=flat().find(x=>x[1]===i);if(r)goRow(r,true)}])].map(([id,t,def,run,any,nt])=>({id,t,def,run,any,nt}));
 const keyOf=a=>AS.keys&&Object.prototype.hasOwnProperty.call(AS.keys,a.id)?AS.keys[a.id]:a.def;
 let KREC=null;
 document.addEventListener('keydown',e=>{if(KREC||e.defaultPrevented||e.isComposing)return;const t=e.target,c=comboOf(e);
  // a shortcut: on the main screen, not in a pop-up; while typing only those with Ctrl or Alt (so typing letters never triggers one)
  const a=!popOpen()&&ACTS.find(x=>keyOf(x)===c);
- if(a&&(!typing(t)||/^(Ctrl|Alt)\+/.test(c))&&(a.any||mainFree())){e.preventDefault();a.run();return}
+ if(a&&(!typing(t)||/^(Ctrl|Alt)\+/.test(c)&&!a.nt)&&(a.any||mainFree())){e.preventDefault();if(typing(t))t.blur();a.run();return}
  if(!mainFree())return;
  if(e.key==='Tab'&&!e.ctrlKey&&!e.altKey){e.preventDefault();if(typing(t)){if(!boxStep(t,e.shiftKey?-1:1))t.blur()}else sideSet(SIDE==='list'?'right':'list');return}
  if(typing(t)){if(e.key==='Escape'&&t.closest('#L,#R,header')){t.blur();e.preventDefault()}return}
+ if((e.key==='Delete'||e.key==='Backspace')&&!e.ctrlKey&&!e.altKey&&!e.shiftKey){e.preventDefault();return delSel()}
  if(!/^Arrow/.test(e.key)||e.altKey)return;e.preventDefault();
  const h=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0,v=e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0;
  if(h)return contentStep(h);
@@ -623,7 +659,7 @@ document.addEventListener('keydown',e=>{if(!KREC)return;if(['Control','Shift','A
  const other=ACTS.find(a=>a.id!==id&&keyOf(a)===c);if(other){AS.keys[other.id]='';toast(c+' moved from "'+other.t+'"')}
  AS.keys[id]=c;saveApp();keysDlg()},true);
 const R=$('#R');
-R.addEventListener('input',e=>{if(e.target.dataset.cap!=null){const m=SEL&&SEL.media[+e.target.dataset.cap];if(m&&!isLocked()){m.cap=e.target.value;save()}return}const f=e.target.dataset.f;if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
+R.addEventListener('input',e=>{if(e.target.dataset.cap!=null){const m=SEL&&SEL.media[+e.target.dataset.cap];if(m&&!isLocked()){umark(m);m.cap=e.target.value;save()}return}const f=e.target.dataset.f;if(f&&SEL&&!isLocked())umark('f:'+f+':'+JSON.stringify(selPath()));if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
  if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL()}
  if(t.id==='txf'){AS.tf=t.value;saveApp();txSet(x=>x.f=AS.tf)}
@@ -643,14 +679,14 @@ async function wpThumb(blob){const bm=await createImageBitmap(blob),k=Math.min(1
 function wpWho(n){const t='Add '+n+' work photo'+(n>1?'s':'');if(pinOn('sign')||pinOn('names'))return askPin({title:t,note:'Your PIN records who added '+(n>1?'them':'it')+'.'}).then(w=>w&&{by:w.name,uid:w.uid});
  return new Promise(res=>{DLGOK=()=>{const v=$('#wpn').value.trim();if(!v)return res(null);AS.wpby=v;saveApp();res({by:v,uid:''})};
   dlg(`<div class="dh"><b>${t}</b></div><label>Your name (shown with the photo${n>1?'s':''})<input id="wpn" value="${esc(AS.wpby||'')}" maxlength="60"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Add</button></div>`);setTimeout(()=>{const i=$('#wpn');if(i)i.select()},0)})}
-async function wpAdd(files){const it=SEL,n=files.length;files=files.filter(f=>/^image\//.test(f.type));if(n>files.length)toast('Work Photos takes photos only (no videos)');if(!it||!files.length)return;if(errNow())return showErr(errNow());
+async function wpAdd(files){uclear();const it=SEL,n=files.length;files=files.filter(f=>/^image\//.test(f.type));if(n>files.length)toast('Work Photos takes photos only (no videos)');if(!it||!files.length)return;if(errNow())return showErr(errNow());
  const late=wpLocked(it),who=await wpWho(files.length);if(!who)return;
  for(const f of files){const{blob,type}=await shrinkImg(f,f.type);let tb;try{tb=await wpThumb(blob)}catch(e){toast('Could not read '+f.name);continue}
   if(!await roomFor(blob.size+tb.size))break;const id=uid(),tid=uid();await idbPut('m',id,{blob,name:f.name,type});await idbPut('m',tid,{blob:tb,name:'preview of '+f.name,type:'image/jpeg'});
   wpOf(it).push({id,tid,name:f.name,by:who.by,uid:who.uid,at:now()});logEv(late?'work photo added after sign-off':'work photo added',it,who.by,who.uid)}
  save();renderL();if(SEL===it)renderR();if(!$('#wg').hidden)wgRender()}
 async function wpDel(it,i){const p=wpL(it)[i];if(!p)return;if(errNow())return showErr(errNow());if(wpLocked(it))return toast('This item is signed off: its work photos can no longer change');
- const go=w=>{wpOf(it).splice(i,1);idbDel('m',p.id);idbDel('m',p.tid);logEv('work photo removed ('+(p.name||'photo')+', added by '+(p.by||'unknown')+' '+fmt(p.at)+')',it,w?w.name:'',w?w.uid:'');save();renderL();renderR();if(!$('#wg').hidden)wgRender()};
+ const go=w=>{uclear();wpOf(it).splice(i,1);idbDel('m',p.id);idbDel('m',p.tid);logEv('work photo removed ('+(p.name||'photo')+', added by '+(p.by||'unknown')+' '+fmt(p.at)+')',it,w?w.name:'',w?w.uid:'');save();renderL();renderR();if(!$('#wg').hidden)wgRender()};
  if(S.worker||pinOn('sign')){const w=await askPin({title:'Remove this work photo',note:'Main profile or Boss PIN.',boss:true});if(w)go(w)}
  else ask('Remove this work photo? The activity log keeps a note of it.','Remove',()=>go(null),1)}
 const wpTile=(o,k,cap,del)=>{const p=wpL(o.it)[o.i];return `<div class="wtile" data-wi="${k}" title="${esc(cap)}"><img data-mid="${p.tid}" alt=""><span class="wcap">${esc(cap)}</span>${del?`<button class="wdel" data-wd="${o.i}" title="Remove this work photo">✕</button>`:''}</div>`};
@@ -720,7 +756,7 @@ R.addEventListener('click',e=>{
  if(isLocked()&&(b.id==='mpick'||b.dataset.a==='maddurl'||b.dataset.a==='mdel'))return;
  if(b.id==='mpick')$('#mfile').click();
  else if(b.dataset.a==='maddurl'){const u=$('#murl').value.trim();if(u&&SEL){SEL.media.push({kind:'link',url:u});IM.i=SEL.media.length-1;save();renderR();renderL()}}
- else if(b.dataset.a==='mdel'&&SEL){const m=SEL.media.splice(+b.dataset.k,1)[0];if(m&&m.id)idbDel('m',m.id);save();renderR();renderL()}
+ else if(b.dataset.a==='mdel'&&SEL){umark();SEL.media.splice(+b.dataset.k,1);save();renderR();renderL()}
  else if(b.dataset.a==='vm'){IM.mode=b.dataset.k;renderR()}
  else if(b.dataset.a==='nav'){const n=SEL.media.length;IM.i=(IM.i+ +b.dataset.k+n)%n;renderR()}
  else if(b.dataset.a==='go')goPage()});
@@ -912,7 +948,7 @@ async function drawOpen(m){if(isLocked())return toast('Editing is locked');const
  w.innerHTML=`<div class="dwbar"><button class="dwok" data-dw="ok">Apply</button><button class="dwno" data-dw="no">Cancel</button><span class="dwsep"></span>
  <label class="dwl" title="Pen size">Size<input type="range" id="dwsz" min="1" max="40" value="${size}"><span class="dwdot"><i></i></span></label>
  <span class="dwcol"><button data-dw="col" title="Pen color"><span class="dwsw" style="background:${col}"></span> Color ▾</button><span class="dwpop" hidden><input type="range" id="dwhue" min="0" max="360" value="0" title="Any color"><span class="dwpre">${DCOL.map(c=>`<button data-dc="${c}" style="background:${c}" title="${c}"></button>`).join('')}</span></span></span>
- <span class="dwsep"></span><button data-dw="un" title="Undo (Ctrl+Z)">${ICON.undo}</button><button data-dw="re" title="Redo (Ctrl+Y)">${ICON.redo}</button><button data-dw="clr" title="Delete all drawing on this image">${ICON.trash}</button></div>
+ <span class="dwsep"></span><button data-dw="un" title="Undo (Ctrl+Z)">${ICON.undo}</button><button data-dw="re" title="Redo (Ctrl+Shift+Z)">${ICON.redo}</button><button data-dw="clr" title="Delete all drawing on this image">${ICON.trash}</button></div>
  <div class="dwbox"><canvas id="dwcv"></canvas></div>`;w.hidden=false;
  const cv=$('#dwcv'),g=cv.getContext('2d'),box=w.querySelector('.dwbox'),dot=w.querySelector('.dwdot i');let color=col;
  const fit=()=>{const r=box.getBoundingClientRect(),d=devicePixelRatio||1;sc=Math.min((r.width-20)/W,(r.height-20)/H,1);cv.style.width=W*sc+'px';cv.style.height=H*sc+'px';cv.width=Math.round(W*sc*d);cv.height=Math.round(H*sc*d);paint()};
@@ -926,7 +962,7 @@ async function drawOpen(m){if(isLocked())return toast('Editing is locked');const
  cv.onpointerup=cv.onpointercancel=()=>{if(!cur)return;const s=cur;cur=null;commit(strokes.concat([s]))};
  const close=()=>{w.hidden=true;w.innerHTML='';removeEventListener('resize',fit);document.removeEventListener('keydown',key,true)};
  const key=e=>{if(w.hidden)return;const k=e.key.toLowerCase();if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}
-  else if((e.ctrlKey||e.metaKey)&&(k==='y'||(k==='z'&&e.shiftKey))){e.preventDefault();w.querySelector('[data-dw=re]').click()}else if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();w.querySelector('[data-dw=un]').click()}};
+  else if((e.ctrlKey||e.metaKey)&&k==='z'&&e.shiftKey){e.preventDefault();w.querySelector('[data-dw=re]').click()}else if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();w.querySelector('[data-dw=un]').click()}};
  w.onclick=e=>{const pc=e.target.closest('[data-dc]');if(pc){color=pc.dataset.dc;AS.dcol=color;saveApp();w.querySelector('.dwpop').hidden=true;ui();return}
   const b=e.target.closest('[data-dw]');if(!b){if(!e.target.closest('.dwcol'))w.querySelector('.dwpop').hidden=true;return}const a=b.dataset.dw;
   if(a==='col')w.querySelector('.dwpop').hidden=!w.querySelector('.dwpop').hidden;
@@ -1022,7 +1058,7 @@ function renderPdfUI(){$('#pvt').textContent=S.name||'Unnamed';
 $('#psel').onchange=e=>openP(e.target.value,1);
 $('#prev').onclick=()=>show(cur-1);$('#next').onclick=()=>show(cur+1);$('#pn').onchange=e=>show(+e.target.value);
 $('#zi').onclick=()=>{zoom=Math.min(3,zoom+.2);draw()};$('#zo').onclick=()=>{zoom=Math.max(.5,zoom-.2);draw()};
-$('#pin').onclick=()=>{if(!SEL||!pdf||isLocked())return;SEL.pdf=ACT;SEL.page=revLabel(cur);save();renderL();renderR();vmsg('Page '+SEL.page+' assigned to the selected item')};
+$('#pin').onclick=()=>{if(!SEL||!pdf||isLocked())return;umark();SEL.pdf=ACT;SEL.page=revLabel(cur);save();renderL();renderR();vmsg('Page '+SEL.page+' assigned to the selected item')};
 $('#snap').onclick=()=>{if(!SEL||!pdf||isLocked())return;$('#cv').toBlob(b=>{attach(b,'pdf-page-'+cur+'.png','image/png');vmsg('Snapshot attached to the selected item')})};
 $('#off').onchange=e=>{const P=pr(ACT);if(!P||isLocked())return;P.offset=+e.target.value||0;save();label()};
 const mapName=k=>{k=k.trim();if(!k||!pdf||isLocked())return;AP().map[k]=cur;save();label();pvSearch();if(PV2)tocRender()};
@@ -1210,7 +1246,7 @@ menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(
  else if(m==='pdf'){if(isLocked())toast('Editing is locked');else $('#file').click()}
  else if(m==='demo')loadDemo()
  else if(m==='keys')keysDlg()
- else if(m==='uncheck')ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
+ else if(m==='uncheck')uclear(),ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
 // ---------- file library / main menu ----------
 function uniqueName(base,self){base=(base||'').trim().replace(/[\\/:*?"<>|]+/g,'_')||'unnamed';const used=new Set(LIB.filter(x=>x.id!==self).map(x=>x.name.toLowerCase()));let n=base,k=2;while(used.has(n.toLowerCase()))n=base+' '+k++;return n}
 async function refreshLib(){let rec={};try{rec=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}const l=await FS.list();LIB=l.map(f=>({id:f.name,name:f.name,saved:f.mtime,opened:rec[f.name]||0,pid:f.pid||'',locked:!!f.locked,worker:!!f.worker}))}
@@ -1233,7 +1269,7 @@ async function openProject(id){let r;
  catch(e){toast('Could not read that file');return}
  if(!r||r==='cancelled')return;
  if(CUR&&CUR!==id&&FS.tidy)FS.tidy(CUR+'.bcl').catch(()=>{});
- TX=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();
+ TX=null;uclear();SSEC=null;CUR=id;S=r.o;S.name=id;SEL=null;ER=ES=null;EDITOK=null;RO=S.app&&APPV&&verNewer(S.app,APPV)?S.app:null;stampCheck();
  // RO above: saved by a newer version, so view-only and never saved here
  LQ='';$('#lsearch').value='';$('#lcount').textContent='';
  for(const k in urls){URL.revokeObjectURL(urls[k]);delete urls[k]}UORD.length=0;
