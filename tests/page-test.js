@@ -867,6 +867,17 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     'Fit #10-32 screws//#10-32 x 1/2/4/', 'Check gap 1.5 mm - 2.0 mm/1.5-2.0 mm///', 'Torque - final pass/25 Nm (+/- 1)///'] }, 'dashes and minus signs inside text, values and notes stay text');
 
 
+  // ---- live preview beside the text: the tree, lines left out, unknown fields, lines read as notes, (check); click a row to go to its line ----
+  const prv = await pg.evaluate(async () => { textDlg(); const ta = $('#aitxt'); ta.value = ['Sure! Here it is:', '', '# Prep', '## Required parts | p. 4', '- Pump kit | qty: 1 | part: WP-220', '# Fitting [sign-off]', '## Fit the pump', '- Torque the bolts | spec: 22 Nm (check) | p. 15', 'Let me know if you want more!'].join('\n');
+    ta.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 150)); const pv = $('#aiprev');
+    const r = { secs: [...pv.querySelectorAll('.ps')].map(e => e.textContent), rows: [...pv.querySelectorAll('.pc,.pst')].map(e => e.textContent), warn: [...pv.querySelectorAll('.pw')].map(e => e.textContent), head: pv.querySelector('.ph').textContent, mark: pv.querySelectorAll('mark').length, am: pv.querySelectorAll('.pn .am').length };
+    pv.querySelector('.pst[data-ln="7"]').click(); r.sel = ta.value.slice(ta.selectionStart, ta.selectionEnd); r.cur = pv.querySelector('.cur')?.textContent;
+    ta.value = ''; ta.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 150)); r.empty = pv.textContent; closeDlg(); return r; });
+  assert.deepStrictEqual(prv.secs, ['Prep', 'Fitting sign-off'], 'preview sections: ' + JSON.stringify(prv));
+  assert(/^Required parts\s*p\. 4$/.test(prv.rows[0]) && /Pump kit\s*Qty 1\s*left out: part: WP-220/.test(prv.rows[1]) && /Fit the pump\s*no page/.test(prv.rows[2]) && /Values 22 Nm \(check\)/.test(prv.rows[3]), 'preview rows with tags: ' + JSON.stringify(prv.rows));
+  assert(prv.warn.length === 1 && /Line 1 left out/.test(prv.warn[0]) && /1 line left out/.test(prv.head) && /1 unknown field/.test(prv.head) && /1 line read as a note/.test(prv.head) && prv.mark === 1 && prv.am === 1, 'preview warnings: ' + JSON.stringify(prv));
+  assert(prv.sel === '- Torque the bolts | spec: 22 Nm (check) | p. 15' && /Torque the bolts/.test(prv.cur) && /shows here as you type/.test(prv.empty), 'click a preview row selects its line: ' + JSON.stringify(prv));
+
   // ---- Import on the main menu: From file (the file picker, as before) or From text / AI; supported video types shown ----
   const impd = await pg.evaluate(async () => { await openHome(); let picked = 0; const jf = $('#jfile'), old = jf.click; jf.click = () => picked++;
     $('#hImp').click(); const r = { btns: [...document.querySelectorAll('#modal .impch b')].map(b => b.textContent), note: /\.bcl/.test($('#impfile').textContent) && /\.json/.test($('#impfile').textContent), noOldBtn: !$('#hText') };
