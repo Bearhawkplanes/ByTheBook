@@ -118,34 +118,35 @@ async function installUpdate() {
 function updScript(K, cur, prev, flags, safe) {
   const q = v => "'" + String(v).replace(/'/g, "''") + "'", folder = K.k === 'folder', dir = path.dirname(cur);
   const start = flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur';
-  return [`$ErrorActionPreference='Stop';$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)};$dir=${q(dir)};$ok=${q(UOK)};$fail=${q(UFAIL)};$pend=${q(PEND)}`,
+  return [`try{Start-Transcript -LiteralPath ${q(path.join(dataDir, 'update-log.txt'))} -Append | Out-Null}catch{}`, `$ErrorActionPreference='Stop';$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)};$dir=${q(dir)};$ok=${q(UOK)};$fail=${q(UFAIL)};$pend=${q(PEND)}`,
     `$from=${q(app.getVersion())};$to=${q(dl.version)};$safe=${q(safe)};$moved=@();$placed=@()`,
     // retried: antivirus or a closing process can hold a file for a moment
-    'function Mv($a,$b){for($i=0;$i -lt 120;$i++){try{Move-Item -LiteralPath $a -Destination $b -Force -ErrorAction Stop;return}catch{Start-Sleep -Milliseconds 500}};Move-Item -LiteralPath $a -Destination $b -Force}',
-    'function Rm($a){for($i=0;$i -lt 120 -and (Test-Path -LiteralPath $a);$i++){try{Remove-Item -LiteralPath $a -Recurse -Force -ErrorAction Stop}catch{Start-Sleep -Milliseconds 500}};if(Test-Path -LiteralPath $a){throw "Could not remove $a"}}',
-    `Wait-Process -Id ${process.pid} -Timeout 300 -ErrorAction SilentlyContinue`,
+    'function Move-Retry($a,$b){for($i=0;$i -lt 120;$i++){try{Move-Item -LiteralPath $a -Destination $b -Force -ErrorAction Stop;return}catch{Start-Sleep -Milliseconds 500}};Move-Item -LiteralPath $a -Destination $b -Force}',
+    'function Remove-Retry($a){for($i=0;$i -lt 120 -and (Test-Path -LiteralPath $a);$i++){try{Remove-Item -LiteralPath $a -Recurse -Force -ErrorAction Stop}catch{Start-Sleep -Milliseconds 500}};if(Test-Path -LiteralPath $a){throw "Could not remove $a"}}',
+    `Write-Output ('Waiting for '+${process.pid}+' to close, '+(Get-Date -Format o))`, `Wait-Process -Id ${process.pid} -Timeout 300 -ErrorAction SilentlyContinue`, "Write-Output ('Closed, '+(Get-Date -Format o))",
     'try{',
     ...(folder ? [
-      "$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Rm $nd};Expand-Archive -LiteralPath $new -DestinationPath $nd -Force",
+      "$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Remove-Retry $nd};Expand-Archive -LiteralPath $new -DestinationPath $nd -Force",
       '$exe=Split-Path $cur -Leaf;$root=$nd;if(-not(Test-Path -LiteralPath (Join-Path $root $exe))){$s=@(Get-ChildItem -LiteralPath $nd -Directory);if($s.Count -eq 1 -and (Test-Path -LiteralPath (Join-Path $s[0].FullName $exe))){$root=$s[0].FullName}}',
       "if(-not(Test-Path -LiteralPath (Join-Path $root $exe))){throw 'The downloaded update does not contain the program ('+$exe+')'}",
       '$names=@(Get-ChildItem -LiteralPath $root -Force | ForEach-Object {$_.Name})',
-      'if(Test-Path -LiteralPath $prev){Rm $prev};New-Item -ItemType Directory -Path $prev | Out-Null',
-      'foreach($n in $names){$p=Join-Path $dir $n;if(Test-Path -LiteralPath $p){Mv $p (Join-Path $prev $n);$moved+=$n}}',
-      'foreach($n in $names){Mv (Join-Path $root $n) (Join-Path $dir $n);$placed+=$n}',
-      'Rm $nd;Rm $new'] : [
-      'if(Test-Path -LiteralPath $prev){Rm $prev};Mv $cur $prev;$moved+=1;Mv $new $cur;$placed+=1']),
-    `if(Test-Path -LiteralPath $ok){Rm $ok};${start.replace('Start-Process', '$p=Start-Process -PassThru')}`,
+      'if(Test-Path -LiteralPath $prev){Remove-Retry $prev};New-Item -ItemType Directory -Path $prev | Out-Null',
+      'foreach($n in $names){$p=Join-Path $dir $n;if(Test-Path -LiteralPath $p){Move-Retry $p (Join-Path $prev $n);$moved+=$n}}',
+      'foreach($n in $names){Move-Retry (Join-Path $root $n) (Join-Path $dir $n);$placed+=$n}',
+      'Remove-Retry $nd;Remove-Retry $new'] : [
+      'if(Test-Path -LiteralPath $prev){Remove-Retry $prev};Move-Retry $cur $prev;$moved+=1;Move-Retry $new $cur;$placed+=1']),
+    `if(Test-Path -LiteralPath $ok){Remove-Retry $ok};${start.replace('Start-Process', '$p=Start-Process -PassThru')}`,
     // wait for the new version to say it started; if it closes first, it failed. Still starting after 3 minutes (a slow PC): leave it.
     "$t=0;while(-not(Test-Path -LiteralPath $ok) -and $t -lt 360){if($p.HasExited){throw 'The new version closed before it finished starting'};Start-Sleep -Milliseconds 500;$t++}",
     'if(Test-Path -LiteralPath $ok){Remove-Item -LiteralPath $ok -Force -ErrorAction SilentlyContinue}',
-    '}catch{$err=$_.Exception.Message;$back=$true',
+    '}catch{$err=$_.Exception.Message;$back=$true;Write-Output (\'Failed: \'+$err)',
     ' try{' + (folder
-      ? "foreach($n in $placed){Rm (Join-Path $dir $n)};foreach($n in $moved){Mv (Join-Path $prev $n) (Join-Path $dir $n)};$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Remove-Item -LiteralPath $nd -Recurse -Force -ErrorAction SilentlyContinue}"
-      : 'if($placed.Count){Rm $cur};if($moved.Count){Mv $prev $cur}') + "}catch{$back=$false;$err=$err+' (putting the previous version back: '+$_.Exception.Message+')'}",
+      ? "foreach($n in $placed){Remove-Retry (Join-Path $dir $n)};foreach($n in $moved){Move-Retry (Join-Path $prev $n) (Join-Path $dir $n)};$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Remove-Item -LiteralPath $nd -Recurse -Force -ErrorAction SilentlyContinue}"
+      : 'if($placed.Count){Remove-Retry $cur};if($moved.Count){Move-Retry $prev $cur}') + "}catch{$back=$false;$err=$err+' (putting the previous version back: '+$_.Exception.Message+')'}",
     " Remove-Item -LiteralPath $new -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $pend -Force -ErrorAction SilentlyContinue",
     ' @{from=$from;to=$to;error=$err;safe=$safe;back=$back;prev=$prev;at=(Get-Date -Format o)} | ConvertTo-Json | Set-Content -LiteralPath $fail -Encoding UTF8',
     ' if($back){' + start + '}}',
+    "Write-Output ('Update '+$from+' -> '+$to+' finished')",'try{Stop-Transcript | Out-Null}catch{}',
     'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue'];
 }
 // ---- printable checklist ------------------------------------------------------------------------------

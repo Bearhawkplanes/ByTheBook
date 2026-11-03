@@ -54,5 +54,6 @@ srv.listen(0, '127.0.0.1', async () => {
       console.log('Update test passed: 0.0.1 -> ' + newV + (folder ? ' (folder version)' : '') + ', previous version kept, safety copy made, checklists untouched');
     }
     fs.rmSync(work, { recursive: true, force: true });
-  } catch (e) { console.error('FAILED:', e.message, '\nfolder:', fs.readdirSync(dir), '\nData:', fs.existsSync(path.join(dir, 'Data')) && fs.readdirSync(path.join(dir, 'Data'))); process.exit(1); }
+  } catch (e) { console.error('FAILED:', e.message, '\nfolder:', fs.readdirSync(dir), '\nData:', fs.existsSync(path.join(dir, 'Data')) && fs.readdirSync(path.join(dir, 'Data')));
+    for (const f of ['update-log.txt', 'update-failed.json', 'update-pending.json']) { const p = path.join(dir, 'Data', f); if (fs.existsSync(p)) console.error('--- ' + f + ':\n' + fs.readFileSync(p, 'utf8')); } process.exit(1); }
 });
