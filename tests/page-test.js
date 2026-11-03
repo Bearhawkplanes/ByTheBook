@@ -858,6 +858,14 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(imp.made.name === 'Head job' && imp.made.more && imp.made.main === 'Fit the cylinder head' && imp.made.steps[0] === 'Clean both mating faces//57/No scraping tools on the aluminium face.\nUse a plastic scraper.' && imp.made.steps[1] === 'Torque the head bolts in sequence/40 Nm + 90°/58/' && !imp.made.ver && imp.made.log === 'created from text', 'new checklist with steps, notes, specs; nothing ticked or verified: ' + JSON.stringify(imp.made));
   assert(imp.jcount === 'Found: 1 section, 1 main item, 1 step' && imp.added === 'Prep,Assembly,Final checks' && imp.undone === 'Prep,Assembly', 'JSON format adds to the open checklist; undo removes it: ' + JSON.stringify([imp.added, imp.undone]));
   assert(/No sections, main items or steps found/.test(imp.bad), 'text without an outline is explained');
+  // dashes, minus signs, part numbers, # and colons inside text, values and notes do not break the outline
+  const dash = await pg.evaluate(() => { const r = parseOutline(['# Cold test - stage 1', '## Chill the block - 2 hours | spec: -40 °C to -20 °C | p. 9', '- Set the chamber to -40 °C | spec: -40 ± 2 °C', '  > - wait for the light - then start', '  > Ratio 10:1 - see table', '-5 °C or lower before the next step',
+    '- Fit #10-32 screws | size: #10-32 x 1/2 | qty: 4', '1. Check gap 1.5 mm - 2.0 mm | spec: 1.5-2.0 mm', '2) Torque - final pass | spec: 25 Nm (+/- 1)'].join('\n')).o, c = r.sections[0].cards[0];
+    return { sec: r.sections[0].title, card: [c.text, c.spec, c.page].join('/'), steps: c.steps.map(x => [x.text, x.spec || '', x.size || '', x.qty || '', x.desc || ''].join('/')) }; });
+  assert.deepStrictEqual(dash, { sec: 'Cold test - stage 1', card: 'Chill the block - 2 hours/-40 °C to -20 °C/9', steps: [
+    'Set the chamber to -40 °C/-40 ± 2 °C///- wait for the light - then start\nRatio 10:1 - see table\n-5 °C or lower before the next step',
+    'Fit #10-32 screws//#10-32 x 1/2/4/', 'Check gap 1.5 mm - 2.0 mm/1.5-2.0 mm///', 'Torque - final pass/25 Nm (+/- 1)///'] }, 'dashes and minus signs inside text, values and notes stay text');
+
 
   // ---- Import on the main menu: From file (the file picker, as before) or From text / AI; supported video types shown ----
   const impd = await pg.evaluate(async () => { await openHome(); let picked = 0; const jf = $('#jfile'), old = jf.click; jf.click = () => picked++;
