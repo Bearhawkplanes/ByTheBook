@@ -841,6 +841,24 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(() => document.querySelector('[data-ka=vidv]').click()); await pg.keyboard.press('Control+Alt+K'); const wks2 = await pg.evaluate(() => [AS.keys.search, AS.keys.vidv, document.querySelector('[data-ka=rename]').textContent, document.querySelector('[data-ka=new]').textContent]); await pg.evaluate(() => closeDlg());
   assert.deepStrictEqual(wks2, ['Shift+N', 'Ctrl+Alt+K', 'R', 'Not set'], 'Shift+N and three-key shortcuts can be recorded; defaults R and (none) for New checklist');
 
+  // ---- Import from text / AI: the outline from docs/AI-CHECKLIST-GUIDE.md, the JSON format, and adding to the open checklist ----
+  const outline = ['```', '# Prep', '## Required parts | p. 3', '- Head gasket | qty: 1 | p. 3', '- Head bolts, new | qty: 10 | size: M10 x 1.25 | p. 3', '# Assembly [sign-off]', '## **Fit the cylinder head** | p. 57',
+    '1. Clean both mating faces | p. 57', '  > No scraping tools on the aluminium face.', '  > Use a plastic scraper.', '2. Torque the head bolts in sequence | spec: 40 Nm + 90° | p.58', '```'].join('\n');
+  const imp = await pg.evaluate(async t => { closeDlg(); const n0 = LIB.length; textDlg(); const r = { copyBtn: !!$('#aicopy'), prompt: /# Section title/.test(AIPROMPT) && /counting the first page of the file as 1/.test(AIPROMPT) };
+    $('#aitxt').value = t; $('#aitxt').dispatchEvent(new Event('input', { bubbles: true })); r.count = $('#aicnt').textContent; $('#ainame').value = 'Head job'; $('#aigo').click(); await new Promise(r => setTimeout(r, 600));
+    const sx = S.sections; r.made = { name: CUR, more: LIB.length === n0 + 1, secs: sx.map(x => x.title + (x.sign ? '*' : '')), parts: sx[0].cards[0].steps.map(x => [x.text, x.qty, x.size, x.page].join('/')), main: sx[1].cards[0].text, steps: sx[1].cards[0].steps.map(x => [x.text, x.spec, x.page, x.desc].join('/')), ver: sx[1].cards[0].steps.some(x => x.ver || x.done), log: S.log.at(-1).ev };
+    // JSON from the guide, pasted to add a section to the open checklist (and undone with Ctrl+Z)
+    textDlg(); $('#aitxt').value = JSON.stringify({ sections: [{ title: 'Final checks', sign: false, cards: [{ text: 'Leak test', steps: [{ text: 'Run for 10 minutes', spec: 'no leaks', page: '90' }] }] }] }); $('#aitxt').dispatchEvent(new Event('input', { bubbles: true }));
+    r.jcount = $('#aicnt').textContent; document.querySelector('#modal input[name=aiw][value=add]').click(); $('#aigo').click(); await new Promise(r => setTimeout(r, 200)); r.added = S.sections.map(x => x.title).join();
+    urestore(false); r.undone = S.sections.map(x => x.title).join();
+    textDlg(); $('#aitxt').value = 'just some words'; $('#aitxt').dispatchEvent(new Event('input', { bubbles: true })); r.bad = $('#aicnt').textContent; closeDlg(); const demo = LIB.filter(x => /^Demo engine build/.test(x.id)).sort((a, b) => b.opened - a.opened)[0]; await openProject(demo.id); return r; }, outline);
+  assert(imp.copyBtn && imp.prompt && imp.count === 'Found: 2 sections, 2 main items, 4 steps', 'outline read: ' + JSON.stringify(imp));
+  assert.deepStrictEqual(imp.made.secs, ['Prep', 'Assembly*'], 'sections and [sign-off]');
+  assert.deepStrictEqual(imp.made.parts, ['Head gasket/1//3', 'Head bolts, new/10/M10 x 1.25/3'], 'qty, size and page fields');
+  assert(imp.made.name === 'Head job' && imp.made.more && imp.made.main === 'Fit the cylinder head' && imp.made.steps[0] === 'Clean both mating faces//57/No scraping tools on the aluminium face.\nUse a plastic scraper.' && imp.made.steps[1] === 'Torque the head bolts in sequence/40 Nm + 90°/58/' && !imp.made.ver && imp.made.log === 'created from text', 'new checklist with steps, notes, specs; nothing ticked or verified: ' + JSON.stringify(imp.made));
+  assert(imp.jcount === 'Found: 1 section, 1 main item, 1 step' && imp.added === 'Prep,Assembly,Final checks' && imp.undone === 'Prep,Assembly', 'JSON format adds to the open checklist; undo removes it: ' + JSON.stringify([imp.added, imp.undone]));
+  assert(/No sections, main items or steps found/.test(imp.bad), 'text without an outline is explained');
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);

@@ -53,7 +53,7 @@ h2{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;justify-content:sp
 .tile button{position:absolute;top:6px;right:6px;padding:0 7px}
 .tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 #L.kside .stabs,#R.kside .tabs{box-shadow:inset 0 3px 0 var(--acc)}
-.kdlg{width:min(640px,94vw)}.secband.ssel h3{text-decoration:underline 3px var(--acc);text-underline-offset:6px}.krow{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}.krow>span{flex:1}.krow kbd{font:12px 'IBM Plex Mono',monospace;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);white-space:nowrap}
+.kdlg{width:min(640px,94vw)}.dlg .airow{display:flex;align-items:center;gap:10px;margin:6px 0}.dlg .airow label{display:inline-flex;align-items:center;gap:7px;margin:0;white-space:nowrap;color:var(--fg);font-size:13px}.dlg .airow label.mut{color:var(--mut)}.dlg .airow input[type=radio]{width:16px;height:16px;padding:0;margin:0;accent-color:var(--acc)}.dlg .airow #ainame{flex:1;min-width:0;width:auto}.secband.ssel h3{text-decoration:underline 3px var(--acc);text-underline-offset:6px}.krow{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)}.krow>span{flex:1}.krow kbd{font:12px 'IBM Plex Mono',monospace;padding:3px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);white-space:nowrap}
 .kbtn{min-width:150px;font:12px 'IBM Plex Mono',monospace}.kbtn.none{color:var(--mut)}.kbtn.rec{border-color:var(--acc);color:var(--acc)}.kclr{padding:2px 8px}.klist{max-height:46vh;overflow:auto;padding-right:6px}
 #vbox{overflow:auto;max-height:calc(100vh - 250px);min-height:300px;border:1px solid var(--line);border-radius:8px;background:#7d7d7d}
 canvas{display:block;margin:0 auto}
@@ -269,7 +269,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 <div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click,</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option><option value="wp">Work Photos</option></select></label><div id="menu" hidden>
 <button data-m="wunlock" hidden>Unlock menu (Boss PIN)…</button><button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button>
 <button data-m="loc">Open file location</button><button data-m="export">Export…</button>
-<button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><button data-m="keys">Shortcuts…</button><hr>
+<button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><button data-m="text">Import from text / AI…</button><button data-m="keys">Shortcuts…</button><hr>
 <button data-m="pdf">Open PDF…</button><hr>
 <button data-m="uncheck" class="warnb">Uncheck everything…</button><button data-m="delete" class="warnb">Delete checklist</button></div></div>
 <div class="hc"><div class="tline"><span id="savedi" aria-live="polite">Saved!</span><h1 id="ptitle"></h1><button class="pencil ed" id="ptEdit" title="Rename checklist">✎</button><span id="lockb" class="chip ok" hidden>🔒 master file</span><span id="pie" role="img"></span></div><div id="prog"></div></div>
@@ -297,7 +297,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </main>
 <div id="home"><div id="hleft"><aside id="hside"><div class="hh">Saved checklists</div><div id="flist"></div><p class="mut" style="margin-top:auto;padding-top:14px">Every checklist in this app's save folder shows up here.</p></aside><div class="hfoot"><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button><button id="hTut" class="prof" title="Tutorial (coming soon)"><span class="avatar" style="align-items:center"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg></span><span>Tutorial</span></button></div></div>
 <section id="hmain"><div class="hcenter" id="hcen"><h1>Build Checklist</h1>
-<div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button></div>
+<div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button><button class="big sm" id="hText" title="Paste a checklist written by an AI chatbot (or typed as an outline) to make a new checklist">From text / AI</button></div>
 <button id="hBack" hidden style="margin-bottom:24px">Back to the open checklist</button>
 <h2>Open recent</h2><div id="rlist"></div></div>
 <div id="hprof" class="hcenter" hidden></div>
@@ -1246,6 +1246,7 @@ menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(
  else if(m==='pdf'){if(isLocked())toast('Editing is locked');else $('#file').click()}
  else if(m==='demo')loadDemo()
  else if(m==='keys')keysDlg()
+ else if(m==='text')textDlg()
  else if(m==='uncheck')uclear(),ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
 // ---------- file library / main menu ----------
 function uniqueName(base,self){base=(base||'').trim().replace(/[\\/:*?"<>|]+/g,'_')||'unnamed';const used=new Set(LIB.filter(x=>x.id!==self).map(x=>x.name.toLowerCase()));let n=base,k=2;while(used.has(n.toLowerCase()))n=base+' '+k++;return n}
@@ -1377,6 +1378,55 @@ $('#home').addEventListener('click',e=>{const ab=e.target.closest('button[data-a
  if(e.target.closest('button[data-a=logv]')){viewLogOf(HS);return}
   if(e.target.closest('button[data-a=open]')){openProject(HS);return}const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id,t=Date.now();
  if(lastClk.id===id&&t-lastClk.t<500){lastClk={id:null,t:0};openProject(id);return}lastClk={id,t};HS=id;renderHome()});
+// ---------- import from text / AI: an outline any chatbot can write (docs/AI-CHECKLIST-GUIDE.md); also the JSON format ----------
+// # Section [sign-off]   ## Main item | qty: 2 | size: M8 | spec: 25 Nm | p. 14   - Step | spec: … | p. 15   > description line
+// AIPROMPT is what "Copy instructions for an AI" puts on the clipboard; keep it in step with the guide.
+const AIPROMPT=`You are helping me build a checklist for the Build Checklist app from the manual (PDF) I give you. Read the pages I point you to and write the checklist as a plain outline in exactly this format, with nothing else before or after it:
+
+# Section title
+## Main item | qty: 2 | size: M8 x 1.25 | spec: 25 Nm | p. 14
+- Step | spec: 30 Nm | p. 15
+  > Optional notes for the line above (one or more lines starting with >)
+
+Rules:
+- "#" starts a section (a stage of the job, e.g. "Disassembly"). Add " [sign-off]" after its title if each main item in it must be signed off by a supervisor.
+- "##" is a main item: one task or procedure. "-" lines under it are its steps, in the order they are done, one action each.
+- After a "|" you may add fields: qty (how many), size (part size, thread, length), spec (values and limits with units, e.g. torque, clearance, pressure), p. (the page number in the PDF file where it is described, counting the first page of the file as 1, even if the printed page numbers differ). Leave out fields you do not need.
+- Use the manual's own wording and values. Never guess a value: if something is unclear, write "(check)" after it.
+- Keep each line short. Put explanations, warnings and tool lists in "> " note lines.
+- If parts or tools are needed, start with a section "Prep" with main items such as "Required tools" and "Required parts", each part or tool as a step with its qty and size.`;
+function parseOutline(txt){txt=String(txt||'').replace(/^\s*```[a-z]*\s*$/gim,'').trim();if(!txt)return null;
+ // JSON (the format in the guide): {name, manual, mech, sections:[{title, sign, cards:[{text,…,steps:[…]}]}]} or just the sections array
+ if(/^[\[{]/.test(txt)){let o;try{o=JSON.parse(txt)}catch(e){return{err:'That looks like JSON but cannot be read: '+e.message}}if(Array.isArray(o))o={sections:o};if(!Array.isArray(o.sections))return{err:'The JSON has no "sections" list'};return{o}}
+ const o={sections:[]},F={qty:'qty',quantity:'qty',size:'size',spec:'spec',value:'spec',values:'spec',limits:'spec',torque:'spec',p:'page',page:'page',ref:'page','ref page':'page',pg:'page',desc:'desc',notes:'desc',note:'desc'};
+ let sec=null,card=null,last=null;const clean=t=>t.replace(/\*\*|__/g,'').trim();
+ // a field is "name: value", or a page written as "p. 14" / "p.14" / "page 14"
+ const kv=p=>{const i=p.indexOf(':');if(i>0)return[p.slice(0,i),p.slice(i+1)];const m=/^\s*(p|pg|page|ref)\.?\s*(\S.*)$/i.exec(p);return m&&[m[1],m[2]]};
+ const item=(t)=>{const parts=t.split('|'),it={text:clean(parts.shift()||'')};for(const p of parts){const m=kv(p);if(!m)continue;const k=F[m[0].toLowerCase().replace(/\./g,'').replace(/\s+/g,' ').trim()];if(k)it[k]=clean(m[1])}return it};
+ const needSec=()=>sec||(o.sections.push(sec={title:'Checklist',sign:false,cards:[]}),sec),needCard=()=>card||(needSec().cards.push(card={text:'General',open:true,steps:[]}),card);
+ for(const raw of txt.split(/\r?\n/)){const l=raw.trim();if(!l)continue;let m;
+  if(m=/^#\s*([^#].*)$/.exec(l)){const sg=/\[(sign[- ]?off)\]|\((sign[- ]?off)\)/i.test(m[1]);o.sections.push(sec={title:clean(m[1].replace(/\[(sign[- ]?off)\]|\((sign[- ]?off)\)/ig,'')),sign:sg,cards:[]});card=null;last=null}
+  else if(m=/^#{2,}\s*(.*)$/.exec(l)){card=Object.assign(item(m[1]),{open:true,steps:[]});needSec().cards.push(card);last=card}
+  else if(m=/^(?:[-*•]|\d+[.)])\s+(.*)$/.exec(l)){last=item(m[1]);needCard().steps.push(last)}
+  else if(m=/^>\s?(.*)$/.exec(l)){if(last)last.desc=(last.desc?last.desc+'\n':'')+m[1]}
+  else if(last)last.desc=(last.desc?last.desc+'\n':'')+l}
+ return o.sections.length?{o}:{err:'No sections, main items or steps found. Lines should start with #, ## or -'}}
+const outlineCount=o=>{let c=0,st=0;o.sections.forEach(s=>(s.cards||[]).forEach(k=>{c++;st+=(k.steps||[]).length}));return`${o.sections.length} section${o.sections.length===1?'':'s'}, ${c} main item${c===1?'':'s'}, ${st} step${st===1?'':'s'}`};
+function textDlg(){const canAdd=!!CUR&&$('#home').hidden&&!isLocked();
+ dlg(`<div class="dh"><b>Import from text / AI</b><button data-d="x">✕</button></div><p class="mut" style="margin:0 0 8px">Paste a checklist written by an AI chatbot (or typed by hand) as an outline: <code># Section</code>, <code>## Main item</code>, <code>- Step</code>, with <code>| qty: … | size: … | spec: … | p. …</code> after a line and <code>&gt; notes</code> under it. The JSON format from the guide works too.</p>
+ <div class="tb"><button id="aicopy" title="Copies a prompt that tells any chatbot how to write the outline; paste it into the chat with your manual">Copy instructions for an AI</button><span class="mut" style="font-size:12px">Then paste them into ChatGPT, Claude, a local model… with your manual.</span></div>
+ <textarea id="aitxt" rows="12" placeholder="# Disassembly&#10;## Remove the cover | p. 12&#10;- Undo the 8 screws | size: M6 | spec: 10 Nm | p. 12&#10;  > Keep the screws in order" style="width:100%;font:12.5px 'IBM Plex Mono',monospace"></textarea><div id="aicnt" class="mut" style="min-height:20px">Nothing pasted yet.</div>
+ <div class="airow"><label><input type="radio" name="aiw" value="new" checked> New checklist named</label><input id="ainame" value="${esc(uniqueName('Imported checklist'))}"></div>
+ <div class="airow" title="${canAdd?'':'Open a checklist that is not locked'}"><label${canAdd?'':' class="mut"'}><input type="radio" name="aiw" value="add" ${canAdd?'':'disabled'}> Add the sections to the end of the open checklist${CUR&&$('#home').hidden?` ("${esc(S.name||CUR)}")`:''}</label></div>
+ <p class="mut" style="font-size:12px;margin:6px 0 0">Everything comes in unticked and not "Verified": check each value against its page before relying on it. Pictures are added afterwards; Ref. pages link to the PDF once you add it (Menu > Open PDF…).</p>
+ <div class="dbtn"><button data-d="x">Cancel</button><button class="pri" id="aigo">Import</button></div>`);$('#modal .dlg').classList.add('kdlg')}
+$('#modal').addEventListener('input',e=>{if(e.target.id!=='aitxt')return;const r=parseOutline(e.target.value);$('#aicnt').textContent=!r?'Nothing pasted yet.':r.err?r.err:'Found: '+outlineCount(r.o)});
+$('#modal').addEventListener('click',async e=>{const t=e.target;if(t.id==='aicopy'){try{await navigator.clipboard.writeText(AIPROMPT);toast('Instructions copied: paste them into your AI chat')}catch(x){toast('Could not copy')}return}
+ if(t.id!=='aigo')return;const r=parseOutline($('#aitxt').value);if(!r)return toast('Paste the checklist first');if(r.err)return toast(r.err);
+ const add=document.querySelector('#modal input[name=aiw]:checked').value==='add',secs=norm({sections:r.o.sections}).sections,what=outlineCount({sections:secs});closeDlg();
+ if(add){if(isLocked())return toast('Editing is locked');umark();S.sections.push(...secs);if(r.o.manual&&!S.manual)S.manual=r.o.manual;logEv('imported from text',{text:what});save();renderL();renderR();toast('Added '+what);return}
+ const o=norm({name:'',manual:r.o.manual||'',mech:!!r.o.mech,sections:secs});o.log=[];const id=await addEntry(o,$('#ainame').value.trim()||'Imported checklist');await openProject(id);logEv('created from text',{text:what});save();toast('Created with '+what)});
+$('#hText').onclick=()=>textDlg();
 async function loadDemo(){const o=norm(demoData());o.pdf=await b2d(new Blob([demoBuf()],{type:'application/pdf'}));openProject(await addEntry(o,'Demo engine build'))}
 $('#hDemo').onclick=loadDemo;
 // placeholder: the tutorial is still to be written (see CLAUDE.md)
