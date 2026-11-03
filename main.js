@@ -106,6 +106,7 @@ async function installUpdate() {
       fs.writeFileSync(PEND, JSON.stringify({ from: app.getVersion(), to: dl.version, safe, at: new Date().toISOString() }));
       const ps = path.join(os.tmpdir(), 'build-checklist-update-' + process.pid + '.ps1');
       fs.writeFileSync(ps, '\ufeff' + updScript(K, cur, prev, flags, safe).join('\r\n'));
+      if (process.env.BCL_VERSION_MARK) try { fs.copyFileSync(ps, path.join(dataDir, 'update-helper.ps1')); } catch (e) {}   // tests: keep a copy to check
       spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
     }
   }
