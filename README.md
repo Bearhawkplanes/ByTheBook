@@ -4,6 +4,16 @@ Offline desktop app for shop work done step by step, by the manual. Build a chec
 
 Runs on Windows with no internet and no account. Everything stays on your computer or drive.
 
+## Made for long, complicated jobs
+
+Building an engine, overhauling a gearbox, assembling a machine: jobs with hundreds of steps, a thick manual, several people and weeks of work. ByTheBook is built for that:
+
+- **Nothing gets skipped.** The job is split into sections, main items and steps, in order. Progress shows per item, per section and for the whole job, and a main item can't be signed off until every step under it is done.
+- **The manual comes to you.** Every step points to its page, picture or video clip, so nobody has to dig through a 600-page PDF to find the torque value or the right diagram.
+- **Pick up where anyone left off.** Days or weeks later, or with a different person on the job, the checklist shows exactly what is done, who did it, and what is next.
+- **Big jobs stay fast.** Checklists with thousands of steps and gigabytes of photos, PDFs and video open and save quickly, even on an older shop laptop.
+- **A record you can stand behind.** When the job is done, the checklist holds who did each step and when, the sign-offs, the photos and the full log.
+
 ## Main features
 
 - **Everything on the step it belongs to.** Each step can carry its manual page, pictures (with drawings and text marked on them), video clips, quantities, sizes and values. Click a step and its page opens in the PDF, or its clip plays, right beside the list.
