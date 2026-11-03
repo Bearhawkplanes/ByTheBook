@@ -137,6 +137,8 @@ function updScript(K, cur, prev, flags, safe) {
   const q = v => "'" + String(v).replace(/'/g, "''") + "'", folder = K.k === 'folder', dir = path.dirname(cur);
   const start = flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur';
   return [`try{Set-Content -LiteralPath ${q(HELPER_ON)} -Value $PID}catch{}`, `try{Start-Transcript -LiteralPath ${q(path.join(dataDir, 'update-log.txt'))} -Append | Out-Null}catch{}`, `$ErrorActionPreference='Stop';$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)};$dir=${q(dir)};$ok=${q(UOK)};$fail=${q(UFAIL)};$pend=${q(PEND)}`,
+    // started through WMI, the helper does not inherit this app's environment: pass on the test switches (BCL_*), so tests can follow
+    ...Object.keys(process.env).filter(k => /^BCL_/.test(k)).map(k => `$env:${k}=${q(process.env[k])}`),
     `$from=${q(app.getVersion())};$to=${q(dl.version)};$safe=${q(safe)};$moved=@();$placed=@()`,
     // retried: antivirus or a closing process can hold a file for a moment
     'function Move-Retry($a,$b){for($i=0;$i -lt 120;$i++){try{Move-Item -LiteralPath $a -Destination $b -Force -ErrorAction Stop;return}catch{Start-Sleep -Milliseconds 500}};Move-Item -LiteralPath $a -Destination $b -Force}',
