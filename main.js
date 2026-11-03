@@ -114,7 +114,8 @@ async function installUpdate() {
 // The Windows helper (PowerShell). Portable: the .exe is swapped, the old one kept as "<name> (previous).exe". Folder: the new zip is
 // unpacked beside the program first (.update-new), then only the names in it are swapped; the old ones go to .previous-version, so
 // Data, Saves and anything else in the folder are never moved. Either way, if anything fails or the new version does not start,
-// the previous version is put back and started, and update-failed.json says what happened.
+// the previous version is put back and started, and update-failed.json says what happened. (Hashtable keys are quoted: "from" is a
+// reserved word in PowerShell, and a script that does not parse does not run at all.)
 function updScript(K, cur, prev, flags, safe) {
   const q = v => "'" + String(v).replace(/'/g, "''") + "'", folder = K.k === 'folder', dir = path.dirname(cur);
   const start = flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur';
@@ -144,7 +145,7 @@ function updScript(K, cur, prev, flags, safe) {
       ? "foreach($n in $placed){Remove-Retry (Join-Path $dir $n)};foreach($n in $moved){Move-Retry (Join-Path $prev $n) (Join-Path $dir $n)};$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Remove-Item -LiteralPath $nd -Recurse -Force -ErrorAction SilentlyContinue}"
       : 'if($placed.Count){Remove-Retry $cur};if($moved.Count){Move-Retry $prev $cur}') + "}catch{$back=$false;$err=$err+' (putting the previous version back: '+$_.Exception.Message+')'}",
     " Remove-Item -LiteralPath $new -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $pend -Force -ErrorAction SilentlyContinue",
-    ' @{from=$from;to=$to;error=$err;safe=$safe;back=$back;prev=$prev;at=(Get-Date -Format o)} | ConvertTo-Json | Set-Content -LiteralPath $fail -Encoding UTF8',
+    ' @{"from"=$from;"to"=$to;"error"=$err;"safe"=$safe;"back"=$back;"prev"=$prev;"at"=(Get-Date -Format o)} | ConvertTo-Json | Set-Content -LiteralPath $fail -Encoding UTF8',
     ' if($back){' + start + '}}',
     "Write-Output ('Update '+$from+' -> '+$to+' finished')",'try{Stop-Transcript | Out-Null}catch{}',
     'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue'];
