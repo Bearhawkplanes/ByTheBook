@@ -44,7 +44,7 @@ Install Node.js LTS once, then in this folder:
 - `Saves/.profile-marker.json`  small signed record of the profile ID, kept with the checklists
 
 Settings > Save file location lets you move the Saves folder, e.g. to an external drive.
-If the app sits somewhere it cannot write (Program Files, a Mac /Applications), it falls back to Documents/ByTheBook (or Documents/Build Checklist, if that already holds the data from before the app was renamed).
+On a Mac they always live in Documents/ByTheBook. If the app sits somewhere it cannot write (Program Files), it falls back to Documents/ByTheBook (or Documents/Build Checklist, if that already holds the data from before the app was renamed).
 
 ## Loading screen
 While the app starts, a small loading window shows a spinning wrench, a loading bar and what it is doing ("Reading saved checklists…"). The main window appears when the menu is ready. Before that, the portable `.exe` unpacks itself every time it starts, which can take a while on a slow computer with nothing on screen; the folder version and the installer skip that step and start faster.

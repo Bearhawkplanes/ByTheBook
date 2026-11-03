@@ -1,0 +1,39 @@
+# A Mac test build, not published: Actions tab > "Mac test build" > Run workflow. When it finishes, the run page lists
+# ByTheBook-mac-apple-silicon (M1 and newer) and ByTheBook-mac-intel; each is a .dmg in a zip. Not signed by Apple: the first
+# time, right-click the app > Open (or System Settings > Privacy & Security > Open Anyway).
+name: Mac test build
+on:
+  workflow_dispatch:
+jobs:
+  mac:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            name: apple-silicon
+          - arch: x64
+            name: intel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # npm_config_arch makes ffmpeg-static download the video tool for that kind of Mac
+      - run: npm ci
+        env:
+          npm_config_arch: ${{ matrix.arch }}
+      - run: npx electron-builder --mac dir --${{ matrix.arch }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # an ad-hoc signature: without any, Apple Silicon Macs refuse to open the app ("damaged")
+      - run: |
+          APP=$(ls -d dist/mac*/ByTheBook.app | head -1)
+          codesign --force --deep --sign - "$APP"
+          file "$APP/Contents/MacOS/ByTheBook" "$APP/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-static/ffmpeg"
+          hdiutil create -volname ByTheBook -srcfolder "$APP" -ov -format UDZO ByTheBook-mac-${{ matrix.name }}.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ByTheBook-mac-${{ matrix.name }}
+          path: ByTheBook-mac-${{ matrix.name }}.dmg

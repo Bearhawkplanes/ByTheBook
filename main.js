@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path'), fs = require('fs'), fsp = fs.promises, crypto = require('crypto');
 
-// Everything lives next to the app by default: <app folder>/Saves and <app folder>/Data
+// Everything lives next to the app by default: <app folder>/Saves and <app folder>/Data. On a Mac "next to the program" is inside the
+// .app package (lost on every update, and it breaks the app's signature), so there it is Documents/ByTheBook.
 const baseDir = app.isPackaged
-  ? (process.env.PORTABLE_EXECUTABLE_DIR || (process.env.APPIMAGE && path.dirname(process.env.APPIMAGE)) || path.dirname(app.getPath('exe')))
+  ? (process.platform === 'darwin' ? path.join(app.getPath('documents'), 'ByTheBook') : process.env.PORTABLE_EXECUTABLE_DIR || (process.env.APPIMAGE && path.dirname(process.env.APPIMAGE)) || path.dirname(app.getPath('exe')))
   : __dirname;
 let dataDir = path.join(baseDir, 'Data');
 try { fs.mkdirSync(dataDir, { recursive: true }); fs.accessSync(dataDir, fs.constants.W_OK); }
