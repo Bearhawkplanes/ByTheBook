@@ -164,7 +164,7 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   assert.deepStrictEqual(await call('updDownload'), { ok: true, size: ASSET.length }); assert.strictEqual(prog.at(-1), 1, 'progress reaches 100%');
   await call('updSet', { skip: '0.10.0', snooze: 123 }); u = await call('updGet');
   assert(u.skip === '0.10.0' && u.snooze === 123, 'skip and snooze remembered');
-  call('updInstall'); await new Promise(r => setTimeout(r, 400));
+  call('updInstall'); for (let i = 0; i < 50 && !quits; i++) await new Promise(r => setTimeout(r, 100));
   assert.strictEqual(fs.readFileSync(process.env.APPIMAGE, 'utf8'), ASSET.toString(), 'new version in place under the same name');
   assert.strictEqual(fs.readFileSync(path.join(dir, 'BuildChecklist (previous).AppImage'), 'utf8'), '#!/bin/sh\necho old\n', 'previous version kept');
   assert(quits >= 1, 'the app closes so the new version can start');
