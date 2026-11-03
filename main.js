@@ -109,7 +109,14 @@ async function installUpdate() {
       if (process.env.BCL_VERSION_MARK) try { fs.copyFileSync(ps, path.join(dataDir, 'update-helper.ps1')); } catch (e) {}   // tests: keep a copy to check
       // close only once the helper says it is running (HELPER_ON); if it never does, nothing has changed and the app stays open
       fs.rmSync(HELPER_ON, { force: true }); const psx = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-      let bad = null; const h = spawn(fs.existsSync(psx) ? psx : 'powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { stdio: 'ignore', windowsHide: true });   // not detached: PowerShell started without a console closes at once
+      // Two steps: Windows closes everything this app started when it exits, so a small first script asks Windows (WMI) to start the
+      // real helper on its own, outside this app; PowerShell is not started detached (without a console it closes at once).
+      const px = fs.existsSync(psx) ? psx : 'powershell.exe', qq = v => "'" + String(v).replace(/'/g, "''") + "'", line = `"${px}" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "${ps}"`;
+      const ps0 = ps.replace(/\.ps1$/, '-start.ps1');
+      fs.writeFileSync(ps0, '\ufeff' + [`$l=${qq(line)}`, 'try{$si=New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ShowWindow=[uint16]0};$r=Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine=$l;ProcessStartupInformation=$si};if($r.ReturnValue -ne 0){throw ("WMI "+$r.ReturnValue)}}',
+        `catch{Start-Process -FilePath ${qq(px)} -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',${qq('"' + ps + '"')}) -WindowStyle Hidden}`,
+        'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue'].join('\r\n'));
+      let bad = null; const h = spawn(px, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps0], { stdio: 'ignore', windowsHide: true });
       h.on('error', e => { bad = e; }); h.on('exit', c => trace('helper exited with code ' + c)); h.unref(); trace('helper spawned, pid ' + h.pid);
       for (let i = 0; i < 200 && !bad && !fs.existsSync(HELPER_ON); i++) await new Promise(r => setTimeout(r, 100));
       if (!fs.existsSync(HELPER_ON)) { trace('helper did not start: ' + (bad ? bad.message : 'no sign of it after 20 s')); try { h.kill(); } catch (e) {} fs.rmSync(PEND, { force: true });
