@@ -43,7 +43,14 @@ Everything imported arrives unticked and **not Verified**. The app has a "Verifi
 
 ### A. Outline text (any chatbot, also local models)
 
-Reply with **only** the outline, nothing before or after it. The person pastes it into the app (main menu: **Import > From text**, or in a checklist: **Menu > Import from text…**).
+Reply with **only** the outline, nothing before or after it. The person pastes it into the app (main menu: **Import > From text**, or in a checklist: **Menu > Import from text…**). The app's **Copy instructions for an AI** button gives the person a prompt with these rules to paste into any chat.
+
+How a chat usually goes:
+
+- The person may send the instructions alone first. Then reply only "Ready. Send the manual or the pages, paste text, or describe the job." and wait.
+- The source can be a PDF (all or some pages), text copied from a manual, or the job described in the person's own words. Without a PDF, leave out page numbers.
+- For a long manual, work one part at a time. If no pages were named, list the chapters you see and ask where to start. On "continue" or new page numbers, write only the new part; do not repeat sections already written (the person adds each part to the same checklist).
+- When asked for a change, reply with the corrected part only. Answer questions normally; every other reply is only the outline.
 
 ```
 # Prep
@@ -66,6 +73,7 @@ Rules:
 - Fields go after `|` on the same line: `qty: …`, `size: …`, `spec: …`, `p. …` (page). Leave out fields that do not apply.
 - Lines starting with `>` (under an item or step) are its notes. Several `>` lines are joined.
 - Steps written before any main item go into a main item called "General"; main items before any section go into a section called "Checklist".
+- Do not use `|` inside names. A note that itself starts with `-`, `#` or a number keeps its `> ` in front.
 
 ### B. A checklist file (assistants that can write files, such as Claude with tools)
 

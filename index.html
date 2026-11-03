@@ -1382,18 +1382,26 @@ $('#home').addEventListener('click',e=>{const ab=e.target.closest('button[data-a
 // ---------- import from text / AI: an outline any chatbot can write (docs/AI-CHECKLIST-GUIDE.md); also the JSON format ----------
 // # Section [sign-off]   ## Main item | qty: 2 | size: M8 | spec: 25 Nm | p. 14   - Step | spec: … | p. 15   > description line
 // AIPROMPT is what "Copy instructions for an AI" puts on the clipboard; keep it in step with the guide.
-const AIPROMPT=`You are helping me build a checklist for the Build Checklist app from the manual (PDF) I give you. Read the pages I point you to and write the checklist as a plain outline in exactly this format, with nothing else before or after it:
+const AIPROMPT=`You are helping me write a checklist for the Build Checklist app, a shop app for step-by-step work done from a manual. Follow these instructions for the rest of this conversation.
 
+HOW WE WILL WORK
+- I will give you the source in one of these ways, in this message or a later one: a PDF or document (all of it, or only some pages), text copied from a manual, or the job described in my own words. If I have not given you anything yet, reply only: "Ready. Send the manual or the pages, paste text, or describe the job."
+- For a long manual, work one part at a time. If I did not say which pages, list the chapters you see and ask where to start. When I say "continue" or name more pages, write only the new part, carrying on from where you stopped; do not repeat sections you already wrote.
+- If I ask for a change ("split that step", "add the torque values", "merge those two"), reply with the corrected part only.
+- If I ask a question, answer it normally. Every other reply is only the checklist outline, with nothing before or after it, so I can paste it straight into the app.
+
+FORMAT (exactly like this)
 # Section title
 ## Main item | qty: 2 | size: M8 x 1.25 | spec: 25 Nm | p. 14
 - Step | spec: 30 Nm | p. 15
   > Optional notes for the line above (one or more lines starting with >)
 
-Rules:
+RULES
 - "#" starts a section (a stage of the job, e.g. "Disassembly"). Add " [sign-off]" after its title if each main item in it must be signed off by a supervisor.
 - "##" is a main item: one task or procedure. "-" lines under it are its steps, in the order they are done, one action each.
-- After a "|" you may add fields: qty (how many), size (part size, thread, length), spec (values and limits with units, e.g. torque, clearance, pressure), p. (the page number in the PDF file where it is described, counting the first page of the file as 1, even if the printed page numbers differ). Leave out fields you do not need.
-- Use the manual's own wording and values. Never guess a value: if something is unclear, write "(check)" after it.
+- After a "|" you may add fields: qty (how many), size (part size, thread, length), spec (values and limits with units, e.g. torque, clearance, pressure), p. (the page number in the PDF file where it is described, counting the first page of the file as 1, even if the printed page numbers differ). Leave out fields you do not need, and leave out p. when there is no PDF.
+- Do not use "|" inside names. If a note starts with "-", "#" or a number, keep the "> " in front of it.
+- Use the manual's own wording and values. Never guess a value: if something is unclear or missing, write "(check)" after it.
 - Keep each line short. Put explanations, warnings and tool lists in "> " note lines.
 - If parts or tools are needed, start with a section "Prep" with main items such as "Required tools" and "Required parts", each part or tool as a step with its qty and size.`;
 function parseOutline(txt){txt=String(txt||'').replace(/^\s*```[a-z]*\s*$/gim,'').trim();if(!txt)return null;
