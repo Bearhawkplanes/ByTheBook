@@ -109,8 +109,8 @@ async function installUpdate() {
       if (process.env.BCL_VERSION_MARK) try { fs.copyFileSync(ps, path.join(dataDir, 'update-helper.ps1')); } catch (e) {}   // tests: keep a copy to check
       // close only once the helper says it is running (HELPER_ON); if it never does, nothing has changed and the app stays open
       fs.rmSync(HELPER_ON, { force: true }); const psx = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-      let bad = null; const h = spawn(fs.existsSync(psx) ? psx : 'powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { detached: true, stdio: 'ignore', windowsHide: true });
-      h.on('error', e => { bad = e; }); h.unref(); trace('helper spawned, pid ' + h.pid);
+      let bad = null; const h = spawn(fs.existsSync(psx) ? psx : 'powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { stdio: 'ignore', windowsHide: true });   // not detached: PowerShell started without a console closes at once
+      h.on('error', e => { bad = e; }); h.on('exit', c => trace('helper exited with code ' + c)); h.unref(); trace('helper spawned, pid ' + h.pid);
       for (let i = 0; i < 200 && !bad && !fs.existsSync(HELPER_ON); i++) await new Promise(r => setTimeout(r, 100));
       if (!fs.existsSync(HELPER_ON)) { trace('helper did not start: ' + (bad ? bad.message : 'no sign of it after 20 s')); try { h.kill(); } catch (e) {} fs.rmSync(PEND, { force: true });
         throw new Error('The update helper (Windows PowerShell) could not start' + (bad ? ': ' + bad.message : '') + '. Nothing was changed: your checklists are safe.'); }
