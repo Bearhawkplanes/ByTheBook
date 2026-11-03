@@ -896,7 +896,19 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     urestore(false); urestore(false); S.pdfs = JSON.parse(S0); select(null); renderL(); return r; });
   assert(ms.ctrl === 2 && ms.cls === 2 && ms.sel === null && /2 lines selected/.test(ms.txt), 'Ctrl+click picks two lines: ' + JSON.stringify(ms));
   assert(ms.shift === '2,3,4,5' && ms.ctrl2 === false && ms.esc === 0 && ms.range === 4, 'Shift+click picks a range, Ctrl+click removes one, Esc clears: ' + JSON.stringify(ms));
-  assert(ms.on === 'pdfsel,pdfnone' && ms.set && !ms.out && ms.none[0] === 'q1' && ms.none[1] === '' && ms.none[2] === 'Waiting', 'Edit menu sets the PDF on selected lines and on lines without one: ' + JSON.stringify(ms));
+  assert(ms.on === 'pdfsel,pdfnone,del' && ms.set && !ms.out && ms.none[0] === 'q1' && ms.none[1] === '' && ms.none[2] === 'Waiting', 'Edit menu sets the PDF on selected lines and on lines without one: ' + JSON.stringify(ms));
+
+  // ---- deleting several selected lines: Delete key or Edit > Delete selected lines…, one question with the count, Enter confirms, Ctrl+Z undoes ----
+  const mdl = await pg.evaluate(async () => { const ck = (el, o) => el.querySelector('.t').dispatchEvent(new MouseEvent('click', Object.assign({ bubbles: true }, o)));
+    const sec = S.sections[0]; sec.cards.forEach(c => { c.open = true; c.done = false; c.sig = null; c.steps.forEach(x => x.done = false) }); renderL(); const before = JSON.stringify(S.sections.map(s => s.cards.map(c => [c.text, c.steps.length])));
+    const rows = () => [...L.querySelectorAll('.secw[data-sw="0"] .row')], f = flat().filter(x => x[1] === 0).map(x => x[0]); const c0 = sec.cards[0], st = c0.steps.length;
+    ck(rows()[0], {}); ck(rows()[st + 2], { ctrlKey: true }); document.activeElement.blur?.(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+    const r = { msg: $('#modal').textContent }; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); r.gone = !inTree(c0) && !inTree(f[st + 2]) && MSEL.size === 0;
+    urestore(false); r.back = JSON.stringify(S.sections.map(s => s.cards.map(c => [c.text, c.steps.length]))) === before; renderL();
+    ck(rows()[1], {}); ck(rows()[2], { shiftKey: true }); $('#editBtn').click(); r.btn = !document.querySelector('#emenu [data-e=del]').classList.contains('dis'); document.querySelector('#emenu [data-e=del]').click();
+    r.msg2 = $('#modal').textContent; closeDlg(); select(null); return r; });
+  assert(/You are about to delete 2 selected lines: 2 main items \(with \d+ steps under them\)\./.test(mdl.msg) && /Delete 2 lines/.test(mdl.msg) && mdl.gone && mdl.back, 'Delete key removes the selected lines after one question, Enter confirms, undo restores: ' + JSON.stringify(mdl));
+  assert(mdl.btn && /You are about to delete 2 selected lines: 2 steps\./.test(mdl.msg2), 'Edit > Delete selected lines asks with the count: ' + JSON.stringify(mdl));
 
   // ---- live preview beside the text: the tree, lines left out, unknown fields, lines read as notes, (check); click a row to go to its line ----
   const prv = await pg.evaluate(async () => { textDlg(); const ta = $('#aitxt'); ta.value = ['Sure! Here it is:', '', '# Prep', '## Required parts | p. 4', '- Pump kit | qty: 1 | part: WP-220', '# Fitting [sign-off]', '## Fit the pump', '- Torque the bolts | spec: 22 Nm (check) | p. 15', 'Let me know if you want more!'].join('\n');

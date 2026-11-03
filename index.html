@@ -80,7 +80,7 @@ header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10
 #pti{font:600 22px 'IBM Plex Sans',sans-serif;text-align:center;min-width:300px}
 #ptEdit{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.35)}
 .autol{margin-left:8px;white-space:nowrap}.autol select{field-sizing:content}.autol select{max-width:175px;padding:3px 6px}@media(max-width:900px){.autol span{display:none}}.hl{position:relative}.hr{display:flex;justify-content:flex-end}#menuBtn,#cog{font-size:18px;padding:3px 11px}
-#emenu .mhint{font-size:11.5px;color:var(--mut);padding:6px 10px 3px;border-top:1px solid var(--line);margin-top:4px}#editBtn{padding:4px 10px}#menu,#emenu{position:absolute;top:calc(100% + 8px);left:0;z-index:40;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+#emenu .warnb{color:var(--warn)}#emenu i{font-style:normal;font-size:11px;color:var(--mut)}#emenu .mhint{font-size:11.5px;color:var(--mut);padding:6px 10px 3px;border-top:1px solid var(--line);margin-top:4px}#editBtn{padding:4px 10px}#menu,#emenu{position:absolute;top:calc(100% + 8px);left:0;z-index:40;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
 #menu button,#emenu button{display:flex;justify-content:space-between;gap:12px;width:100%;text-align:left;border:0;background:none;border-radius:6px;padding:7px 10px;color:var(--fg)}
 #menu button:hover:not(:disabled):not(.dis),#emenu button:hover:not(.dis){background:color-mix(in srgb,var(--acc) 14%,transparent)}
 #menu button:disabled{color:var(--mut);cursor:default}#menu button.dis,#emenu button.dis{color:var(--mut);opacity:.4;cursor:not-allowed}.delbtn.dis{opacity:.35;cursor:not-allowed}.delbtn.dis:hover{border-color:var(--warn)}#menu i{font-size:11px}#menu hr{border:0;border-top:1px solid var(--line);margin:6px 0}#menu .warnb{color:var(--warn)}
@@ -267,7 +267,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 #menu button i{font-style:normal;color:var(--mut)}
 </style></head><body>
 <header>
-<div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><button id="editBtn" title="Edit: changes to several lines at once">Edit</button><div id="emenu" hidden><button data-e="pdfsel">Set PDF for selected lines…</button><button data-e="pdfnone">Set PDF for lines without one…</button><div class="mhint">Select several lines with Ctrl+click or Shift+click.</div></div><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click,</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option><option value="wp">Work Photos</option></select></label><div id="menu" hidden>
+<div class="hl" style="display:flex;gap:8px;align-items:center"><button id="menuBtn" title="Menu">☰</button><button id="editBtn" title="Edit: changes to several lines at once">Edit</button><div id="emenu" hidden><button data-e="pdfsel">Set PDF for selected lines…</button><button data-e="pdfnone">Set PDF for lines without one…</button><button data-e="del" class="warnb">Delete selected lines… <i>Del</i></button><div class="mhint">Select several lines with Ctrl+click or Shift+click.</div></div><input id="lsearch" placeholder="Search checklist…" style="width:190px;min-width:0"><span id="lcount" class="mut"></span><label class="autol"><span>On click,</span><select id="autos" title="What the right-hand panel shows when you click an item"><option value="stay">Stay on current tab</option><option value="img">Images</option><option value="desc">Description</option><option value="pdf">PDF</option><option value="wp">Work Photos</option></select></label><div id="menu" hidden>
 <button data-m="wunlock" hidden>Unlock menu (Boss PIN)…</button><button data-m="mainmenu">Menu</button><button data-m="new">New checklist <i>Ctrl+N</i></button><button data-m="newjob" title="A fresh, unticked copy of this checklist for the next job: same items, images, PDFs and videos">Start a new job from this checklist…</button>
 <button data-m="loc">Open file location</button><button data-m="export">Export…</button>
 <button data-m="save">Save <i>Ctrl+S</i></button><button data-m="saveas">Save as… <i>Ctrl+Shift+S</i></button><button data-m="dl">Save a copy elsewhere (.bcl)</button><button data-m="restore">Restore from backup…</button><button data-m="log">Activity log…</button><button data-m="text">Import from text…</button><button data-m="keys">Shortcuts…</button><hr>
@@ -535,7 +535,7 @@ async function attach(blob,name,type){if(!SEL||isLocked())return;const vid=type.
  umark();const id=uid(),it=SEL,m={kind:'file',id,type:vid?'video':'image',name};await idbPut('m',id,{blob,name,type});it.media.push(m);IM.i=it.media.length-1;save();renderR();renderL();
  if(vid){const u=URL.createObjectURL(blob);m.thumb=await thumbAt(u,0.5);URL.revokeObjectURL(u);save();if(SEL===it)renderR()}}
 function renderR(){
- const ms=[...MSEL].filter(inTree);if(ms.length>1){$('#sel').textContent=ms.length+' lines selected';$('#p-img').innerHTML=$('#p-wp').innerHTML=$('#p-desc').innerHTML=`<div class="mut msinfo">Ctrl+click adds or removes a line; Shift+click selects every line between two.<br><b>Edit</b> (top left) &gt; Set PDF for selected lines… sets the PDF they refer to.<br>Click a line, or press Esc, to go back to one.</div>`;return}
+ const ms=[...MSEL].filter(inTree);if(ms.length>1){$('#sel').textContent=ms.length+' lines selected';$('#p-img').innerHTML=$('#p-wp').innerHTML=$('#p-desc').innerHTML=`<div class="mut msinfo">Ctrl+click adds or removes a line; Shift+click selects every line between two.<br><b>Edit</b> (top left) &gt; Set PDF for selected lines… sets the PDF they refer to; Delete or Backspace deletes them (asks first).<br>Click a line, or press Esc, to go back to one.</div>`;return}
  const it=SEL;$('#sel').textContent=it?(it.text||'(untitled)'):'Select a checklist item on the left';
  if(!it){$('#p-img').innerHTML=$('#p-wp').innerHTML=$('#p-desc').innerHTML='<div class="mut">Nothing selected.</div>';return}
  $('#p-img').innerHTML=imgPane(it);$('#p-wp').innerHTML=wpPane(it);
@@ -587,11 +587,19 @@ function addItem(){if(isLocked())return toast('Editing is locked');if(!S.section
 function addStep(){if(isLocked())return toast('Editing is locked');const p=selPath();if(!p)return toast('Select a main item or step first');const c=S.sections[p[0]].cards[p[1]];if(c.done)return toast('This main item is signed off');
  umark();const it=mk();c.steps.splice(p[2]==null?c.steps.length:p[2]+1,0,it);c.open=true;voidIfNeeded(c);SEL=it;ER=it;save();renderL();renderR();const t=$('#L .tin');if(t){t.focus();t.select()}}
 // Delete / Backspace: the selected row (or the section just added), asking first unless it is still empty; Enter confirms
-function delSel(){if(isLocked())return toast('Editing is locked');const p=selPath();
+function delSel(){if(isLocked())return toast('Editing is locked');if([...MSEL].filter(inTree).length>1)return delMulti();const p=selPath();
  if(p){const sec=S.sections[p[0]],c=sec.cards[p[1]],step=p[2]!=null,arr=step?c.steps:sec.cards,idx=step?p[2]:p[1],it=arr[idx];if(c.done)return toast('This main item is signed off');
   const go=()=>{umark();arr.splice(idx,1);if(step)voidIfNeeded(c);SEL=arr[Math.min(idx,arr.length-1)]||(step?c:null);save();renderL();renderR();if(SEL)goRow(flat().find(r=>r[0]===SEL))};
   if(blankIt(it))return go();const n=(it.steps||[]).length;return ask(`Delete ${step?'the step':'the main item'} "${esc(it.text||'Untitled')}"${n?` and its ${n} step${n>1?'s':''}`:''}? Ctrl+Z (undo) brings it back.`,'Delete',go,1)}
  if(SSEC!=null&&S.sections[SSEC])return delSection(SSEC);toast('Select a row to delete')}
+// several selected lines (Ctrl/Shift+click): one question with the count; lines under a signed-off main item stay
+function delMulti(){if(isLocked())return toast('Editing is locked');const its=selIts();if(its.length<2)return delSel();
+ const set=new Set(its),cards=[],steps=[];let kept=0;
+ S.sections.forEach(sec=>sec.cards.forEach(c=>{if(set.has(c)){if(c.done)kept++;else cards.push(c)}else c.steps.forEach(x=>{if(set.has(x)){if(c.done)kept++;else steps.push(x)}})}));
+ const n=cards.length+steps.length,sub=cards.reduce((a,c)=>a+c.steps.length,0),pl=(k,w)=>k+' '+w+(k>1?'s':'');if(!n)return toast('The selected lines are under signed-off main items');
+ const go=()=>{umark();const dc=new Set(cards),ds=new Set(steps);S.sections.forEach(sec=>{sec.cards=sec.cards.filter(c=>!dc.has(c));sec.cards.forEach(c=>{const l=c.steps.length;c.steps=c.steps.filter(x=>!ds.has(x));if(c.steps.length<l)voidIfNeeded(c)})});
+  msClear();SEL=null;save();renderL();renderR();toast(`Deleted ${pl(n,'line')}`)};
+ ask(`You are about to delete <b>${pl(n,'selected line')}</b>: ${[cards.length&&pl(cards.length,'main item')+(sub?` (with ${pl(sub,'step')} under them)`:''),steps.length&&pl(steps.length,'step')].filter(Boolean).join(' and ')}.${kept?` ${pl(kept,'line')} under signed-off main items will stay.`:''} Ctrl+Z (undo) brings them back.`,`Delete ${pl(n,'line')}`,go,1)}
 function delSection(si){if(isLocked())return toast('Editing is locked');const sec=S.sections[si];if(!sec)return;const go=()=>{umark();S.sections.splice(si,1);SSEC=null;if(SEL&&!inTree(SEL))SEL=null;ES=null;save();renderL();renderR()};
  if(!sec.cards.length&&sec.title==='New section')return go();ask(`Delete the section "${esc(sec.title)}"${sec.cards.length?` with its ${sec.cards.length} main item${sec.cards.length>1?'s':''}`:''}? Ctrl+Z (undo) brings it back.`,'Delete',go,1)}
 // ---------- keyboard ----------
@@ -625,7 +633,7 @@ function comboOf(e){const k=/^Key[A-Z]$/.test(e.code)?e.code.slice(3):/^Digit\d$
  return [e.ctrlKey||e.metaKey?'Ctrl':'',e.altKey?'Alt':'',e.shiftKey?'Shift':'',k].filter(Boolean).join('+')}
 const FIXED=[['Tab / Shift+Tab','Switch between the checklist and the right-hand side; in a box: the next / previous box'],['Esc','Leave the box you are typing in'],
  ['↑ / ↓','Checklist side: previous / next row. Right side: previous / next tab'],['Shift+↑ / Shift+↓','Previous / next section'],['Ctrl+↑ / Ctrl+↓','Previous / next main item'],
- ['← / →','Previous / next picture (Images tab, Fit view) or page (PDF tab)'],['Delete / Backspace','Delete the selected row (asks first unless it is still empty; Enter confirms)']];
+ ['← / →','Previous / next picture (Images tab, Fit view) or page (PDF tab)'],['Delete / Backspace','Delete the selected row, or all selected lines (asks first unless it is still empty; Enter confirms)']];
 const RESERVED=new Set(['Delete','Backspace','Tab','Shift+Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Shift+ArrowUp','Shift+ArrowDown','Ctrl+ArrowUp','Ctrl+ArrowDown']);
 const rowEl=()=>L.querySelector('.row.sel'),mItem=m=>()=>{const b=menu.querySelector(`[data-m="${m}"]`);if(b&&!b.classList.contains('dis'))b.click();else if(b)toast(b.title||'Not available here')};
 // the actions that can get a key; only Save, Save as and New checklist have one to start with (owner's choice)
@@ -1253,10 +1261,10 @@ const allIts=()=>S.sections.flatMap(s=>s.cards.flatMap(c=>[c,...c.steps])),pdfLe
 const selIts=()=>{const m=[...MSEL].filter(inTree);return m.length?m:SEL?[SEL]:[]};
 $('#editBtn').onclick=e=>{e.stopPropagation();menu.hidden=true;const em=$('#emenu');if(!em.hidden){em.hidden=true;return}
  const lk=isLocked()?'Editing is locked':!S.pdfs.length?'Add a PDF first (Menu > Open PDF…)':'',n=allIts().filter(pdfLess).length;
- const why={pdfsel:lk||(!selIts().length?'Select one or more lines first (Ctrl+click or Shift+click for several)':''),pdfnone:lk||(!n?'Every line already has a PDF':'')};
+ const why={pdfsel:lk||(!selIts().length?'Select one or more lines first (Ctrl+click or Shift+click for several)':''),pdfnone:lk||(!n?'Every line already has a PDF':''),del:isLocked()?'Editing is locked':!selIts().length?'Select one or more lines first (Ctrl+click or Shift+click for several)':''};
  em.querySelectorAll('button[data-e]').forEach(b=>{const w=why[b.dataset.e];b.classList.toggle('dis',!!w);b.title=w||(b.dataset.e==='pdfnone'?n+' line'+(n>1?'s':'')+' without a PDF':'')});em.style.left=$('#editBtn').offsetLeft+'px';em.hidden=false};
 document.addEventListener('click',e=>{if(!e.target.closest('#emenu'))$('#emenu').hidden=true});
-$('#emenu').addEventListener('click',e=>{const b=e.target.closest('button[data-e]');if(!b||b.classList.contains('dis'))return;$('#emenu').hidden=true;pdfSetDlg(b.dataset.e)});
+$('#emenu').addEventListener('click',e=>{const b=e.target.closest('button[data-e]');if(!b||b.classList.contains('dis'))return;$('#emenu').hidden=true;if(b.dataset.e==='del')delSel();else pdfSetDlg(b.dataset.e)});
 function pdfSetDlg(m){const sel=m==='pdfsel',its=sel?selIts():allIts().filter(pdfLess),cards=sel?its.filter(it=>S.sections.some(s=>s.cards.includes(it))).length:0,n=its.length;
  dlg(`<div class="dh"><b>${sel?'Set PDF for selected lines':'Set PDF for lines without one'}</b><button data-d="x">✕</button></div>
  <p class="mut" style="margin:0 0 6px">${sel?`${n} selected line${n>1?'s':''}`:`${n} line${n>1?'s':''} without a PDF (lines that already have one keep it)`}: their Ref. pages will open in this PDF.</p>
