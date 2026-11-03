@@ -54,7 +54,7 @@ For a checklist handed to a worker: it locks editing like a master file (and can
 Needs a profile with a main PIN. It does not apply when the app itself is locked (E-4417/E-4418/E-4419), so a Fresh copy export always stays possible.
 
 ## Making a checklist with an AI (ChatGPT, Claude, a local model…)
-- **From text / AI** on the main menu (or Menu > Import from text / AI… inside a checklist) takes a checklist written as a simple outline and builds it: `# Section` (add `[sign-off]` for a sign-off section), `## Main item`, `- Step`, with `| qty: 2 | size: M8 | spec: 25 Nm | p. 14` after a line and `> notes` lines under it. It shows what it found before you import, and makes a new checklist or adds the sections to the open one (undo with Ctrl+Z).
+- **Import > From text / AI** on the main menu (or Menu > Import from text / AI… inside a checklist) takes a checklist written as a simple outline and builds it: `# Section` (add `[sign-off]` for a sign-off section), `## Main item`, `- Step`, with `| qty: 2 | size: M8 | spec: 25 Nm | p. 14` after a line and `> notes` lines under it. It shows what it found before you import, and makes a new checklist or adds the sections to the open one (undo with Ctrl+Z).
 - **Copy instructions for an AI** (in that window) copies a ready-made prompt: paste it into any chatbot together with your manual (or the pages you want), then paste the chatbot's answer back into the window.
 - AI assistants that can work with files (like Claude) can also write a complete checklist file in the JSON format from the guide; open it with **Import**.
 - The full instructions for AI assistants are in `docs/AI-CHECKLIST-GUIDE.md` (also linked from `AGENTS.md`), for any AI you point at this project.
@@ -66,7 +66,7 @@ Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "
 Exporting a fresh copy is noted in the original's activity log. When the copy includes the log, its last entry says it is a copy, of which checklist and when, and that the entries above record work done in the original.
 
 ## Opening files
-- Menu > Import, or drag a `.bcl` onto the app / use "Open with": the file is copied into Saves and opened.
+- **Import** on the main menu offers **From file** (a `.bcl` checklist, or a `.json` checklist from an older version or written by an AI) and **From text / AI** (see below). Dragging a `.bcl` onto the app or "Open with" also works: the file is copied into Saves and opened.
 - Double-clicking a `.bcl` in Explorer works only with the installer build (portable apps cannot register file types).
 - Sharing with someone else: Menu > Export… > Fresh copy saves a clean copy ("name (shared).bcl") with every section, step, image and PDF, but nothing checked off, no sign-offs and no profile stamp. The activity log is left out unless you tick "Include the activity log". It opens on any computer without an error; their app stamps it with their own profile on the first save. A plain copy (Save a copy elsewhere, or copying the file) keeps the stamp and shows E-4420 for that checklist only (on a computer with a different profile or with no profile yet) until it is adopted.
 
@@ -138,6 +138,7 @@ Photos that prove the work was done (for example for a customer), kept apart fro
 
 ## Video Player
 Top bar > Video Player (next to PDF Viewer). The player shows the videos of the open checklist.
+Plays MP4 and WebM videos, and most MOV files from phones and cameras (listed under "+ Add video…"). Other kinds (AVI, WMV, MPG, many MKV files, VHS or camcorder captures, iPhone "High Efficiency" videos) usually need converting to MP4 first, for example with the free program HandBrake.
 - + Add video… asks how to add it:
   - Import the entire video: copied into the checklist file, so it works on any computer. Only for videos up to 300 MB (a checklist is one file that is read whole when opened).
   - Call to the existing file: the checklist only remembers where the video is. Nothing is added to the file, but if the video is moved, renamed or changed it will not play properly. A video kept inside the save folder (for example on the same USB drive) keeps working when that folder moves.

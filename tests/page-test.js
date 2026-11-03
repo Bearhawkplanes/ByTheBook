@@ -859,6 +859,14 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(imp.jcount === 'Found: 1 section, 1 main item, 1 step' && imp.added === 'Prep,Assembly,Final checks' && imp.undone === 'Prep,Assembly', 'JSON format adds to the open checklist; undo removes it: ' + JSON.stringify([imp.added, imp.undone]));
   assert(/No sections, main items or steps found/.test(imp.bad), 'text without an outline is explained');
 
+  // ---- Import on the main menu: From file (the file picker, as before) or From text / AI; supported video types shown ----
+  const impd = await pg.evaluate(async () => { await openHome(); let picked = 0; const jf = $('#jfile'), old = jf.click; jf.click = () => picked++;
+    $('#hImp').click(); const r = { btns: [...document.querySelectorAll('#modal .impch b')].map(b => b.textContent), note: /\.bcl/.test($('#impfile').textContent) && /\.json/.test($('#impfile').textContent), noOldBtn: !$('#hText') };
+    $('#impfile').click(); r.picked = picked; r.closed = $('#modal').hidden; $('#hImp').click(); $('#imptext').click(); r.ai = !!$('#aitxt'); closeDlg(); jf.click = old;
+    r.vid = /MP4/.test($('#vpside').textContent) && /WebM/.test($('#vpside').textContent) && /HandBrake/.test($('#vpside').textContent); return r; });
+  assert(impd.btns.join() === 'From file,From text / AI' && impd.note && impd.noOldBtn && impd.picked === 1 && impd.closed && impd.ai && impd.vid, 'Import offers From file and From text / AI; video types listed: ' + JSON.stringify(impd));
+  await pg.evaluate(async () => { const demo = LIB.filter(x => /^Demo engine build/.test(x.id)).sort((a, b) => b.opened - a.opened)[0]; await openProject(demo.id); });
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);
