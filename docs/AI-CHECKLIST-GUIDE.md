@@ -37,7 +37,7 @@ Pictures, videos and the PDF itself are added in the app afterwards, by the pers
 6. Start with a **Prep** section when the job needs parts or tools: main items "Required tools" and "Required parts", each tool or part as a step with its qty and size.
 7. Mark a section as **sign-off** only when supervisor sign-off makes sense (for example final inspection, or safety-critical work). If unsure, leave it off; the person can switch it on in the app.
 
-Everything imported arrives unticked and **not Verified**. The app has a "Verified" mark per item, which the person sets after checking each value against the manual. Say so when you hand over the checklist.
+Everything imported arrives unticked. The person checks each value against the manual in the app before using the checklist. Say so when you hand over the checklist.
 
 ## 3. Two ways to deliver the checklist
 
@@ -125,4 +125,4 @@ In the app, once the person adds the PDF to the checklist (Menu > Open PDF…), 
 
 ## 6. Handing over
 
-End by telling the person, in a sentence or two: what pages you covered, anything you marked `(check)`, and that every value should be checked against its page in the app before the checklist is used (the "Verified" mark).
+End by telling the person, in a sentence or two: what pages you covered, anything you marked `(check)`, and that every value should be checked against its page in the app before the checklist is used.

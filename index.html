@@ -326,8 +326,8 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const now=()=>new Date().toISOString();
 const fmt=t=>new Date(t).toLocaleString([],{dateStyle:'short',timeStyle:'short'});
 // ---------- data ----------
-const mk=o=>Object.assign({text:'',qty:'',size:'',spec:'',desc:'',page:'',pdf:'',media:[],done:false,ver:false,src:'manual',sig:null,sigDraft:'',hist:[]},o);
-function fix(o){o=mk(o);if(typeof o.media==='string')o.media=o.media?[{kind:'link',url:o.media}]:[];if(!Array.isArray(o.media))o.media=[];if(!Array.isArray(o.hist))o.hist=[];return o}
+const mk=o=>Object.assign({text:'',qty:'',size:'',spec:'',desc:'',page:'',pdf:'',media:[],done:false,src:'manual',srcn:'',sig:null,sigDraft:'',hist:[]},o);
+function fix(o){o=mk(o);delete o.ver;if(typeof o.media==='string')o.media=o.media?[{kind:'link',url:o.media}]:[];if(!Array.isArray(o.media))o.media=[];if(!Array.isArray(o.hist))o.hist=[];return o}
 function norm(d){d=d||{};d.name=d.name||'';d.mech=!!d.mech;d.manual=d.manual||'';d.videos=(d.videos||[]).map(v=>({id:v.id||uid(),name:v.name||'Video',size:+v.size||0,link:v.link||null}));d.pdfs=(d.pdfs||[]).map(p=>({id:p.id||uid(),name:p.name||'PDF',offset:+p.offset||0,map:p.map||{}}));d.locked=!!d.locked;d.log=d.log||[];
  if(!d.sections){const P=d.prep||{};
   d.sections=[{title:'Prep',sign:false,cards:[['tools','Required tools'],['parts','Required parts (exact counts and sizes)'],['pre','Pre-work (clean, paint, stage)']].map(([k,t])=>({text:t,open:true,steps:P[k]||[]}))},{title:'Main checklist',sign:true,cards:d.tasks||[]}]}
@@ -343,7 +343,7 @@ function demoData(){const m=(c,t)=>[{kind:'link',url:ph(c,t)}],I=(t,o)=>Object.a
  {title:'Prep',sign:false,cards:[
   C('Required tools',{desc:'Placeholder tool list.'},[I('Torque wrench, inch-lb',{desc:'Placeholder: calibrated inch-pound wrench. Range to be confirmed from the manual.',page:'1',media:m('#3b6ea5','Torque wrench')}),I('Feeler gauge set',{desc:'Placeholder text only: no image and no page on this item.'})]),
   C('Required parts',{},[I('Cover plate screws',{qty:'12',size:'#10-32 x 1/2',desc:'Made-up test count and size. Has an image and a page.',page:'2',media:m('#8a5a9e','Cover plate screws')}),I('Gasket set',{qty:'1',size:'per model',desc:'Image only, no page assigned.',media:m('#4f8a6b','Gasket set')})]),
-  C('Pre-work',{},[I('Clean reused bolts',{desc:'Placeholder pre-work: solvent clean and inspect threads.',src:'custom'}),I('Paint valve covers',{desc:'Custom item that is not in the manual.',src:'custom',media:m('#b5543c','Painted valve covers')})])]},
+  C('Pre-work',{},[I('Clean reused bolts',{desc:'Placeholder pre-work: solvent clean and inspect threads.',src:'custom'}),I('Paint valve covers',{desc:'Custom item that is not in the manual.',src:'custom',srcn:'Customer request',media:m('#b5543c','Painted valve covers')})])]},
  {title:'Main checklist',sign:true,cards:[
   C('Apply cover plates',{page:'2',desc:'Placeholder: install every cover plate once all steps below are complete.',media:m('#c2761a','Cover plate locations')},[
    I('Locate all four cover plates',{desc:'Placeholder: plates sit at the marked positions on the figure.',page:'2',media:m('#c2761a','Plate locations')}),
@@ -533,7 +533,7 @@ function renderR(){
  <div class="g2"><label>Quantity<input data-f="qty" value="${esc(it.qty)}"></label><label>Size<input data-f="size" value="${esc(it.size)}"></label></div>
  <label>Ref. page (label, e.g. 7-12 or 42)</label><div class="tb"><input data-f="page" value="${esc(it.page)}" style="width:120px"><select data-f="pdf" style="max-width:170px"><option value="">PDF: first / active</option>${S.pdfs.map(p=>`<option value="${p.id}" ${it.pdf===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select><button data-a="go">Show in PDF</button></div>
  <div class="tb"><label style="margin:0">Source <select data-f="src"><option value="manual" ${it.src==='manual'?'selected':''}>from manual</option><option value="custom" ${it.src==='custom'?'selected':''}>custom</option></select></label>
- <label style="margin:0"><input type="checkbox" data-f="ver" ${it.ver?'checked':''} style="width:auto"> Verified</label></div>`;
+ ${it.src==='custom'?`<input data-f="srcn" value="${esc(it.srcn||'')}" placeholder="Where from? e.g. customer request, shop practice" style="flex:1;min-width:0">`:''}</div>`;
  if(isLocked())document.querySelectorAll('#p-desc [data-f]').forEach(x=>x.disabled=true);
  hydrate();vidMount();
 }
@@ -662,7 +662,7 @@ document.addEventListener('keydown',e=>{if(!KREC)return;if(['Control','Shift','A
 const R=$('#R');
 R.addEventListener('input',e=>{if(e.target.dataset.cap!=null){const m=SEL&&SEL.media[+e.target.dataset.cap];if(m&&!isLocked()){umark(m);m.cap=e.target.value;save()}return}const f=e.target.dataset.f;if(f&&SEL&&!isLocked())umark('f:'+f+':'+JSON.stringify(selPath()));if(f&&SEL&&!isLocked()&&e.target.type!=='checkbox'&&e.target.tagName!=='SELECT'){SEL[f]=e.target.value;save()}});
 R.addEventListener('change',e=>{const t=e.target,f=t.dataset.f;
- if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL()}
+ if(f&&SEL&&!isLocked()){SEL[f]=t.type==='checkbox'?t.checked:t.value;save();renderL();if(f==='src'){renderR();if(t.value==='custom')$('#p-desc [data-f=srcn]')?.focus()}}
  if(t.id==='txf'){AS.tf=t.value;saveApp();txSet(x=>x.f=AS.tf)}
  if(t.id==='txs'){AS.tsz=+t.value;saveApp();txSet(x=>x.s=AS.tsz*txW()/1000)}
  if(t.id==='mfile'){const fl=[...t.files],isV=f=>/^video\//.test(f.type)||/\.(mp4|m4v|mov|webm|mkv|avi|wmv|mpe?g|3gp)$/i.test(f.name);t.value='';
@@ -1431,7 +1431,7 @@ function textDlg(){const canAdd=!!CUR&&$('#home').hidden&&!isLocked();
  <div class="aigrid"><div><textarea id="aitxt" rows="17" placeholder="# Disassembly&#10;## Remove the cover | p. 12&#10;- Undo the 8 screws | size: M6 | spec: 10 Nm | p. 12&#10;  > Keep the screws in order" style="width:100%;height:100%;min-height:0;resize:none;font:12.5px 'IBM Plex Mono',monospace"></textarea></div><div class="aiR"><div id="aiprev"></div></div></div><div id="aicnt" class="mut" style="min-height:20px">Nothing typed or pasted yet.</div>
  <div class="airow"><label><input type="radio" name="aiw" value="new" checked> New checklist named</label><input id="ainame" value="${esc(uniqueName('Imported checklist'))}"></div>
  <div class="airow" title="${canAdd?'':'Open a checklist that is not locked'}"><label${canAdd?'':' class="mut"'}><input type="radio" name="aiw" value="add" ${canAdd?'':'disabled'}> Add the sections to the end of the open checklist${CUR&&$('#home').hidden?` ("${esc(S.name||CUR)}")`:''}</label></div>
- <p class="mut" style="font-size:12px;margin:6px 0 0">Everything comes in unticked and not "Verified": check each value against its page before relying on it. Pictures are added afterwards; Ref. pages link to the PDF once you add it (Menu > Open PDF…).</p>
+ <p class="mut" style="font-size:12px;margin:6px 0 0">Everything comes in unticked: check each value against its page before relying on it. Pictures are added afterwards; Ref. pages link to the PDF once you add it (Menu > Open PDF…).</p>
  <div class="dbtn"><button data-d="x">Cancel</button><button class="pri" id="aigo">Import</button></div>`);$('#modal .dlg').classList.add('aidlg');aiPrev()}
 // the live preview beside the text: what the import will make, and lines the app read differently than they were marked (click one to go to it)
 function aiPrev(){const ta=$('#aitxt'),pv=$('#aiprev');if(!ta||!pv)return;const r=parseOutline(ta.value);

@@ -867,6 +867,12 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     'Fit #10-32 screws//#10-32 x 1/2/4/', 'Check gap 1.5 mm - 2.0 mm/1.5-2.0 mm///', 'Torque - final pass/25 Nm (+/- 1)///'] }, 'dashes and minus signs inside text, values and notes stay text');
 
 
+  // ---- Description tab: no Verified box; Source "custom" shows a box for where it came from ----
+  const srcb = await pg.evaluate(async () => { const it = S.sections[0].cards[0]; select(it); setTab('desc'); const r = { ver: !!$('#p-desc [data-f=ver]'), box0: !!$('#p-desc [data-f=srcn]') }; const sel = $('#p-desc [data-f=src]');
+    sel.value = 'custom'; sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); const b = $('#p-desc [data-f=srcn]'); r.box1 = !!b && document.activeElement === b;
+    b.value = 'Customer request'; b.dispatchEvent(new Event('input', { bubbles: true })); r.val = it.srcn; r.src = it.src; const s2 = $('#p-desc [data-f=src]'); s2.value = 'manual'; s2.dispatchEvent(new Event('change', { bubbles: true })); r.box2 = !!$('#p-desc [data-f=srcn]'); r.kept = it.srcn; return r; });
+  assert(!srcb.ver && !srcb.box0 && srcb.box1 && srcb.val === 'Customer request' && srcb.src === 'custom' && !srcb.box2 && srcb.kept === 'Customer request', 'Source custom asks where from; no Verified box: ' + JSON.stringify(srcb));
+
   // ---- live preview beside the text: the tree, lines left out, unknown fields, lines read as notes, (check); click a row to go to its line ----
   const prv = await pg.evaluate(async () => { textDlg(); const ta = $('#aitxt'); ta.value = ['Sure! Here it is:', '', '# Prep', '## Required parts | p. 4', '- Pump kit | qty: 1 | part: WP-220', '# Fitting [sign-off]', '## Fit the pump', '- Torque the bolts | spec: 22 Nm (check) | p. 15', 'Let me know if you want more!'].join('\n');
     ta.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 150)); const pv = $('#aiprev');

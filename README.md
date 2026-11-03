@@ -58,7 +58,7 @@ Needs a profile with a main PIN. It does not apply when the app itself is locked
 - **Copy instructions for an AI** (in that window) copies a ready-made prompt for any chatbot. Paste it on its own (the chatbot answers "Ready" and waits) or together with your manual, the pages you want, copied text, or the job in your own words. For long manuals it works a part at a time: say "continue" or name the next pages, and paste each answer in with "Add the sections to the end of the open checklist". Ask it for changes ("split that step") and it replies with just the corrected part.
 - AI assistants that can work with files (like Claude) can also write a complete checklist file in the JSON format from the guide; open it with **Import**.
 - The full instructions for AI assistants are in `docs/AI-CHECKLIST-GUIDE.md` (also linked from `AGENTS.md`), for any AI you point at this project.
-- Everything comes in unticked and not "Verified": check each value against its page before relying on it. Pictures are added afterwards. Ref. pages are PDF page numbers and link to the PDF once you add it (Menu > Open PDF…).
+- Everything comes in unticked: check each value against its page before relying on it. Pictures are added afterwards. Ref. pages are PDF page numbers and link to the PDF once you add it (Menu > Open PDF…).
 
 ## Starting a new job
 Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "<name> - new job"), then makes a fresh copy inside the app with every section, step, image, PDF and video and nothing checked off, and opens it. Its activity log starts with "New job started, from the checklist …". The original keeps its progress. A master file lock carries over to the job.
@@ -185,6 +185,7 @@ For torque patterns, bolt numbering and the like.
 - Under the checklist name: **Items** = main items checked off / all main items, **Sections** = sections complete (all their main items done, shown green) / all sections. The small pie right of the name fills by main items done (hover for the numbers).
 - When there are more section tabs than fit, the mouse wheel over them scrolls them sideways (down = right, up = left); the same in the step picker.
 - Right panel tabs: Images, Description, PDF, Work Photos (the selected one is highlighted).
+- Description tab: notes, values / limits, qty, size, Ref. page with the PDF it refers to, and **Source**: "from manual" or "custom" (not in the manual); for custom a box asks where it came from (e.g. customer request, shop practice).
 - **Keyboard** (Menu > Shortcuts… lists every key):
   - **Tab** switches between the checklist side and the right-hand side (an orange line marks the active one). Typing in a box, Tab goes to the next box and Shift+Tab to the previous one (buttons are skipped); **Esc** leaves the box.
   - Checklist side: **↓ / ↑** next / previous row (main items and the steps of open items), **Shift+↓ / ↑** next / previous section, **Ctrl+↓ / ↑** next / previous main item.
