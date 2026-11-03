@@ -23,6 +23,7 @@ Every main item and step can carry:
 | size | Part size, thread, length, grade | `M10 x 1.25` |
 | spec | Values and limits, with units (torque, clearance, pressure, temperature…) | `40 Nm + 90°` |
 | page | **Ref. page**: the page of the PDF where it is described (see section 4) | `57` |
+| pdf | Only when there are several PDFs: the file name of the PDF that page is in (without `.pdf`). Put it on each main item; its steps use the same PDF unless they name another | `Engine manual` |
 | desc | Notes: explanation, warnings, tools, tips | `Use new bolts. Oil the threads.` |
 
 Pictures, videos and the PDF itself are added in the app afterwards, by the person. An assistant cannot add pictures.
@@ -70,7 +71,7 @@ Rules:
 
 - `# Title` starts a section. Add ` [sign-off]` after the title for a sign-off section.
 - `## Text` is a main item. `- Text` (or `1. Text`) is a step of the main item above it.
-- Fields go after `|` on the same line: `qty: …`, `size: …`, `spec: …`, `p. …` (page). Leave out fields that do not apply.
+- Fields go after `|` on the same line: `qty: …`, `size: …`, `spec: …`, `p. …` (page), `pdf: …` (which PDF, only with several). Leave out fields that do not apply.
 - Lines starting with `>` (under an item or step) are its notes. Several `>` lines are joined.
 - Steps written before any main item go into a main item called "General"; main items before any section go into a section called "Checklist".
 - Do not use `|` inside names. A note that itself starts with `-`, `#` or a number keeps its `> ` in front.
@@ -105,7 +106,7 @@ Write a JSON file (for example `Engine overhaul.json`). The person opens it in t
 ```
 
 - `sections[].title` (text), `sections[].sign` (true / false: main items need a supervisor sign-off).
-- `cards` are the main items, `steps` their steps. Both use the fields from section 1: `text`, `qty`, `size`, `spec`, `page`, `desc`. All values are text (strings), also numbers.
+- `cards` are the main items, `steps` their steps. Both use the fields from section 1: `text`, `qty`, `size`, `spec`, `page`, `pdf`, `desc`. All values are text (strings), also numbers.
 - `manual` (optional): the manual's name and revision, shown in the app and on printouts.
 - `mech` (optional): `true` uses mechanical wording in the app (technician, inspector, torque, spec); `false` (default) uses general wording.
 - Do not add progress fields (done, initials, sign-offs): those are filled in by people in the app.
@@ -115,7 +116,7 @@ Write a JSON file (for example `Engine overhaul.json`). The person opens it in t
 
 Use the **page number in the PDF file**, counting the file's first page as 1, even when the printed page numbers in the manual are different (front pages numbered i, ii…, or chapters numbered 3-1, 3-2…). That is the number a PDF reader shows as "page 57 of 300".
 
-In the app, once the person adds the PDF to the checklist (Menu > Open PDF…), a Ref. page of `57` opens the 57th page of that PDF with one click. If a checklist uses several PDFs, the person picks which PDF each item refers to in the app; by default it is the first one.
+In the app, once the person adds the PDF to the checklist (Menu > Open PDF…), a Ref. page of `57` opens the 57th page of that PDF with one click. If a checklist uses several PDFs, name the PDF with the `pdf` field (its file name, without `.pdf`) on each main item; steps take their main item's PDF. The app links the name to the PDF of that name in the checklist, now or as soon as the person adds it (close matches such as different capitals or an added "rev B" work too). Without a `pdf` field, the first PDF is used.
 
 ## 5. For assistants with file and tool access (Claude Code and similar)
 

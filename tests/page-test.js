@@ -873,6 +873,31 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     b.value = 'Customer request'; b.dispatchEvent(new Event('input', { bubbles: true })); r.val = it.srcn; r.src = it.src; const s2 = $('#p-desc [data-f=src]'); s2.value = 'manual'; s2.dispatchEvent(new Event('change', { bubbles: true })); r.box2 = !!$('#p-desc [data-f=srcn]'); r.kept = it.srcn; return r; });
   assert(!srcb.ver && !srcb.box0 && srcb.box1 && srcb.val === 'Customer request' && srcb.src === 'custom' && !srcb.box2 && srcb.kept === 'Customer request', 'Source custom asks where from; no Verified box: ' + JSON.stringify(srcb));
 
+  // ---- the AI names the PDF ("| pdf: name"): steps take their main item's, linked now or when a PDF of that name is added ----
+  const pn = await pg.evaluate(() => { const r = parseOutline(['# A', '## Fit pump | p. 4 | pdf: Pump manual', '- Step one | p. 5', '- Step two | p. 9 | pdf: engine-manual.pdf'].join('\n'));
+    const secs = pdfNames(norm({ sections: r.o.sections }).sections, [{ id: 'e1', name: 'Engine Manual' }]), c = secs[0].cards[0];
+    const out = { card: [c.pdf, c.pdfn], s1: [c.steps[0].pdf, c.steps[0].pdfn], s2: [c.steps[1].pdf, c.steps[1].pdfn] };
+    S.sections.push(...secs); S.pdfs.push({ id: 'p9', name: 'PUMP manual rev B', offset: 0, map: {} }); out.linked = pdfLink(); out.after = [c.pdf, c.pdfn, c.steps[0].pdf];
+    c.pdf = ''; c.pdfn = 'Gearbox'; select(c); setTab('desc'); out.opt = $('#p-desc [data-f=pdf]').selectedOptions[0].textContent; S.sections.pop(); S.pdfs.pop(); select(null); return out; });
+  assert.deepStrictEqual(pn, { card: ['', 'Pump manual'], s1: ['', 'Pump manual'], s2: ['e1', ''], linked: 2, after: ['p9', '', 'p9'], opt: 'PDF: Gearbox (not added yet)' }, 'PDF names from the AI: ' + JSON.stringify(pn));
+  // ---- several lines: Ctrl+click and Shift+click, the right side shows how many; Edit > Set PDF for selected lines / for lines without one ----
+  const ms = await pg.evaluate(async () => { const ck = (el, o) => el.querySelector('.t').dispatchEvent(new MouseEvent('click', Object.assign({ bubbles: true }, o)));
+    S.sections[0].cards.forEach(c => c.open = true); renderL(); const rows = () => [...L.querySelectorAll('.secw[data-sw="0"] .row')], f = flat().filter(x => x[1] === 0).map(x => x[0]);
+    ck(rows()[0], {}); ck(rows()[2], { ctrlKey: true }); const r = { ctrl: MSEL.size, cls: L.querySelectorAll('.row.msel').length, sel: SEL, txt: $('#sel').textContent };
+    ck(rows()[5], { shiftKey: true }); r.shift = [...MSEL].map(it => f.indexOf(it)).sort((a, b) => a - b).join();
+    ck(rows()[3], { ctrlKey: true }); r.ctrl2 = MSEL.has(f[3]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); r.esc = MSEL.size;
+    ck(rows()[1], {}); ck(rows()[4], { shiftKey: true }); r.range = MSEL.size;
+    $('#editBtn').click(); r.dis = [...document.querySelectorAll('#emenu button.dis')].map(b => b.dataset.e + ':' + b.title);
+    const S0 = JSON.stringify(S.pdfs); S.pdfs.push({ id: 'q1', name: 'Second', offset: 0, map: {} }); $('#editBtn').click(); $('#editBtn').click(); r.on = [...document.querySelectorAll('#emenu button:not(.dis)')].map(b => b.dataset.e).join();
+    document.querySelector('#emenu [data-e=pdfsel]').click(); $('#pdfset').value = 'q1'; $('#pdfsetgo').click(); r.set = [...MSEL].every(it => it.pdf === 'q1'); r.out = f[0].pdf === 'q1';
+    const rest = allIts().filter(x => f.indexOf(x) < 0), ex = rest[0]; ex.pdf = ''; ex.pdfn = ''; const ex2 = rest[1]; ex2.pdf = ''; ex2.pdfn = 'Waiting';
+    $('#editBtn').click(); document.querySelector('#emenu [data-e=pdfnone]').click(); $('#pdfset').value = 'q1'; $('#pdfsetgo').click(); r.none = [ex.pdf, ex2.pdf, ex2.pdfn];
+    urestore(false); urestore(false); S.pdfs = JSON.parse(S0); select(null); renderL(); return r; });
+  assert(ms.ctrl === 2 && ms.cls === 2 && ms.sel === null && /2 lines selected/.test(ms.txt), 'Ctrl+click picks two lines: ' + JSON.stringify(ms));
+  assert(ms.shift === '2,3,4,5' && ms.ctrl2 === false && ms.esc === 0 && ms.range === 4, 'Shift+click picks a range, Ctrl+click removes one, Esc clears: ' + JSON.stringify(ms));
+  assert(ms.on === 'pdfsel,pdfnone' && ms.set && !ms.out && ms.none[0] === 'q1' && ms.none[1] === '' && ms.none[2] === 'Waiting', 'Edit menu sets the PDF on selected lines and on lines without one: ' + JSON.stringify(ms));
+
   // ---- live preview beside the text: the tree, lines left out, unknown fields, lines read as notes, (check); click a row to go to its line ----
   const prv = await pg.evaluate(async () => { textDlg(); const ta = $('#aitxt'); ta.value = ['Sure! Here it is:', '', '# Prep', '## Required parts | p. 4', '- Pump kit | qty: 1 | part: WP-220', '# Fitting [sign-off]', '## Fit the pump', '- Torque the bolts | spec: 22 Nm (check) | p. 15', 'Let me know if you want more!'].join('\n');
     ta.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(r => setTimeout(r, 150)); const pv = $('#aiprev');
