@@ -1,11 +1,11 @@
 # ByTheBook: notes for Claude
 
-Offline Electron desktop app for shop build checklists: sections > cards > steps, each with specs, images and links into a PDF manual, plus check-offs, initials, sign-offs, PIN-protected roles and an activity log. Used in a real shop by a foreman and employees. `README.md` is the user-facing manual; keep it in sync with behaviour changes.
+Offline Electron desktop app for shop build checklists: sections > cards > steps, each with specs, images and links into a PDF manual, plus check-offs, initials, sign-offs, PIN-protected roles and an activity log. Used in a real shop by a foreman and employees. `docs/MANUAL.md` is the full user manual; keep it in sync with behaviour changes. `README.md` is only the short GitHub front page (main features, downloads, links; owner's wish: no feature-by-feature detail there); touch it only when a main feature or the downloads change.
 
 ## Working on this repo
 - The app is for any in-depth mechanical work, **not aircraft-specific** (owner's rule): keep every label, example, demo item, export and doc generic (no aircraft, wing, airframe… wording). Mechanics words (technician, inspector, torque, spec) appear only when the checklist's `S.mech` switch is on (Settings > This checklist, off by default; demo on); otherwise use general words. The page reference is "Ref. page".
 - The owner (GitHub: Bearhawkplanes) is not a programmer. Explain changes in plain language, give them something concrete to try, and keep answers short.
-- Workflow: commit to `main` and push after each finished change (the owner pulls it on their work and home computers). One logical change per commit, with a clear message. Update `README.md` in the same commit when behaviour changes.
+- Workflow: commit to `main` and push after each finished change (the owner pulls it on their work and home computers). One logical change per commit, with a clear message. Update `docs/MANUAL.md` in the same commit when behaviour changes.
 - No build step. The only runtime dependency is `ffmpeg-static` (approved by the owner for video clips; unpacked from the asar via `asarUnpack`). Do not add frameworks or other npm packages without asking. `lib/` holds vendored pdf.js 3.11.174 (Apache 2.0) and `lib/fonts/` (six OFL sans fonts for text on images, subset to Latin + shop symbols as WOFF2, licenses in `lib/fonts/LICENSES.txt`); leave them alone.
 - `index.html` is written in a dense style: compact one-line functions, short global names (`S`, `PR`, `CUR`), few comments that explain *why*. Match it; do not reformat or "prettify" existing code.
 - Test: `node tests/main-test.js` runs the real `main.js` and `storage.js` against a fake Electron in a temp folder (PIN limits, E-4419, stamps). `node tests/page-test.js` loads the real `index.html` in headless Chromium with an in-memory stub for `window.fsapi` (Playwright and Chromium are preinstalled in Claude cloud sessions). Add a case there for new behaviour. It cannot test `main.js`/Electron itself; say so when reporting, and ask the owner to try `npm start`.
@@ -46,7 +46,7 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
   - Lock the whole app **only** when the profile settings themselves were tampered with. A copied checklist locks only itself.
   - The shop must never lose its files to a bad employee: even under E-4417/E-4418, checklists must still open and **Menu > Export… > Fresh copy** must still work.
   - Fresh copy export (`exportDlg` (the Export window, `#xp`) > `xpExport` > `blankCopy`) keeps all content, images and PDFs, and clears progress, stamp and `ids`. "Include the activity log" keeps the old log read-only under an "Exported as a fresh copy" segment, so the checks can be re-entered by hand in a new install.
-- Security is deliberately "deters casual tampering". The README says what it does not stop; keep that honest when changing things.
+- Security is deliberately "deters casual tampering". The manual (docs/MANUAL.md, Tamper detection) says what it does not stop; keep that honest when changing things.
 
 ## Updates (main.js `checkUpdate/downloadUpdate/installUpdate`, page `updRefresh/updBar`)
 - `UPDATE_URL` = GitHub releases/latest (override `BCL_UPDATE_URL` for tests). State in `Data/config.json` `upd` {auto (off by default), last, skip, snooze, found}. Automatic checks at most ~once a day (`updCheck(false)`); the page calls it at start and every 3 h.
