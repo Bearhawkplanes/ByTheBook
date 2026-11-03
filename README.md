@@ -66,7 +66,7 @@ Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "
 Exporting a fresh copy is noted in the original's activity log. When the copy includes the log, its last entry says it is a copy, of which checklist and when, and that the entries above record work done in the original.
 
 ## Opening files
-- **Import** on the main menu offers **From file** (a `.bcl` checklist, or a `.json` checklist from an older version or written by an AI) and **From text / AI** (see below). Dragging a `.bcl` onto the app or "Open with" also works: the file is copied into Saves and opened.
+- **Import** on the main menu offers **From file** (a `.bcl` checklist, or a `.json` checklist file written by an AI) and **From text / AI** (see below). Dragging a `.bcl` onto the app or "Open with" also works: the file is copied into Saves and opened.
 - Double-clicking a `.bcl` in Explorer works only with the installer build (portable apps cannot register file types).
 - Sharing with someone else: Menu > Export… > Fresh copy saves a clean copy ("name (shared).bcl") with every section, step, image and PDF, but nothing checked off, no sign-offs and no profile stamp. The activity log is left out unless you tick "Include the activity log". It opens on any computer without an error; their app stamps it with their own profile on the first save. A plain copy (Save a copy elsewhere, or copying the file) keeps the stamp and shows E-4420 for that checklist only (on a computer with a different profile or with no profile yet) until it is adopted.
 
