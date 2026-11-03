@@ -87,7 +87,7 @@ async function safetyCopy(v) {
 }
 // the helper (below) restarts into the new version and waits for it to say it started (UOK, written when its menu is ready); if it
 // does not, the helper puts the previous version back, starts it, and leaves UFAIL for it to explain
-const PEND = path.join(dataDir, 'update-pending.json'), UOK = path.join(dataDir, 'update-ok.txt'), UFAIL = path.join(dataDir, 'update-failed.json');
+const HELPER_ON = path.join(dataDir, 'update-helper-running.txt'), PEND = path.join(dataDir, 'update-pending.json'), UOK = path.join(dataDir, 'update-ok.txt'), UFAIL = path.join(dataDir, 'update-failed.json');
 function updStarted() { try { const p = JSON.parse(fs.readFileSync(PEND, 'utf8')); if (p.to === app.getVersion()) { fs.writeFileSync(UOK, app.getVersion()); fs.rmSync(PEND, { force: true }); } } catch (e) {} }
 const updFailed = () => { try { return JSON.parse(fs.readFileSync(UFAIL, 'utf8').replace(/^\ufeff/, '')); } catch (e) { return null; } };
 // the swap happens after this copy has closed (a helper waits for it), so the new version starts cleanly with the same Saves/ and Data/
@@ -107,11 +107,20 @@ async function installUpdate() {
       const ps = path.join(os.tmpdir(), 'build-checklist-update-' + process.pid + '.ps1');
       fs.writeFileSync(ps, '\ufeff' + updScript(K, cur, prev, flags, safe).join('\r\n'));
       if (process.env.BCL_VERSION_MARK) try { fs.copyFileSync(ps, path.join(dataDir, 'update-helper.ps1')); } catch (e) {}   // tests: keep a copy to check
-      spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+      // close only once the helper says it is running (HELPER_ON); if it never does, nothing has changed and the app stays open
+      fs.rmSync(HELPER_ON, { force: true }); const psx = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+      let bad = null; const h = spawn(fs.existsSync(psx) ? psx : 'powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { detached: true, stdio: 'ignore', windowsHide: true });
+      h.on('error', e => { bad = e; }); h.unref(); trace('helper spawned, pid ' + h.pid);
+      for (let i = 0; i < 200 && !bad && !fs.existsSync(HELPER_ON); i++) await new Promise(r => setTimeout(r, 100));
+      if (!fs.existsSync(HELPER_ON)) { trace('helper did not start: ' + (bad ? bad.message : 'no sign of it after 20 s')); try { h.kill(); } catch (e) {} fs.rmSync(PEND, { force: true });
+        throw new Error('The update helper (Windows PowerShell) could not start' + (bad ? ': ' + bad.message : '') + '. Nothing was changed: your checklists are safe.'); }
+      trace('helper running');
     }
   }
-  setTimeout(() => app.quit(), 300); return true;
+  setTimeout(() => { trace('quitting'); app.quit(); }, 300); return true;
 }
+// tests only (BCL_VERSION_MARK): what the update did, for the Windows test log
+const trace = t => { if (process.env.BCL_VERSION_MARK) try { fs.appendFileSync(path.join(dataDir, 'update-trace.txt'), new Date().toISOString() + ' ' + process.pid + ' ' + t + '\n'); } catch (e) {} };
 // The Windows helper (PowerShell). Portable: the .exe is swapped, the old one kept as "<name> (previous).exe". Folder: the new zip is
 // unpacked beside the program first (.update-new), then only the names in it are swapped; the old ones go to .previous-version, so
 // Data, Saves and anything else in the folder are never moved. Either way, if anything fails or the new version does not start,
@@ -120,7 +129,7 @@ async function installUpdate() {
 function updScript(K, cur, prev, flags, safe) {
   const q = v => "'" + String(v).replace(/'/g, "''") + "'", folder = K.k === 'folder', dir = path.dirname(cur);
   const start = flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur';
-  return [`try{Start-Transcript -LiteralPath ${q(path.join(dataDir, 'update-log.txt'))} -Append | Out-Null}catch{}`, `$ErrorActionPreference='Stop';$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)};$dir=${q(dir)};$ok=${q(UOK)};$fail=${q(UFAIL)};$pend=${q(PEND)}`,
+  return [`try{Set-Content -LiteralPath ${q(HELPER_ON)} -Value $PID}catch{}`, `try{Start-Transcript -LiteralPath ${q(path.join(dataDir, 'update-log.txt'))} -Append | Out-Null}catch{}`, `$ErrorActionPreference='Stop';$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)};$dir=${q(dir)};$ok=${q(UOK)};$fail=${q(UFAIL)};$pend=${q(PEND)}`,
     `$from=${q(app.getVersion())};$to=${q(dl.version)};$safe=${q(safe)};$moved=@();$placed=@()`,
     // retried: antivirus or a closing process can hold a file for a moment
     'function Move-Retry($a,$b){for($i=0;$i -lt 120;$i++){try{Move-Item -LiteralPath $a -Destination $b -Force -ErrorAction Stop;return}catch{Start-Sleep -Milliseconds 500}};Move-Item -LiteralPath $a -Destination $b -Force}',
@@ -148,7 +157,7 @@ function updScript(K, cur, prev, flags, safe) {
     " Remove-Item -LiteralPath $new -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $pend -Force -ErrorAction SilentlyContinue",
     ' @{"from"=$from;"to"=$to;"error"=$err;"safe"=$safe;"back"=$back;"prev"=$prev;"at"=(Get-Date -Format o)} | ConvertTo-Json | Set-Content -LiteralPath $fail -Encoding UTF8',
     ' if($back){' + start + '}}',
-    "Write-Output ('Update '+$from+' -> '+$to+' finished')",'try{Stop-Transcript | Out-Null}catch{}',
+    "Write-Output ('Update '+$from+' -> '+$to+' finished')",`Remove-Item -LiteralPath ${q(HELPER_ON)} -Force -ErrorAction SilentlyContinue`,'try{Stop-Transcript | Out-Null}catch{}',
     'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue'];
 }
 // ---- printable checklist ------------------------------------------------------------------------------
@@ -402,5 +411,5 @@ else {
     if (f && f.asset) { try { await downloadUpdate(); await installUpdate(); return; } catch (e) { try { fs.appendFileSync(process.env.BCL_VERSION_MARK || path.join(TMP, 'update-error.txt'), 'error: ' + e.message + '\n'); } catch (x) {} } }
     app.quit(); });
   app.on('window-all-closed', () => app.quit());
-  app.on('quit', () => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });
+  app.on('quit', () => { trace('quit'); try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });
 }

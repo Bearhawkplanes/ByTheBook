@@ -55,6 +55,8 @@ srv.listen(0, '127.0.0.1', async () => {
     }
     fs.rmSync(work, { recursive: true, force: true });
   } catch (e) { console.error('FAILED:', e.message, '\nfolder:', fs.readdirSync(dir), '\nData:', fs.existsSync(path.join(dir, 'Data')) && fs.readdirSync(path.join(dir, 'Data')));
+    for (const f of ['update-trace.txt']) { const p = path.join(dir, 'Data', f); if (fs.existsSync(p)) console.error('--- ' + f + ':\n' + fs.readFileSync(p, 'utf8')); }
+    if (process.platform === 'win32') try { console.error('--- running:\n' + execFileSync('tasklist', ['/FO', 'CSV'], { encoding: 'utf8' }).split('\n').filter(l => /powershell|BuildChecklist|Build Checklist/i.test(l)).join('\n')); } catch (x) {}
     const hp = path.join(dir, 'Data', 'update-helper.ps1');
     if (fs.existsSync(hp)) { console.error('--- update-helper.ps1:\n' + fs.readFileSync(hp, 'utf8'));
       try { console.error('--- parse check:\n' + execFileSync('powershell.exe', ['-NoProfile', '-Command', `$e=$null;[void][System.Management.Automation.Language.Parser]::ParseFile('${hp}',[ref]$null,[ref]$e);if($e){$e|ForEach-Object{$_.Extent.StartLineNumber.ToString()+': '+$_.Message}}else{'no errors'}`], { encoding: 'utf8' })); } catch (x) { console.error('parse check failed: ' + x.message); } }
