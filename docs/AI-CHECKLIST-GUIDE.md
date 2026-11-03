@@ -1,12 +1,12 @@
 # Making checklists with an AI assistant
 
-This guide is for any AI assistant (Claude, ChatGPT, a local model in Ollama or LM Studio, …) asked to help build a checklist for the **Build Checklist** app from a manual, usually a PDF. A person gives the assistant this guide and the manual. The assistant writes the checklist; the person imports it into the app and checks it.
+This guide is for any AI assistant (Claude, ChatGPT, a local model in Ollama or LM Studio, …) asked to help build a checklist for the **ByTheBook** app from a manual, usually a PDF. A person gives the assistant this guide and the manual. The assistant writes the checklist; the person imports it into the app and checks it.
 
 You do not need to know how the app's code works. Everything you need is on this page.
 
 ## 1. What the app is
 
-Build Checklist is an offline desktop app for shop work done step by step from a manual: engines, machines, assemblies, any detailed mechanical job. A checklist is a tree:
+ByTheBook is an offline desktop app for shop work done step by step from a manual: engines, machines, assemblies, any detailed mechanical job. A checklist is a tree:
 
 - **Sections**: the big stages of the job, e.g. "Prep", "Disassembly", "Inspection", "Assembly", "Final checks".
 - **Main items** (inside a section): one task or procedure each, e.g. "Remove the cylinder head".

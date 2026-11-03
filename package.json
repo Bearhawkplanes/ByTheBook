@@ -1,7 +1,7 @@
 {
-  "name": "build-checklist",
+  "name": "bythebook",
   "version": "0.5.0",
-  "description": "Offline build checklist with manual PDF viewer",
+  "description": "ByTheBook: offline step-by-step shop checklists with a PDF manual viewer",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "local.buildchecklist",
-    "productName": "Build Checklist",
+    "productName": "ByTheBook",
     "files": [
       "main.js",
       "preload.js",
@@ -33,22 +33,22 @@
     "fileAssociations": [
       {
         "ext": "bcl",
-        "name": "Build Checklist file",
+        "name": "ByTheBook checklist",
         "role": "Editor"
       }
     ],
     "win": {
       "target": "portable",
-      "artifactName": "BuildChecklist.exe"
+      "artifactName": "ByTheBook.exe"
     },
     "nsis": {
-      "artifactName": "BuildChecklist-Setup.exe",
+      "artifactName": "ByTheBook-Setup.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
     "linux": {
       "target": "AppImage",
-      "artifactName": "BuildChecklist.AppImage",
+      "artifactName": "ByTheBook.AppImage",
       "category": "Office"
     },
     "mac": {

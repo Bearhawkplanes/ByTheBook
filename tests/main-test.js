@@ -5,7 +5,7 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bcl-main-'));
 for (const f of ['main.js', 'storage.js', 'bcl.js']) fs.copyFileSync(path.join(__dirname, '..', f), path.join(dir, f));   // main.js keeps Data/ and Saves/ next to itself
 fs.symlinkSync(path.join(__dirname, '..', 'node_modules'), path.join(dir, 'node_modules'), 'junction');   // for ffmpeg-static
 let handle, win, quits = 0;
-process.env.APPIMAGE = path.join(dir, 'BuildChecklist.AppImage'); fs.writeFileSync(process.env.APPIMAGE, '#!/bin/sh\necho old\n');
+process.env.APPIMAGE = path.join(dir, 'ByTheBook.AppImage'); fs.writeFileSync(process.env.APPIMAGE, '#!/bin/sh\necho old\n');
 const http = require('http'); let REL = null, ASSET = Buffer.from('#!/bin/sh\necho new-version > "$BCL_MARK"\n');
 const srv = http.createServer((q, r) => { if (q.url === '/latest') { r.writeHead(REL ? 200 : 404, { 'Content-Type': 'application/json' }); r.end(JSON.stringify(REL || {})); } else if (q.url === '/dl') { r.writeHead(200); r.end(ASSET); } else { r.writeHead(404); r.end(); } });
 const srvReady = new Promise(r => srv.listen(0, '127.0.0.1', () => { process.env.BCL_UPDATE_URL = 'http://127.0.0.1:' + srv.address().port + '/latest'; r(); }));
@@ -88,12 +88,12 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   const meta = (() => { try { execFileSync(ffbin, ['-i', outF], { stdio: 'pipe' }); } catch (e) { return String(e.stderr); } })();
   assert(/Video: h264.*1280x720/.test(meta) && /Audio: aac/.test(meta), 'medium keeps 720p and sound');
   assert(/Duration: 00:00:0(2\.9|3\.0)/.test(meta), 'clip is 3 seconds: ' + (/Duration: [^,]*/.exec(meta) || [])[0]);
-  const lowMeta = (() => { fs.writeFileSync(outF, Buffer.from(fs.readFileSync(path.join(os.tmpdir(), 'build-checklist-video', c.id, 'low.mp4')))); try { execFileSync(ffbin, ['-i', outF], { stdio: 'pipe' }); } catch (e) { return String(e.stderr); } })();
+  const lowMeta = (() => { fs.writeFileSync(outF, Buffer.from(fs.readFileSync(path.join(os.tmpdir(), 'bythebook-video', c.id, 'low.mp4')))); try { execFileSync(ffbin, ['-i', outF], { stdio: 'pipe' }); } catch (e) { return String(e.stderr); } })();
   assert(/x480/.test(lowMeta) && !/Audio:/.test(lowMeta), 'low is 480p, and without sound when asked');
   const th = await call('videoThumb', { rel: 'videos/walkaround.mp4' }, 3);
   assert(th.startsWith('data:image/jpeg;base64,/9j/') && th.length > 2000, 'thumbnail of a linked video');
   assert.strictEqual(await call('videoThumb', { path: path.join(dir, 'gone.mp4') }, 1), '', 'no thumbnail for a missing file');
-  await call('clipDone', c.id); assert(!fs.existsSync(path.join(os.tmpdir(), 'build-checklist-video', c.id)), 'temp files removed');
+  await call('clipDone', c.id); assert(!fs.existsSync(path.join(os.tmpdir(), 'bythebook-video', c.id)), 'temp files removed');
   const m = await call('clipMake', { path: mute }, 0, 1.5);
   assert(!m.audio && !m.sizes.native.with, 'video without sound: no sound option'); await call('clipDone', m.id);
   await assert.rejects(async () => call('clipMake', { path: mute }, 3, 2), /after the start/);
@@ -143,14 +143,14 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   // updates: off by default; a newer release is found, downloaded, checked and swapped in; the previous version is kept
   const base = 'http://127.0.0.1:' + srv.address().port, sha = 'sha256:' + crypto.createHash('sha256').update(ASSET).digest('hex');
   const rel = (tag, extra) => Object.assign({ tag_name: tag, html_url: 'https://github.com/Bearhawkplanes/Build-Checklist/releases/tag/' + tag, body: 'New: things', draft: false, prerelease: false,
-    assets: [{ name: 'BuildChecklist.exe', size: 1, browser_download_url: base + '/nope' }, { name: 'BuildChecklist.AppImage', size: ASSET.length, browser_download_url: base + '/dl', digest: sha }] }, extra || {});
+    assets: [{ name: 'ByTheBook.exe', size: 1, browser_download_url: base + '/nope' }, { name: 'ByTheBook.AppImage', size: ASSET.length, browser_download_url: base + '/dl', digest: sha }] }, extra || {});
   let u = await call('updGet');
   assert(u.auto === false && u.version === '0.5.0' && !u.found, 'automatic checks off by default');
   REL = rel('v0.9.0');
   assert.strictEqual(await call('updCheck', false), null, 'no automatic check while switched off');
   await call('updSet', { auto: true });
   let f = await call('updCheck', false);
-  assert(f.version === '0.9.0' && /releases\/tag\/v0.9.0$/.test(f.url) && f.notes === 'New: things' && f.asset.name === 'BuildChecklist.AppImage', 'newer release found with its page and the right file');
+  assert(f.version === '0.9.0' && /releases\/tag\/v0.9.0$/.test(f.url) && f.notes === 'New: things' && f.asset.name === 'ByTheBook.AppImage', 'newer release found with its page and the right file');
   assert.strictEqual(await call('updCheck', false), null, 'not asked again the same day');
   assert((await call('updGet')).canInstall, 'can install in place');
   REL = rel('v0.5.0'); assert((await call('updCheck', true)).none && !(await call('updGet')).found, 'same version: nothing');
@@ -158,7 +158,7 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   REL = null; assert(/404/.test((await call('updCheck', true)).error), 'no answer: an error, nothing else');
   REL = rel('v0.10.0'); REL.assets[1].digest = 'sha256:' + 'ab'.repeat(32); await call('updCheck', true);
   await assert.rejects(call('updDownload'), /damaged/, 'a download with the wrong fingerprint is refused');
-  assert(!fs.existsSync(path.join(dir, '.update-BuildChecklist.AppImage')), 'and deleted');
+  assert(!fs.existsSync(path.join(dir, '.update-ByTheBook.AppImage')), 'and deleted');
   REL = rel('v0.10.0'); await call('updCheck', true);
   const prog = []; win.webContents.send = (ch, v) => ch === 'upd-progress' && prog.push(v);
   assert.deepStrictEqual(await call('updDownload'), { ok: true, size: ASSET.length }); assert.strictEqual(prog.at(-1), 1, 'progress reaches 100%');
@@ -166,7 +166,7 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   assert(u.skip === '0.10.0' && u.snooze === 123, 'skip and snooze remembered');
   call('updInstall'); for (let i = 0; i < 50 && !quits; i++) await new Promise(r => setTimeout(r, 100));
   assert.strictEqual(fs.readFileSync(process.env.APPIMAGE, 'utf8'), ASSET.toString(), 'new version in place under the same name');
-  assert.strictEqual(fs.readFileSync(path.join(dir, 'BuildChecklist (previous).AppImage'), 'utf8'), '#!/bin/sh\necho old\n', 'previous version kept');
+  assert.strictEqual(fs.readFileSync(path.join(dir, 'ByTheBook (previous).AppImage'), 'utf8'), '#!/bin/sh\necho old\n', 'previous version kept');
   assert(quits >= 1, 'the app closes so the new version can start');
   assert(fs.existsSync(path.join(saves, 'a.bcl')), 'checklists untouched');
   // a safety copy of every checklist and the settings is made before the update

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Build Checklist</title>
+<title>ByTheBook</title>
 
 <style>
 :root{color-scheme:dark;--bg:#14171a;--panel:#1c2024;--fg:#e9e7e2;--mut:#9a9ea5;--line:#30363c;--acc:#ff8a4c;--ok:#6fcf74;--warn:#ff7b72;--hbg:#0e1114;--hfg:#eceae5}
@@ -297,7 +297,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </section>
 </main>
 <div id="home"><div id="hleft"><aside id="hside"><div class="hh">Saved checklists</div><div id="flist"></div><p class="mut" style="margin-top:auto;padding-top:14px">Every checklist in this app's save folder shows up here.</p></aside><div class="hfoot"><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button><button id="hTut" class="prof" title="Tutorial (coming soon)"><span class="avatar" style="align-items:center"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg></span><span>Tutorial</span></button></div></div>
-<section id="hmain"><div class="hcenter" id="hcen"><h1>Build Checklist</h1>
+<section id="hmain"><div class="hcenter" id="hcen"><h1>ByTheBook</h1>
 <div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button></div>
 <button id="hBack" hidden style="margin-bottom:24px">Back to the open checklist</button>
 <h2>Open recent</h2><div id="rlist"></div></div>
@@ -1418,7 +1418,7 @@ $('#home').addEventListener('click',e=>{const ab=e.target.closest('button[data-a
 // ---------- import from text / AI: an outline any chatbot can write (docs/AI-CHECKLIST-GUIDE.md); also the JSON format ----------
 // # Section [sign-off]   ## Main item | qty: 2 | size: M8 | spec: 25 Nm | p. 14   - Step | spec: … | p. 15   > description line
 // AIPROMPT is what "Copy instructions for an AI" puts on the clipboard; keep it in step with the guide.
-const AIPROMPT=`You are helping me write a checklist for the Build Checklist app, a shop app for step-by-step work done from a manual. Follow these instructions for the rest of this conversation.
+const AIPROMPT=`You are helping me write a checklist for the ByTheBook app, a shop app for step-by-step work done from a manual. Follow these instructions for the rest of this conversation.
 
 HOW WE WILL WORK
 - I will give you the source in one of these ways, in this message or a later one: a PDF or document (all of it, or only some pages), text copied from a manual, or the job described in my own words. If I have not given you anything yet, reply only: "Ready. Send the manual or the pages, paste text, or describe the job."
@@ -1739,7 +1739,7 @@ if(FS.onUpdProgress)FS.onUpdProgress(v=>{const st=$('#updbar .ubst');if(st&&!$('
 // after an update that could not be finished: the helper put the previous version back (or says where it is) and left a note
 function updFailDlg(x){if(!x||updFailDlg.on)return;updFailDlg.on=1;
  dlg(`<div class="dh"><b>The update to version ${esc(x.to)} could not be finished</b></div>
- <p>${x.back?`Build Checklist put the previous version (${esc(x.from)}) back, and that is the version you are using now.`:`The previous version (${esc(x.from)}) could not be put back by itself: it is kept next to the program in <code>${esc(x.prev||'')}</code>.`}</p>
+ <p>${x.back?`ByTheBook put the previous version (${esc(x.from)}) back, and that is the version you are using now.`:`The previous version (${esc(x.from)}) could not be put back by itself: it is kept next to the program in <code>${esc(x.prev||'')}</code>.`}</p>
  <p><b>Your checklists were not touched by the update.</b>${x.safe?` A safety copy of all of them and of your settings, made just before the update, is kept in:<br><code style="word-break:break-all">${esc(x.safe)}</code>`:''}</p>
  <p class="mut" style="font-size:12px">What went wrong: ${esc(x.error||'unknown')}</p>
  <div class="dbtn">${x.safe?'<button id="ufsafe">Open the safety copy</button>':''}<button class="pri" data-d="ok">OK</button></div>`);

@@ -1,10 +1,12 @@
-# Build Checklist (offline desktop app)
+# ByTheBook (offline desktop app)
+
+ByTheBook (formerly "Build Checklist") keeps shop work going step by step, by the manual. Checklist files still end in `.bcl`.
 
 ## Download (Windows)
 Get the latest version from the Releases page (right side of the repository page on GitHub):
-- `BuildChecklist-Folder.zip` (**recommended**, also for an external drive): the folder version. Right-click > Extract All, put the `Build Checklist` folder where you want it (the desktop, a USB or external drive), and open `Build Checklist.exe` inside it (pin it to the taskbar to find it quickly). Starts fast. Everything lives in that one folder: `Saves/` (checklists) and `Data/` (profile and settings) are created next to the program, so the whole folder can move between computers and drive letters.
-- `BuildChecklist.exe`: portable single file, nothing to install. Put it in its own folder; `Saves/` and `Data/` are created next to it. It unpacks itself every time it starts, so it takes a few seconds before anything shows.
-- `BuildChecklist-Setup.exe`: installer. Starts fast, and lets you double-click `.bcl` files to open them; checklists live in Documents\Build Checklist.
+- `ByTheBook-Folder.zip` (**recommended**, also for an external drive): the folder version. Right-click > Extract All, put the `ByTheBook` folder where you want it (the desktop, a USB or external drive), and open `ByTheBook.exe` inside it (pin it to the taskbar to find it quickly). Starts fast. Everything lives in that one folder: `Saves/` (checklists) and `Data/` (profile and settings) are created next to the program, so the whole folder can move between computers and drive letters.
+- `ByTheBook.exe`: portable single file, nothing to install. Put it in its own folder; `Saves/` and `Data/` are created next to it. It unpacks itself every time it starts, so it takes a few seconds before anything shows.
+- `ByTheBook-Setup.exe`: installer. Starts fast, and lets you double-click `.bcl` files to open them; checklists live in Documents\ByTheBook.
 
 Windows may warn the first time because the app is not code-signed: click "More info" > "Run anyway".
 To update by hand, replace the program with the new one; keep the `Saves/` and `Data/` folders.
@@ -13,7 +15,7 @@ To update by hand, replace the program with the new one; keep the `Saves/` and `
 - Settings > Updates shows the version you have. "Check for updates automatically" (off by default) asks GitHub about once a day, only when online; "Check now" asks straight away.
 - When a newer version is out, a bar appears along the bottom of the menu page: "Version 1.2.0 is available (you have 1.1.0)" with:
   - What's new?: opens the release page on GitHub with the list of changes.
-  - Install: saves your work, makes a **safety copy** of every checklist and the settings (`Saves/Backups before updates/<date> before <version>`, the newest two kept; refuses with "Nothing was changed" if the drive is too full for it), downloads the new version (the bar shows progress), checks it is complete and undamaged, closes, swaps in the new program in the same folder and opens again. The update never touches Saves/ or Data/. The version you had is kept: "BuildChecklist (previous).exe" next to the portable exe, or the hidden `.previous-version` folder inside the folder version.
+  - Install: saves your work, makes a **safety copy** of every checklist and the settings (`Saves/Backups before updates/<date> before <version>`, the newest two kept; refuses with "Nothing was changed" if the drive is too full for it), downloads the new version (the bar shows progress), checks it is complete and undamaged, closes, swaps in the new program in the same folder and opens again. The update never touches Saves/ or Data/. The version you had is kept: "ByTheBook (previous).exe" next to the portable exe, or the hidden `.previous-version` folder inside the folder version.
   - The folder version unpacks the update beside the program first and only then swaps the program's own files; anything else you keep in the folder is left alone.
   - **If something goes wrong**: before the restart, the bar says what failed and that nothing was changed. If the new version does not start (it closes before its menu appears), the old version is put back and started automatically, and it shows a notice: the update could not be finished, the previous version is back, your checklists were not touched, and where the safety copy is (with a button to open it). This works for the folder version and the portable exe. What the updater did is written to `Data/update-log.txt`.
   - Dismiss: hides the bar until tomorrow. Skip this version: no more reminders about this version (a newer one still shows).
@@ -28,7 +30,7 @@ Raise `"version"` in `package.json` and commit. On GitHub: Releases > Draft a ne
 Install Node.js LTS once, then in this folder:
 
     npm install
-    npm run dist            # Windows: single portable BuildChecklist.exe (in dist/)
+    npm run dist            # Windows: single portable ByTheBook.exe (in dist/)
     npm run dist:installer  # Windows: installer that also registers double-click for .bcl files
     npm run dist:linux      # Linux: AppImage (build on Linux)
     npm run dist:mac        # macOS: dmg (must be built on a Mac)
@@ -42,7 +44,7 @@ Install Node.js LTS once, then in this folder:
 - `Saves/.profile-marker.json`  small signed record of the profile ID, kept with the checklists
 
 Settings > Save file location lets you move the Saves folder, e.g. to an external drive.
-If the app sits somewhere it cannot write (Program Files, a Mac /Applications), it falls back to Documents/Build Checklist.
+If the app sits somewhere it cannot write (Program Files, a Mac /Applications), it falls back to Documents/ByTheBook (or Documents/Build Checklist, if that already holds the data from before the app was renamed).
 
 ## Loading screen
 While the app starts, a small loading window shows a spinning wrench, a loading bar and what it is doing ("Reading saved checklists…"). The main window appears when the menu is ready. Before that, the portable `.exe` unpacks itself every time it starts, which can take a while on a slow computer with nothing on screen; the folder version and the installer skip that step and start faster.

@@ -419,7 +419,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     f.updCheck = async force => { window.__ucalls.push(['check', force]); return force ? (U.found || { none: true }) : null; };
     f.updDownload = async () => { window.__ucalls.push(['download']); window.__prog && [.3, .7, 1].forEach(v => window.__prog(v)); return { ok: true }; };
     f.updInstall = async () => { window.__ucalls.push(['install']); return true; }; f.onUpdProgress = cb => { window.__prog = cb; }; Object.assign(window, extra || {}); }, [st, extra]); };
-  const relF = { version: '0.6.0', url: 'https://github.com/Bearhawkplanes/Build-Checklist/releases/tag/v0.6.0', notes: 'x', asset: { name: 'BuildChecklist.exe' } };
+  const relF = { version: '0.6.0', url: 'https://github.com/Bearhawkplanes/Build-Checklist/releases/tag/v0.6.0', notes: 'x', asset: { name: 'ByTheBook.exe' } };
   pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), ustub({ found: relF }));
   await pg.evaluate(() => updRefresh(false)); await pg.waitForTimeout(100);
   const bar = () => pg.evaluate(() => ({ shown: !$('#updbar').hidden, text: $('#updbar').innerText.replace(/\s+/g, ' ').trim() }));

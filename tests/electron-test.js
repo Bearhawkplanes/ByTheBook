@@ -11,7 +11,7 @@ execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x
 
 const mainWin = async ea => { for (let i = 0; i < 600; i++) { const w = ea.windows().find(p => /index\.html/.test(p.url())); if (w) return w; await new Promise(r => setTimeout(r, 100)); } throw new Error('no main window'); };
 (async () => {
-  const ea = await _electron.launch({ executablePath: path.join(app, 'build-checklist'), args: ['--no-sandbox'] });
+  const ea = await _electron.launch({ executablePath: path.join(app, 'bythebook'), args: ['--no-sandbox'] });
   await ea.evaluate(({ dialog }, f) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [f] }); }, vid);   // stands in for picking the file
   // the loading window comes first; the main window appears (and the loading window closes) when the menu is ready
   await ea.firstWindow(); const early = await ea.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map(w => w.webContents.getURL().split('/').pop().split('?')[0] + (w.isVisible() ? '' : ' (hidden)')));
@@ -81,7 +81,7 @@ const mainWin = async ea => { for (let i = 0; i < 600; i++) { const w = ea.windo
   await ea.close();
   // the shop's own animation: Data/loading.gif replaces the wrench
   execFileSync(ff, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=120x120:rate=10:duration=1', path.join(app, 'Data', 'loading.gif')]);
-  const ea2 = await _electron.launch({ executablePath: path.join(app, 'build-checklist'), args: ['--no-sandbox'] }), sp2 = await (async () => { for (let i = 0; i < 300; i++) { const w = ea2.windows().find(p => /splash\.html/.test(p.url())); if (w) return w; await new Promise(r => setTimeout(r, 50)); } })();
+  const ea2 = await _electron.launch({ executablePath: path.join(app, 'bythebook'), args: ['--no-sandbox'] }), sp2 = await (async () => { for (let i = 0; i < 300; i++) { const w = ea2.windows().find(p => /splash\.html/.test(p.url())); if (w) return w; await new Promise(r => setTimeout(r, 50)); } })();
   await sp2.waitForFunction(() => !!document.querySelector('#art img'), null, { timeout: 15000 }).catch(() => {});
   const own = await sp2.evaluate(() => { const i = document.querySelector('#art img'); return i ? i.naturalWidth : 0; }).catch(() => -1);
   await mainWin(ea2); await ea2.close();

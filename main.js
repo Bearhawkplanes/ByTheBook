@@ -7,7 +7,8 @@ const baseDir = app.isPackaged
   : __dirname;
 let dataDir = path.join(baseDir, 'Data');
 try { fs.mkdirSync(dataDir, { recursive: true }); fs.accessSync(dataDir, fs.constants.W_OK); }
-catch (e) { dataDir = path.join(app.getPath('documents'), 'Build Checklist', 'Data'); fs.mkdirSync(dataDir, { recursive: true }); } // read-only location fallback
+catch (e) { const d = app.getPath('documents'), old = path.join(d, 'Build Checklist');   // read-only location (installer): Documents; a shop that used it before the app was renamed keeps its folder
+  dataDir = path.join(fs.existsSync(path.join(old, 'Data')) ? old : path.join(d, 'ByTheBook'), 'Data'); fs.mkdirSync(dataDir, { recursive: true }); }
 app.setPath('userData', path.join(dataDir, 'profile'));
 const cfgPath = path.join(dataDir, 'config.json');
 let cfg = {}; try { cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')); } catch (e) {}
@@ -24,7 +25,7 @@ const os = require('os'), { spawn } = require('child_process'), { pathToFileURL 
 const FFMPEG = (() => { try { return require('ffmpeg-static').replace('app.asar', 'app.asar.unpacked'); } catch (e) { return null; } })();
 const MAX_COPY = 300 * 1024 * 1024;   // a whole video copied into a checklist; a .bcl is read whole when opened
 const QUALITY = { native: { crf: 20, h: 0 }, medium: { crf: 26, h: 720 }, low: { crf: 30, h: 480 } };
-const TMP = path.join(os.tmpdir(), 'build-checklist-video');
+const TMP = path.join(os.tmpdir(), 'bythebook-video');
 try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}   // leftovers from a crash
 const relToSaves = p => { const r = path.relative(savesDir(), p); return r && !r.startsWith('..') && !path.isAbsolute(r) ? r : ''; };
 const vidPath = v => !v ? '' : v.rel ? path.join(savesDir(), v.rel) : String(v.path || '');
@@ -37,13 +38,13 @@ const verNum = v => String(v || '').replace(/^v/i, '').split(/[-+]/)[0].split('.
 const newer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 // what this copy can replace itself with: the portable .exe, the folder version (a zip; Windows, no uninstaller next to the program),
 // the Windows installer, or the Linux AppImage (a Mac only gets the download page)
-const kind = () => { if (!app.isPackaged) return null; if (process.env.PORTABLE_EXECUTABLE_FILE) return { k: 'portable', file: process.env.PORTABLE_EXECUTABLE_FILE, asset: /^BuildChecklist\.exe$/i };
+const kind = () => { if (!app.isPackaged) return null; if (process.env.PORTABLE_EXECUTABLE_FILE) return { k: 'portable', file: process.env.PORTABLE_EXECUTABLE_FILE, asset: /^ByTheBook\.exe$/i };
   if (process.platform === 'win32') { const exe = app.getPath('exe'); let inst = false; try { inst = fs.readdirSync(path.dirname(exe)).some(f => /^Uninstall .*\.exe$/i.test(f)); } catch (e) {}
-    return inst ? { k: 'setup', asset: /^BuildChecklist-Setup\.exe$/i } : { k: 'folder', file: exe, asset: /^BuildChecklist-Folder\.zip$/i }; }
+    return inst ? { k: 'setup', asset: /^ByTheBook-Setup\.exe$/i } : { k: 'folder', file: exe, asset: /^ByTheBook-Folder\.zip$/i }; }
   return process.env.APPIMAGE ? { k: 'appimage', file: process.env.APPIMAGE, asset: /\.AppImage$/i } : null; };
 const writable = d => { try { fs.accessSync(d, fs.constants.W_OK); return true; } catch (e) { return false; } };
 const updCfg = () => Object.assign({ auto: false, last: 0, skip: '', snooze: 0, found: null }, cfg.upd || {});
-const UA = () => ({ 'User-Agent': 'Build-Checklist/' + app.getVersion(), Accept: 'application/vnd.github+json' });
+const UA = () => ({ 'User-Agent': 'ByTheBook/' + app.getVersion(), Accept: 'application/vnd.github+json' });
 let dl = null;   // the checked download, ready to install: {version, file}
 async function checkUpdate() {
   let r; try { const res = await fetch(UPDATE_URL, { headers: UA(), signal: AbortSignal.timeout(15000) }); if (!res.ok) throw new Error('GitHub answered ' + res.status); r = await res.json(); }
@@ -80,7 +81,7 @@ async function safetyCopy(v) {
   for (const f of files) { const o = path.join(tmp, path.basename(f)); await fsp.copyFile(f, o); const n = fs.statSync(f).size;
     if (fs.statSync(o).size !== n) throw new Error('The safety copy of "' + path.basename(f) + '" came out incomplete. Nothing was changed.'); done += n; tell(need ? done / need : 1); }
   for (const f of data) await fsp.copyFile(f, path.join(tmp, 'Data', path.basename(f)));
-  fs.writeFileSync(path.join(tmp, 'READ ME.txt'), `Made by Build Checklist ${app.getVersion()} just before updating to ${v}, on ${new Date().toString()}.\r\nIt holds every checklist from the Saves folder and the settings from the Data folder, exactly as they were.\r\nTo use one, copy it back into the Saves folder (or Data folder) while the app is closed.\r\n`);
+  fs.writeFileSync(path.join(tmp, 'READ ME.txt'), `Made by ByTheBook ${app.getVersion()} just before updating to ${v}, on ${new Date().toString()}.\r\nIt holds every checklist from the Saves folder and the settings from the Data folder, exactly as they were.\r\nTo use one, copy it back into the Saves folder (or Data folder) while the app is closed.\r\n`);
   fs.renameSync(tmp, out);
   for (const n of fs.readdirSync(SAFE()).filter(n => / before /.test(n) && n !== name).sort().reverse().filter((n, i) => / \(incomplete\)$/.test(n) || i >= 1)) fs.rmSync(path.join(SAFE(), n), { recursive: true, force: true });
   return out;
@@ -104,7 +105,7 @@ async function installUpdate() {
       spawn('/bin/sh', ['-c', 'p=$1; a=$2; shift 2; while kill -0 "$p" 2>/dev/null; do sleep 0.3; done; exec "$a" "$@"', 'sh', String(process.pid), cur, ...flags], { detached: true, stdio: 'ignore' }).unref();
     } else {
       fs.writeFileSync(PEND, JSON.stringify({ from: app.getVersion(), to: dl.version, safe, at: new Date().toISOString() }));
-      const ps = path.join(os.tmpdir(), 'build-checklist-update-' + process.pid + '.ps1');
+      const ps = path.join(os.tmpdir(), 'bythebook-update-' + process.pid + '.ps1');
       fs.writeFileSync(ps, '\ufeff' + updScript(K, cur, prev, flags, safe).join('\r\n'));
       if (process.env.BCL_VERSION_MARK) try { fs.copyFileSync(ps, path.join(dataDir, 'update-helper.ps1')); } catch (e) {}   // tests: keep a copy to check
       // close only once the helper says it is running (HELPER_ON); if it never does, nothing has changed and the app stays open
@@ -375,12 +376,12 @@ ipcMain.on('loading', (e, t, p) => { if (win && e.sender === win.webContents && 
 ipcMain.on('ready', e => { if (win && e.sender === win.webContents) showMain(); });
 function createWindow() {
   try {
-    splash = new BrowserWindow({ width: 460, height: 400, frame: false, resizable: false, maximizable: false, fullscreenable: false, center: true, show: true, backgroundColor: '#14171a', title: 'Build Checklist',
+    splash = new BrowserWindow({ width: 460, height: 400, frame: false, resizable: false, maximizable: false, fullscreenable: false, center: true, show: true, backgroundColor: '#14171a', title: 'ByTheBook',
       webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: false } });
     splash.loadFile(path.join(__dirname, 'splash.html'), { query: customSplash() });
     splash.on('closed', () => { splash = null; });
   } catch (e) { splash = null; }
-  win = new BrowserWindow({ width: 1500, height: 900, autoHideMenuBar: true, title: 'Build Checklist', show: false, backgroundColor: '#14171a',
+  win = new BrowserWindow({ width: 1500, height: 900, autoHideMenuBar: true, title: 'ByTheBook', show: false, backgroundColor: '#14171a',
     webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: !app.isPackaged, preload: path.join(__dirname, 'preload.js') } });
   win.loadFile(path.join(__dirname, 'index.html'));
   // never leave the app invisible: show the window anyway if the page fails or takes very long
@@ -395,7 +396,7 @@ function createWindow() {
     const finish = ok => {
       clearTimeout(timer); ipcMain.removeListener('flushed', onFlushed);
       if (!ok && win) {
-        const r = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['Keep the app open', 'Close anyway'], defaultId: 0, cancelId: 0, title: 'Build Checklist',
+        const r = dialog.showMessageBoxSync(win, { type: 'warning', buttons: ['Keep the app open', 'Close anyway'], defaultId: 0, cancelId: 0, title: 'ByTheBook',
           message: 'Your latest changes could not be saved.', detail: 'Keep the app open and try Menu > Save (Ctrl+S), or close anyway and lose the last edits.' });
         if (r === 0) { closing = false; return; }
       }
