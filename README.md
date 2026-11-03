@@ -215,3 +215,6 @@ For torque patterns, bolt numbering and the like.
 - pdf.js (Apache 2.0) is bundled in lib/ (license: lib/PDFJS-LICENSE.txt).
 - The six text fonts (Inter, Roboto, Open Sans, Lato, Source Sans 3, Barlow; SIL Open Font License 1.1) are bundled in lib/fonts, cut down to Latin letters, digits and shop symbols (about 570 KB together). Licenses: lib/fonts/LICENSES.txt.
 - ffmpeg (GPL v3, via the ffmpeg-static package) is bundled to cut and convert video clips. It runs only while installing a clip or making a thumbnail. Its license and build notes are in resources/app.asar.unpacked/node_modules/ffmpeg-static/; source code is at https://ffmpeg.org.
+
+---
+Built with the help of [Claude Code](https://claude.com/claude-code).
