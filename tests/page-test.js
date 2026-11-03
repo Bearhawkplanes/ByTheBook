@@ -864,7 +864,7 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
     $('#hImp').click(); const r = { btns: [...document.querySelectorAll('#modal .impch b')].map(b => b.textContent), note: /\.bcl/.test($('#impfile').textContent) && /\.json/.test($('#impfile').textContent), noOldBtn: !$('#hText') };
     $('#impfile').click(); r.picked = picked; r.closed = $('#modal').hidden; $('#hImp').click(); $('#imptext').click(); r.ai = !!$('#aitxt'); closeDlg(); jf.click = old;
     r.vid = /MP4/.test($('#vpside').textContent) && /WebM/.test($('#vpside').textContent) && /HandBrake/.test($('#vpside').textContent); return r; });
-  assert(impd.btns.join() === 'From file,From text / AI' && impd.note && impd.noOldBtn && impd.picked === 1 && impd.closed && impd.ai && impd.vid, 'Import offers From file and From text / AI; video types listed: ' + JSON.stringify(impd));
+  assert(impd.btns.join() === 'From file,From text' && impd.note && impd.noOldBtn && impd.picked === 1 && impd.closed && impd.ai && impd.vid, 'Import offers From file and From text / AI; video types listed: ' + JSON.stringify(impd));
   await pg.evaluate(async () => { const demo = LIB.filter(x => /^Demo engine build/.test(x.id)).sort((a, b) => b.opened - a.opened)[0]; await openProject(demo.id); });
 
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----

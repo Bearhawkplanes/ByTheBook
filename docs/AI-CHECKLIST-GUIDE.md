@@ -43,7 +43,7 @@ Everything imported arrives unticked and **not Verified**. The app has a "Verifi
 
 ### A. Outline text (any chatbot, also local models)
 
-Reply with **only** the outline, nothing before or after it. The person pastes it into the app (main menu: **From text / AI**, or in a checklist: **Menu > Import from text / AI…**).
+Reply with **only** the outline, nothing before or after it. The person pastes it into the app (main menu: **Import > From text**, or in a checklist: **Menu > Import from text…**).
 
 ```
 # Prep
@@ -69,7 +69,7 @@ Rules:
 
 ### B. A checklist file (assistants that can write files, such as Claude with tools)
 
-Write a JSON file (for example `Engine overhaul.json`). The person opens it in the app with **Import** on the main menu; the file name becomes the checklist's name. The same JSON can also be pasted into the "Import from text / AI" box.
+Write a JSON file (for example `Engine overhaul.json`). The person opens it in the app with **Import** on the main menu; the file name becomes the checklist's name. The same JSON can also be pasted into the "Import from text" box.
 
 ```json
 {

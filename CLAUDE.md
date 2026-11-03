@@ -69,7 +69,7 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 
 ## AI-made checklists
 - `docs/AI-CHECKLIST-GUIDE.md` is the guide for any AI assistant making checklists from a manual (structure, the outline format, the JSON format = what `norm()` accepts, page numbers = PDF file pages). `AGENTS.md` points to it. Keep it, `AIPROMPT` (the prompt copied by "Copy instructions for an AI") and `parseOutline` in step.
-- `textDlg()` (main menu Import `#hImp` > `importDlg()` > "From text / AI" `#imptext`; "From file" `#impfile` = the old `#jfile` picker; Menu > Import from text / AI… `data-m=text`): `parseOutline` reads the outline (`#`, `##`, `-`/`1.`, `>` notes, `| key: value` fields, `[sign-off]`; code fences and ** ignored) or JSON; makes a new checklist (`addEntry`) or appends sections (`umark` first, logged).
+- `textDlg()` (main menu Import `#hImp` > `importDlg()` > "From text" `#imptext`; "From file" `#impfile` = the old `#jfile` picker; Menu > Import from text… `data-m=text`): `parseOutline` reads the outline (`#`, `##`, `-`/`1.`, `>` notes, `| key: value` fields, `[sign-off]`; code fences and ** ignored) or JSON; makes a new checklist (`addEntry`) or appends sections (`umark` first, logged).
 
 ## Placeholders (to fill in later)
 - **Tutorial**: the "Tutorial" button next to Profile on the main menu (`#hTut`, in `.hfoot`) only shows a "coming soon" toast. The owner asked for it as a reminder; ask them what it should contain before building it (for example a guided walkthrough of the demo checklist).
