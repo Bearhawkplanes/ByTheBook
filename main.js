@@ -34,7 +34,7 @@ const vidPath = v => !v ? '' : v.rel ? path.join(savesDir(), v.rel) : String(v.p
 // Optional (Settings, off by default): asks GitHub's "latest release" address at most about once a day. Installing downloads the new
 // program next to the running one, checks its size and SHA-256, and swaps it in after this copy closes; the previous version is kept
 // as "<name> (previous)". Checklists and Data/ are never touched. BCL_UPDATE_URL points it at a test server.
-const UPDATE_URL = process.env.BCL_UPDATE_URL || 'https://api.github.com/repos/Bearhawkplanes/Build-Checklist/releases/latest';
+const UPDATE_URL = process.env.BCL_UPDATE_URL || 'https://api.github.com/repos/Bearhawkplanes/ByTheBook/releases/latest';
 const verNum = v => String(v || '').replace(/^v/i, '').split(/[-+]/)[0].split('.').map(n => parseInt(n, 10) || 0);
 const newer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 // what this copy can replace itself with: the portable .exe, the folder version (a zip; Windows, no uninstaller next to the program),

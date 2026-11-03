@@ -142,7 +142,7 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
 
   // updates: off by default; a newer release is found, downloaded, checked and swapped in; the previous version is kept
   const base = 'http://127.0.0.1:' + srv.address().port, sha = 'sha256:' + crypto.createHash('sha256').update(ASSET).digest('hex');
-  const rel = (tag, extra) => Object.assign({ tag_name: tag, html_url: 'https://github.com/Bearhawkplanes/Build-Checklist/releases/tag/' + tag, body: 'New: things', draft: false, prerelease: false,
+  const rel = (tag, extra) => Object.assign({ tag_name: tag, html_url: 'https://github.com/Bearhawkplanes/ByTheBook/releases/tag/' + tag, body: 'New: things', draft: false, prerelease: false,
     assets: [{ name: 'ByTheBook.exe', size: 1, browser_download_url: base + '/nope' }, { name: 'ByTheBook.AppImage', size: ASSET.length, browser_download_url: base + '/dl', digest: sha }] }, extra || {});
   let u = await call('updGet');
   assert(u.auto === false && u.version === '0.5.0' && !u.found, 'automatic checks off by default');

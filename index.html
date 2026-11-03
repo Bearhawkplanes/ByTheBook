@@ -1726,10 +1726,10 @@ function updBar(force,st){const b=$('#updbar'),f=UPD&&UPD.found,show=!!f&&(force
  <span class="ubst${st&&st.err?' err':''}">${st?esc(st.t):''}</span><span style="flex:1"></span>
  <button class="pri" data-u="inst" ${st&&st.busy?'disabled':''} title="${UPD.canInstall?'Download it, then restart into the new version':'Open the download page'}">${UPD.canInstall?'Install':'Download'}</button><button data-u="later" title="Remind me again tomorrow">Dismiss</button><button data-u="skip" title="Don't remind me about this version">Skip this version</button>`}
 $('#updbar').addEventListener('click',async e=>{const b=e.target.closest('[data-u]'),f=UPD&&UPD.found;if(!b||!f)return;const u=b.dataset.u;
- if(u==='new')window.open(f.url||'https://github.com/Bearhawkplanes/Build-Checklist/releases');
+ if(u==='new')window.open(f.url||'https://github.com/Bearhawkplanes/ByTheBook/releases');
  else if(u==='later'){await FS.updSet({snooze:nextDay()});UPD.snooze=nextDay();$('#updbar').hidden=true}
  else if(u==='skip'){await FS.updSet({skip:f.version});UPD.skip=f.version;$('#updbar').hidden=true}
- else if(u==='inst'){if(!UPD.canInstall)return window.open(f.url||'https://github.com/Bearhawkplanes/Build-Checklist/releases');
+ else if(u==='inst'){if(!UPD.canInstall)return window.open(f.url||'https://github.com/Bearhawkplanes/ByTheBook/releases');
   ask(`Install version ${esc(f.version)}?<br><br>First the app saves your work and makes a <b>safety copy of all your checklists and settings</b> (in the Saves folder, under "Backups before updates"). Then it downloads the update, closes and opens again on the new version.${UPD.kind==='setup'?'':' If the new version does not start properly, the app puts the version you have now back by itself.'} The update never changes your checklists, profile or settings.`,'Install',async()=>{
    UPS='Downloading…';updBar(true,{t:'Downloading… 0%',busy:true});
    try{await FS.updDownload();if(CUR&&DIRTY)await flush();UPS='Making a safety copy of your checklists…';updBar(true,{t:UPS,busy:true});await FS.updInstall();updBar(true,{t:'Restarting…',busy:true})}

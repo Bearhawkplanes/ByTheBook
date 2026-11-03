@@ -24,7 +24,7 @@ const checklist = JSON.stringify({ name: 'Engine', sections: [{ title: 'A', card
 fs.writeFileSync(path.join(dir, 'Saves', 'Engine.bcl'), checklist);
 const bytes = fs.readFileSync(newApp), dig = 'sha256:' + crypto.createHash('sha256').update(bytes).digest('hex');
 const srv = http.createServer((q, r) => {
-  if (q.url === '/latest') { r.writeHead(200, { 'Content-Type': 'application/json' }); r.end(JSON.stringify({ tag_name: 'v' + newV, html_url: 'https://github.com/Bearhawkplanes/Build-Checklist/releases/tag/v' + newV, body: 'test', draft: false, prerelease: false,
+  if (q.url === '/latest') { r.writeHead(200, { 'Content-Type': 'application/json' }); r.end(JSON.stringify({ tag_name: 'v' + newV, html_url: 'https://github.com/Bearhawkplanes/ByTheBook/releases/tag/v' + newV, body: 'test', draft: false, prerelease: false,
     assets: [{ name, size: bytes.length, digest: dig, browser_download_url: 'http://127.0.0.1:' + srv.address().port + '/dl' }] })); }
   else if (q.url === '/dl') { r.writeHead(200, { 'Content-Length': bytes.length }); r.end(bytes); } else { r.writeHead(404); r.end(); }
 });
