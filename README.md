@@ -1,6 +1,6 @@
 # ByTheBook (offline desktop app)
 
-ByTheBook (formerly "Build Checklist") keeps shop work going step by step, by the manual. Checklist files still end in `.bcl`.
+ByTheBook keeps shop work going step by step, by the manual: checklists with sign-offs, work photos and the PDF manual built in.
 
 ## Download (Windows)
 Get the latest version from the Releases page (right side of the repository page on GitHub):
