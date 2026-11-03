@@ -169,6 +169,15 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   assert.strictEqual(fs.readFileSync(path.join(dir, 'BuildChecklist (previous).AppImage'), 'utf8'), '#!/bin/sh\necho old\n', 'previous version kept');
   assert(quits >= 1, 'the app closes so the new version can start');
   assert(fs.existsSync(path.join(saves, 'a.bcl')), 'checklists untouched');
+  // a safety copy of every checklist and the settings is made before the update
+  const safeDir = path.join(saves, 'Backups before updates'), sc = fs.readdirSync(safeDir);
+  assert(sc.length === 1 && / before 0\.10\.0$/.test(sc[0]), 'one safety copy, named for the update: ' + sc);
+  assert.deepStrictEqual(fs.readFileSync(path.join(safeDir, sc[0], 'a.bcl')), fs.readFileSync(path.join(saves, 'a.bcl')), 'checklist copied exactly');
+  assert(fs.existsSync(path.join(safeDir, sc[0], 'Data', 'profile.json')) && fs.existsSync(path.join(safeDir, sc[0], 'READ ME.txt')), 'settings and a note copied too');
+  // an update that the helper had to roll back leaves a note for the page; seen once, then gone
+  fs.writeFileSync(path.join(dir, 'Data', 'update-failed.json'), '\ufeff' + JSON.stringify({ from: '0.5.0', to: '0.10.0', error: 'boom', back: true, safe: path.join(safeDir, sc[0]) }));
+  const uf = (await call('updGet')).failed; assert(uf && uf.to === '0.10.0' && uf.back && uf.error === 'boom', 'failed update reported: ' + JSON.stringify(uf));
+  await call('updFailedSeen'); assert.strictEqual((await call('updGet')).failed, null, 'and cleared once seen');
   // an older copy never overwrites a profile saved by a newer version
   const P = JSON.parse(fs.readFileSync(path.join(dir, 'Data', 'profile.json'), 'utf8'));
   assert.strictEqual(P.app, '0.5.0', 'profile carries the version that saved it');

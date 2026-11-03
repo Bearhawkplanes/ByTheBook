@@ -1,6 +1,6 @@
-# Checks the self-update on real Windows: an old portable build (0.0.1) updates itself to this version from a
-# fake GitHub server on the test machine, restarts, and keeps Saves/ and Data/. Start it from the Actions tab
-# ("Update test (Windows)" > Run workflow). Nothing is published.
+# Checks the self-update on real Windows: an old build (0.0.1) updates itself to this version from a fake GitHub server on the
+# test machine, restarts, and keeps Saves/ and Data/. Done for the portable .exe and the folder version (zip), plus a broken update
+# that must be rolled back. Start it from the Actions tab ("Update test (Windows)" > Run workflow). Nothing is published.
 name: Update test (Windows)
 on:
   workflow_dispatch:
@@ -20,9 +20,27 @@ jobs:
       - run: npx electron-builder --win portable --publish never -c.extraMetadata.version=0.0.1
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - run: Move-Item dist\BuildChecklist.exe old.exe
+      - run: |
+          Move-Item dist\BuildChecklist.exe old.exe
+          Rename-Item dist\win-unpacked 'Build Checklist'
+          Compress-Archive -Path 'dist\Build Checklist' -DestinationPath old-folder.zip
+          Remove-Item 'dist\Build Checklist' -Recurse -Force
       - run: npx electron-builder --win portable --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - run: Move-Item dist\BuildChecklist.exe new.exe
-      - run: node tests/update-test.js old.exe new.exe
+      - run: |
+          Move-Item dist\BuildChecklist.exe new.exe
+          Rename-Item dist\win-unpacked 'Build Checklist'
+          Compress-Archive -Path 'dist\Build Checklist' -DestinationPath new-folder.zip
+          # a broken update: the "program" closes at once, so the helper must put the old version back
+          New-Item -ItemType Directory 'broken\Build Checklist' | Out-Null
+          Copy-Item C:\Windows\System32\whoami.exe 'broken\Build Checklist\Build Checklist.exe'
+          Compress-Archive -Path 'broken\Build Checklist' -DestinationPath broken-folder.zip
+      - name: Portable exe
+        run: node tests/update-test.js old.exe new.exe
+      - name: Folder version
+        run: node tests/update-test.js old-folder.zip new-folder.zip
+      - name: Folder version, broken update rolled back
+        run: node tests/update-test.js old-folder.zip broken-folder.zip
+        env:
+          EXPECT: rollback

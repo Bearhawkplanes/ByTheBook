@@ -35,9 +35,12 @@ const vidPath = v => !v ? '' : v.rel ? path.join(savesDir(), v.rel) : String(v.p
 const UPDATE_URL = process.env.BCL_UPDATE_URL || 'https://api.github.com/repos/Bearhawkplanes/Build-Checklist/releases/latest';
 const verNum = v => String(v || '').replace(/^v/i, '').split(/[-+]/)[0].split('.').map(n => parseInt(n, 10) || 0);
 const newer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
-// what this copy can replace itself with: the portable .exe, the Windows installer, or the Linux AppImage (a Mac only gets the download page)
-const kind = () => !app.isPackaged ? null : process.env.PORTABLE_EXECUTABLE_FILE ? { k: 'portable', file: process.env.PORTABLE_EXECUTABLE_FILE, asset: /^BuildChecklist\.exe$/i }
-  : process.platform === 'win32' ? { k: 'setup', asset: /^BuildChecklist-Setup\.exe$/i } : process.env.APPIMAGE ? { k: 'appimage', file: process.env.APPIMAGE, asset: /\.AppImage$/i } : null;
+// what this copy can replace itself with: the portable .exe, the folder version (a zip; Windows, no uninstaller next to the program),
+// the Windows installer, or the Linux AppImage (a Mac only gets the download page)
+const kind = () => { if (!app.isPackaged) return null; if (process.env.PORTABLE_EXECUTABLE_FILE) return { k: 'portable', file: process.env.PORTABLE_EXECUTABLE_FILE, asset: /^BuildChecklist\.exe$/i };
+  if (process.platform === 'win32') { const exe = app.getPath('exe'); let inst = false; try { inst = fs.readdirSync(path.dirname(exe)).some(f => /^Uninstall .*\.exe$/i.test(f)); } catch (e) {}
+    return inst ? { k: 'setup', asset: /^BuildChecklist-Setup\.exe$/i } : { k: 'folder', file: exe, asset: /^BuildChecklist-Folder\.zip$/i }; }
+  return process.env.APPIMAGE ? { k: 'appimage', file: process.env.APPIMAGE, asset: /\.AppImage$/i } : null; };
 const writable = d => { try { fs.accessSync(d, fs.constants.W_OK); return true; } catch (e) { return false; } };
 const updCfg = () => Object.assign({ auto: false, last: 0, skip: '', snooze: 0, found: null }, cfg.upd || {});
 const UA = () => ({ 'User-Agent': 'Build-Checklist/' + app.getVersion(), Accept: 'application/vnd.github+json' });
@@ -62,27 +65,88 @@ async function downloadUpdate() {
   if (n !== f.asset.size || (f.asset.digest && f.asset.digest.toLowerCase() !== 'sha256:' + h.digest('hex'))) { fs.rmSync(out, { force: true }); throw new Error('The download was incomplete or damaged; nothing was changed'); }
   dl = { version: f.version, file: out }; return { ok: true, size: n };
 }
+// Before every update: a full copy of every checklist and the settings in Saves/Backups before updates/<date> before <version>
+// (the newest two are kept). The update itself never touches Saves/ or Data/; this copy is for "just in case".
+const SAFE = () => path.join(savesDir(), 'Backups before updates');
+const mbs = n => (n / 1048576).toFixed(n < 1048576 * 10 ? 1 : 0) + ' MB';
+async function safetyCopy(v) {
+  const sd = savesDir(), tell = f => { if (win) win.webContents.send('upd-progress', f); };
+  const files = fs.readdirSync(sd).filter(f => /\.bcl$/i.test(f) || f === '.profile-marker.json').map(f => path.join(sd, f)), data = fs.readdirSync(dataDir).filter(f => /\.json$/i.test(f)).map(f => path.join(dataDir, f));
+  let need = 0; for (const f of [...files, ...data]) need += fs.statSync(f).size;
+  let free = Infinity; try { const s = fs.statfsSync(sd); free = s.bavail * s.bsize; } catch (e) {}
+  if (free < need * 1.05 + 50 * 1048576) throw new Error(`There is not enough free space for the safety copy of your checklists (needs ${mbs(need)}, ${mbs(free)} free). Nothing was changed: free up some space on that drive and try again.`);
+  const name = new Date().toISOString().slice(0, 16).replace('T', ' ').replace(':', '-') + ' before ' + v, tmp = path.join(SAFE(), name + ' (incomplete)'), out = path.join(SAFE(), name);
+  fs.rmSync(tmp, { recursive: true, force: true }); fs.mkdirSync(path.join(tmp, 'Data'), { recursive: true }); let done = 0; tell(0);
+  for (const f of files) { const o = path.join(tmp, path.basename(f)); await fsp.copyFile(f, o); const n = fs.statSync(f).size;
+    if (fs.statSync(o).size !== n) throw new Error('The safety copy of "' + path.basename(f) + '" came out incomplete. Nothing was changed.'); done += n; tell(need ? done / need : 1); }
+  for (const f of data) await fsp.copyFile(f, path.join(tmp, 'Data', path.basename(f)));
+  fs.writeFileSync(path.join(tmp, 'READ ME.txt'), `Made by Build Checklist ${app.getVersion()} just before updating to ${v}, on ${new Date().toString()}.\r\nIt holds every checklist from the Saves folder and the settings from the Data folder, exactly as they were.\r\nTo use one, copy it back into the Saves folder (or Data folder) while the app is closed.\r\n`);
+  fs.renameSync(tmp, out);
+  for (const n of fs.readdirSync(SAFE()).filter(n => / before /.test(n) && n !== name).sort().reverse().filter((n, i) => / \(incomplete\)$/.test(n) || i >= 1)) fs.rmSync(path.join(SAFE(), n), { recursive: true, force: true });
+  return out;
+}
+// the helper (below) restarts into the new version and waits for it to say it started (UOK, written when its menu is ready); if it
+// does not, the helper puts the previous version back, starts it, and leaves UFAIL for it to explain
+const PEND = path.join(dataDir, 'update-pending.json'), UOK = path.join(dataDir, 'update-ok.txt'), UFAIL = path.join(dataDir, 'update-failed.json');
+function updStarted() { try { const p = JSON.parse(fs.readFileSync(PEND, 'utf8')); if (p.to === app.getVersion()) { fs.writeFileSync(UOK, app.getVersion()); fs.rmSync(PEND, { force: true }); } } catch (e) {} }
+const updFailed = () => { try { return JSON.parse(fs.readFileSync(UFAIL, 'utf8').replace(/^\ufeff/, '')); } catch (e) { return null; } };
 // the swap happens after this copy has closed (a helper waits for it), so the new version starts cleanly with the same Saves/ and Data/
-function installUpdate() {
+async function installUpdate() {
   const K = kind(); if (!dl || !K) throw new Error('Download the update first');
+  const safe = await safetyCopy(dl.version);
+  fs.rmSync(UFAIL, { force: true }); fs.rmSync(UOK, { force: true });
   if (K.k === 'setup') spawn(dl.file, [], { detached: true, stdio: 'ignore' }).unref();
   else {
     const flags = process.argv.slice(1).filter(a => /^--[\w-]+(=.*)?$/.test(a));   // start the new version with the same options (not files)
-    const cur = K.file, ext = path.extname(cur), prev = path.join(path.dirname(cur), path.basename(cur, ext) + ' (previous)' + ext);
+    const cur = K.file, ext = path.extname(cur), prev = K.k === 'folder' ? path.join(path.dirname(cur), '.previous-version') : path.join(path.dirname(cur), path.basename(cur, ext) + ' (previous)' + ext);
     if (K.k === 'appimage') {   // Linux lets a running AppImage be replaced
       fs.copyFileSync(cur, prev); fs.chmodSync(dl.file, 0o755); fs.renameSync(dl.file, cur);
       spawn('/bin/sh', ['-c', 'p=$1; a=$2; shift 2; while kill -0 "$p" 2>/dev/null; do sleep 0.3; done; exec "$a" "$@"', 'sh', String(process.pid), cur, ...flags], { detached: true, stdio: 'ignore' }).unref();
     } else {
-      const q = v => "'" + String(v).replace(/'/g, "''") + "'", ps = path.join(os.tmpdir(), 'build-checklist-update-' + process.pid + '.ps1');
-      fs.writeFileSync(ps, '\ufeff' + [`$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)}`,
-        `Wait-Process -Id ${process.pid} -Timeout 300 -ErrorAction SilentlyContinue`,
-        '$ok=$false;for($i=0;$i -lt 120 -and -not $ok;$i++){try{if(Test-Path -LiteralPath $prev){Remove-Item -LiteralPath $prev -Force -ErrorAction Stop};Move-Item -LiteralPath $cur -Destination $prev -Force -ErrorAction Stop;$ok=$true}catch{Start-Sleep -Milliseconds 500}}',
-        'if($ok){try{Move-Item -LiteralPath $new -Destination $cur -Force -ErrorAction Stop}catch{Move-Item -LiteralPath $prev -Destination $cur -Force}}',
-        flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur', 'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force'].join('\r\n'));
+      fs.writeFileSync(PEND, JSON.stringify({ from: app.getVersion(), to: dl.version, safe, at: new Date().toISOString() }));
+      const ps = path.join(os.tmpdir(), 'build-checklist-update-' + process.pid + '.ps1');
+      fs.writeFileSync(ps, '\ufeff' + updScript(K, cur, prev, flags, safe).join('\r\n'));
       spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
     }
   }
   setTimeout(() => app.quit(), 300); return true;
+}
+// The Windows helper (PowerShell). Portable: the .exe is swapped, the old one kept as "<name> (previous).exe". Folder: the new zip is
+// unpacked beside the program first (.update-new), then only the names in it are swapped; the old ones go to .previous-version, so
+// Data, Saves and anything else in the folder are never moved. Either way, if anything fails or the new version does not start,
+// the previous version is put back and started, and update-failed.json says what happened.
+function updScript(K, cur, prev, flags, safe) {
+  const q = v => "'" + String(v).replace(/'/g, "''") + "'", folder = K.k === 'folder', dir = path.dirname(cur);
+  const start = flags.length ? `Start-Process -FilePath $cur -ArgumentList @(${flags.map(q).join(',')})` : 'Start-Process -FilePath $cur';
+  return [`$ErrorActionPreference='Stop';$cur=${q(cur)};$new=${q(dl.file)};$prev=${q(prev)};$dir=${q(dir)};$ok=${q(UOK)};$fail=${q(UFAIL)};$pend=${q(PEND)}`,
+    `$from=${q(app.getVersion())};$to=${q(dl.version)};$safe=${q(safe)};$moved=@();$placed=@()`,
+    // retried: antivirus or a closing process can hold a file for a moment
+    'function Mv($a,$b){for($i=0;$i -lt 120;$i++){try{Move-Item -LiteralPath $a -Destination $b -Force -ErrorAction Stop;return}catch{Start-Sleep -Milliseconds 500}};Move-Item -LiteralPath $a -Destination $b -Force}',
+    'function Rm($a){for($i=0;$i -lt 120 -and (Test-Path -LiteralPath $a);$i++){try{Remove-Item -LiteralPath $a -Recurse -Force -ErrorAction Stop}catch{Start-Sleep -Milliseconds 500}};if(Test-Path -LiteralPath $a){throw "Could not remove $a"}}',
+    `Wait-Process -Id ${process.pid} -Timeout 300 -ErrorAction SilentlyContinue`,
+    'try{',
+    ...(folder ? [
+      "$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Rm $nd};Expand-Archive -LiteralPath $new -DestinationPath $nd -Force",
+      '$exe=Split-Path $cur -Leaf;$root=$nd;if(-not(Test-Path -LiteralPath (Join-Path $root $exe))){$s=@(Get-ChildItem -LiteralPath $nd -Directory);if($s.Count -eq 1 -and (Test-Path -LiteralPath (Join-Path $s[0].FullName $exe))){$root=$s[0].FullName}}',
+      "if(-not(Test-Path -LiteralPath (Join-Path $root $exe))){throw 'The downloaded update does not contain the program ('+$exe+')'}",
+      '$names=@(Get-ChildItem -LiteralPath $root -Force | ForEach-Object {$_.Name})',
+      'if(Test-Path -LiteralPath $prev){Rm $prev};New-Item -ItemType Directory -Path $prev | Out-Null',
+      'foreach($n in $names){$p=Join-Path $dir $n;if(Test-Path -LiteralPath $p){Mv $p (Join-Path $prev $n);$moved+=$n}}',
+      'foreach($n in $names){Mv (Join-Path $root $n) (Join-Path $dir $n);$placed+=$n}',
+      'Rm $nd;Rm $new'] : [
+      'if(Test-Path -LiteralPath $prev){Rm $prev};Mv $cur $prev;$moved+=1;Mv $new $cur;$placed+=1']),
+    `if(Test-Path -LiteralPath $ok){Rm $ok};${start.replace('Start-Process', '$p=Start-Process -PassThru')}`,
+    // wait for the new version to say it started; if it closes first, it failed. Still starting after 3 minutes (a slow PC): leave it.
+    "$t=0;while(-not(Test-Path -LiteralPath $ok) -and $t -lt 360){if($p.HasExited){throw 'The new version closed before it finished starting'};Start-Sleep -Milliseconds 500;$t++}",
+    'if(Test-Path -LiteralPath $ok){Remove-Item -LiteralPath $ok -Force -ErrorAction SilentlyContinue}',
+    '}catch{$err=$_.Exception.Message;$back=$true',
+    ' try{' + (folder
+      ? "foreach($n in $placed){Rm (Join-Path $dir $n)};foreach($n in $moved){Mv (Join-Path $prev $n) (Join-Path $dir $n)};$nd=Join-Path $dir '.update-new';if(Test-Path -LiteralPath $nd){Remove-Item -LiteralPath $nd -Recurse -Force -ErrorAction SilentlyContinue}"
+      : 'if($placed.Count){Rm $cur};if($moved.Count){Mv $prev $cur}') + "}catch{$back=$false;$err=$err+' (putting the previous version back: '+$_.Exception.Message+')'}",
+    " Remove-Item -LiteralPath $new -Force -ErrorAction SilentlyContinue;Remove-Item -LiteralPath $pend -Force -ErrorAction SilentlyContinue",
+    ' @{from=$from;to=$to;error=$err;safe=$safe;back=$back;prev=$prev;at=(Get-Date -Format o)} | ConvertTo-Json | Set-Content -LiteralPath $fail -Encoding UTF8',
+    ' if($back){' + start + '}}',
+    'Remove-Item -LiteralPath $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue'];
 }
 // ---- printable checklist ------------------------------------------------------------------------------
 // print.html lays the blank checklist out in a hidden window; Chromium's own printing turns it into the PDF
@@ -239,11 +303,13 @@ const handlers = {
   // updates
   appVersion: () => app.getVersion(),
   updGet: () => { const c = updCfg(), K = kind(), f = c.found && newer(c.found.version, app.getVersion()) ? c.found : null;
-    return { auto: c.auto, skip: c.skip, snooze: c.snooze, last: c.last, found: f, version: app.getVersion(), canInstall: !!(K && f && f.asset && (K.k === 'setup' || writable(path.dirname(K.file)))) }; },
+    return { auto: c.auto, skip: c.skip, snooze: c.snooze, last: c.last, found: f, version: app.getVersion(), failed: updFailed(), kind: K && K.k, canInstall: !!(K && f && f.asset && (K.k === 'setup' || writable(path.dirname(K.file)))) }; },
   updSet: p => { const c = updCfg(); p = p || {}; if ('auto' in p) c.auto = !!p.auto; if ('skip' in p) c.skip = String(p.skip || ''); if ('snooze' in p) c.snooze = +p.snooze || 0; cfg.upd = c; saveCfg(); return true; },
   updCheck: force => { const c = updCfg(); return force || (c.auto && Date.now() - c.last > 20 * 3600000) ? checkUpdate() : null; },   // automatic checks at most about once a day
   updDownload: () => downloadUpdate(),
   updInstall: () => installUpdate(),
+  updFailedSeen: () => { fs.rmSync(UFAIL, { force: true }); return true; },
+  updSafeOpen: p => { p = String(p || ''); if (p && path.resolve(p).startsWith(SAFE()) && fs.existsSync(p)) shell.openPath(p); else shell.openPath(SAFE()); return true; },
   // video
   videoPick: async () => {
     const r = await dialog.showOpenDialog(win, { title: 'Choose a video', properties: ['openFile'], filters: [{ name: 'Videos', extensions: ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'avi', 'wmv', 'mpg', 'mpeg', '3gp'] }, { name: 'All files', extensions: ['*'] }] });
@@ -281,7 +347,7 @@ function customSplash() {
   return {};
 }
 function showMain() {
-  if (shown || !win) return; shown = true; win.show();
+  if (shown || !win) return; shown = true; win.show(); updStarted();
   if (splash && !splash.isDestroyed()) { const s = splash; splash = null; s.webContents.executeJavaScript("step('Ready',1)").catch(() => {}); setTimeout(() => { if (!s.isDestroyed()) s.destroy(); }, 150); }
 }
 ipcMain.on('loading', (e, t, p) => { if (win && e.sender === win.webContents && splash && !splash.isDestroyed()) splash.webContents.executeJavaScript('step(' + JSON.stringify(String(t || '')) + ',' + (+p || 0) + ')').catch(() => {}); });
@@ -327,8 +393,10 @@ else {
   app.whenReady().then(createWindow);
   // test hooks (tests/update-test.js, .github/workflows/update-test.yml): note which version started; update without the page
   if (process.env.BCL_VERSION_MARK) try { fs.appendFileSync(process.env.BCL_VERSION_MARK, app.getVersion() + '\n'); } catch (e) {}
-  if (process.env.BCL_UPDATE_AUTO) app.whenReady().then(async () => { await new Promise(r => setTimeout(r, 3000)); const f = await checkUpdate().catch(() => null);
-    if (f && f.asset) { try { await downloadUpdate(); installUpdate(); return; } catch (e) { try { fs.appendFileSync(process.env.BCL_VERSION_MARK || path.join(TMP, 'update-error.txt'), 'error: ' + e.message + '\n'); } catch (x) {} } }
+  if (process.env.BCL_UPDATE_AUTO) app.whenReady().then(async () => { for (let i = 0; i < 60 && !shown; i++) await new Promise(r => setTimeout(r, 500)); await new Promise(r => setTimeout(r, 1000));
+    if (updFailed()) { try { fs.appendFileSync(process.env.BCL_VERSION_MARK, 'rolled back\n'); } catch (e) {} return app.quit(); }
+    const f = await checkUpdate().catch(() => null);
+    if (f && f.asset) { try { await downloadUpdate(); await installUpdate(); return; } catch (e) { try { fs.appendFileSync(process.env.BCL_VERSION_MARK || path.join(TMP, 'update-error.txt'), 'error: ' + e.message + '\n'); } catch (x) {} } }
     app.quit(); });
   app.on('window-all-closed', () => app.quit());
   app.on('quit', () => { try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {} });

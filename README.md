@@ -2,19 +2,22 @@
 
 ## Download (Windows)
 Get the latest version from the Releases page (right side of the repository page on GitHub):
-- `BuildChecklist.exe`: portable, nothing to install. Put it in its own folder (for example on the desktop or a USB drive); `Saves/` and `Data/` are created next to it.
-- `BuildChecklist-Setup.exe`: installer. Also lets you double-click `.bcl` files to open them.
+- `BuildChecklist-Folder.zip` (**recommended**, also for an external drive): the folder version. Right-click > Extract All, put the `Build Checklist` folder where you want it (the desktop, a USB or external drive), and open `Build Checklist.exe` inside it (pin it to the taskbar to find it quickly). Starts fast. Everything lives in that one folder: `Saves/` (checklists) and `Data/` (profile and settings) are created next to the program, so the whole folder can move between computers and drive letters.
+- `BuildChecklist.exe`: portable single file, nothing to install. Put it in its own folder; `Saves/` and `Data/` are created next to it. It unpacks itself every time it starts, so it takes a few seconds before anything shows.
+- `BuildChecklist-Setup.exe`: installer. Starts fast, and lets you double-click `.bcl` files to open them; checklists live in Documents\Build Checklist.
 
 Windows may warn the first time because the app is not code-signed: click "More info" > "Run anyway".
-To update, replace the exe with the new one; keep the `Saves/` and `Data/` folders.
+To update by hand, replace the program with the new one; keep the `Saves/` and `Data/` folders.
 
 ## Updates
 - Settings > Updates shows the version you have. "Check for updates automatically" (off by default) asks GitHub about once a day, only when online; "Check now" asks straight away.
 - When a newer version is out, a bar appears along the bottom of the menu page: "Version 1.2.0 is available (you have 1.1.0)" with:
   - What's new?: opens the release page on GitHub with the list of changes.
-  - Install: saves your work, downloads the new version (the bar shows progress), checks it is complete and undamaged, closes, swaps in the new program in the same folder and opens again. Checklists, profile and settings stay exactly as they are. The version you had is kept next to the app as "BuildChecklist (previous)", so you can go back by opening that.
+  - Install: saves your work, makes a **safety copy** of every checklist and the settings (`Saves/Backups before updates/<date> before <version>`, the newest two kept; refuses with "Nothing was changed" if the drive is too full for it), downloads the new version (the bar shows progress), checks it is complete and undamaged, closes, swaps in the new program in the same folder and opens again. The update never touches Saves/ or Data/. The version you had is kept: "BuildChecklist (previous).exe" next to the portable exe, or the hidden `.previous-version` folder inside the folder version.
+  - The folder version unpacks the update beside the program first and only then swaps the program's own files; anything else you keep in the folder is left alone.
+  - **If something goes wrong**: before the restart, the bar says what failed and that nothing was changed. If the new version does not start (it closes before its menu appears), the old version is put back and started automatically, and it shows a notice: the update could not be finished, the previous version is back, your checklists were not touched, and where the safety copy is (with a button to open it). This works for the folder version and the portable exe.
   - Dismiss: hides the bar until tomorrow. Skip this version: no more reminders about this version (a newer one still shows).
-- Install works in place for the portable Windows .exe and the Linux AppImage; the Windows installer version runs the new installer. Elsewhere (Mac) the button says Download and opens the download page.
+- Install works in place for the Windows folder version, the portable .exe and the Linux AppImage; the Windows installer version runs the new installer. Elsewhere (Mac) the button says Download and opens the download page.
 - Updates come from this repository's Releases, so they must be public for the check to work. Pre-releases are ignored, which is handy for trying a version first.
 - Checklists remember which version saved them. If an older copy of the app opens a checklist saved by a newer one, it opens view-only with a message to update, and never saves it, so nothing new in it is lost. An older copy also won't overwrite a profile saved by a newer one.
 
@@ -42,7 +45,7 @@ Settings > Save file location lets you move the Saves folder, e.g. to an externa
 If the app sits somewhere it cannot write (Program Files, a Mac /Applications), it falls back to Documents/Build Checklist.
 
 ## Loading screen
-While the app starts, a small loading window shows a spinning wrench, a loading bar and what it is doing ("Reading saved checklists…"). The main window appears when the menu is ready. Before that, the portable `.exe` unpacks itself every time it starts, which can take a while on a slow computer with nothing on screen; the installer version (`BuildChecklist-Setup.exe`) skips that step and starts faster.
+While the app starts, a small loading window shows a spinning wrench, a loading bar and what it is doing ("Reading saved checklists…"). The main window appears when the menu is ready. Before that, the portable `.exe` unpacks itself every time it starts, which can take a while on a slow computer with nothing on screen; the folder version and the installer skip that step and start faster.
 
 To use your own animation instead of the wrench, put a file named `loading.gif`, `loading.webm`, `loading.mp4`, `loading.png`, `loading.webp`, `loading.apng` or `loading.svg` (under 30 MB; a few MB opens fastest) in the `Data` folder. It loops, without sound, at up to 220 × 220 pixels. Delete it to get the wrench back.
 

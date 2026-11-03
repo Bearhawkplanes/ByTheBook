@@ -1719,7 +1719,7 @@ async function newCl(){if(!$('#modal').hidden)return;if(CUR&&DIRTY)await flush()
 // ---------- updates: a bar at the bottom of the menu page; Settings > Updates switches automatic checks on (off by default) ----------
 let UPD=null,APPV='';
 const verNewer=(a,b)=>{const p=v=>String(v||'').replace(/^v/i,'').split(/[-+]/)[0].split('.').map(n=>parseInt(n,10)||0),x=p(a),y=p(b);for(let i=0;i<3;i++)if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0);return false};
-async function updRefresh(force){if(!FS.updGet)return null;let r=null;try{r=await FS.updCheck(!!force)}catch(e){r={error:String(e.message||e)}}try{UPD=await FS.updGet()}catch(e){}updBar(force);return r}
+async function updRefresh(force){if(!FS.updGet)return null;let r=null;try{UPD=await FS.updGet();if(UPD&&UPD.failed&&$('#modal').hidden)updFailDlg(UPD.failed)}catch(e){}try{r=await FS.updCheck(!!force)}catch(e){r={error:String(e.message||e)}}try{UPD=await FS.updGet()}catch(e){}updBar(force);return r}
 const nextDay=()=>{const d=new Date();d.setHours(24,0,0,0);return d.getTime()};
 function updBar(force,st){const b=$('#updbar'),f=UPD&&UPD.found,show=!!f&&(force||st||(f.version!==UPD.skip&&Date.now()>=UPD.snooze));b.hidden=!show;if(!show)return;
  b.innerHTML=`<span class="ubv">Version <b>${esc(f.version)}</b> is available <span class="mut">(you have ${esc(UPD.version)})</span></span><button data-u="new" title="Opens the release page on GitHub">What's new?</button>
@@ -1730,11 +1730,20 @@ $('#updbar').addEventListener('click',async e=>{const b=e.target.closest('[data-
  else if(u==='later'){await FS.updSet({snooze:nextDay()});UPD.snooze=nextDay();$('#updbar').hidden=true}
  else if(u==='skip'){await FS.updSet({skip:f.version});UPD.skip=f.version;$('#updbar').hidden=true}
  else if(u==='inst'){if(!UPD.canInstall)return window.open(f.url||'https://github.com/Bearhawkplanes/Build-Checklist/releases');
-  ask(`Install version ${esc(f.version)}? The app saves your work, downloads the update, closes and opens again on the new version. Checklists, profile and settings stay exactly as they are; the version you have now is kept next to the app as "(previous)".`,'Install',async()=>{
-   updBar(true,{t:'Downloading… 0%',busy:true});
-   try{await FS.updDownload();updBar(true,{t:'Restarting…',busy:true});if(CUR&&DIRTY)await flush();await FS.updInstall()}
-   catch(x){updBar(true,{t:'Update failed: '+String((x&&x.message)||x).replace(/^.*Error: /,''),err:true})}})}});
-if(FS.onUpdProgress)FS.onUpdProgress(v=>{const st=$('#updbar .ubst');if(st&&!$('#updbar').hidden)st.textContent='Downloading… '+Math.round(v*100)+'%'});
+  ask(`Install version ${esc(f.version)}?<br><br>First the app saves your work and makes a <b>safety copy of all your checklists and settings</b> (in the Saves folder, under "Backups before updates"). Then it downloads the update, closes and opens again on the new version.${UPD.kind==='setup'?'':' If the new version does not start properly, the app puts the version you have now back by itself.'} The update never changes your checklists, profile or settings.`,'Install',async()=>{
+   UPS='Downloading…';updBar(true,{t:'Downloading… 0%',busy:true});
+   try{await FS.updDownload();if(CUR&&DIRTY)await flush();UPS='Making a safety copy of your checklists…';updBar(true,{t:UPS,busy:true});await FS.updInstall();updBar(true,{t:'Restarting…',busy:true})}
+   catch(x){updBar(true,{t:'Update failed: '+String((x&&x.message)||x).replace(/^.*Error: /,'')+(/Nothing was changed/.test(String(x&&x.message))?'':' Nothing was changed: your checklists are safe.'),err:true})}})}});
+let UPS='Downloading…';
+if(FS.onUpdProgress)FS.onUpdProgress(v=>{const st=$('#updbar .ubst');if(st&&!$('#updbar').hidden)st.textContent=UPS+' '+Math.round(v*100)+'%'});
+// after an update that could not be finished: the helper put the previous version back (or says where it is) and left a note
+function updFailDlg(x){if(!x||updFailDlg.on)return;updFailDlg.on=1;
+ dlg(`<div class="dh"><b>The update to version ${esc(x.to)} could not be finished</b></div>
+ <p>${x.back?`Build Checklist put the previous version (${esc(x.from)}) back, and that is the version you are using now.`:`The previous version (${esc(x.from)}) could not be put back by itself: it is kept next to the program in <code>${esc(x.prev||'')}</code>.`}</p>
+ <p><b>Your checklists were not touched by the update.</b>${x.safe?` A safety copy of all of them and of your settings, made just before the update, is kept in:<br><code style="word-break:break-all">${esc(x.safe)}</code>`:''}</p>
+ <p class="mut" style="font-size:12px">What went wrong: ${esc(x.error||'unknown')}</p>
+ <div class="dbtn">${x.safe?'<button id="ufsafe">Open the safety copy</button>':''}<button class="pri" data-d="ok">OK</button></div>`);
+ DLGOK=()=>FS.updFailedSeen&&FS.updFailedSeen();$('#ufsafe')?.addEventListener('click',()=>FS.updSafeOpen(x.safe))}
 const updHtml=()=>`<div class="ds"><div class="dt">Updates</div><p class="mut" style="margin:0 0 6px">This is version ${esc(APPV||'?')}.</p>
  <label class="chk"><input type="checkbox" id="updauto" ${UPD&&UPD.auto?'checked':''}> Check for updates automatically (about once a day, when online)</label>
  <div class="tb" style="margin-top:6px"><button data-up="now">Check now</button><span id="updmsg" class="mut"></span></div></div>`;

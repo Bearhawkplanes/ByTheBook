@@ -442,10 +442,19 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   // Install: confirm, download with progress, save the open checklist, restart
   await open(pg, 'shop'); await pg.evaluate(() => { S.name = S.name; DIRTY = true; openHome(); }); await pg.waitForTimeout(100);
   await pg.evaluate(() => document.querySelector('[data-u=inst]').click());
-  assert(/closes and opens again on the new version/.test(await pg.evaluate(() => $('#modal').textContent)), 'asks first');
+  assert(/closes and opens again on the new version/.test(await pg.evaluate(() => $('#modal').textContent)) && /safety copy of all your checklists/.test(await pg.evaluate(() => $('#modal').textContent)), 'asks first, mentions the safety copy');
   await pg.evaluate(() => document.querySelector('#modal [data-d=ok]').click()); await pg.waitForTimeout(200);
   assert.deepStrictEqual(await pg.evaluate(() => window.__ucalls.filter(c => c[0] !== 'set' && c[0] !== 'check').map(c => c[0])), ['download', 'install'], 'downloaded, then installed');
   assert(await pg.evaluate(() => /Restarting/.test($('#updbar').innerText) && !DIRTY), 'saved before restarting');
+  // a failed install: the error says nothing was changed
+  const ufail = await pg.evaluate(async () => { window.fsapi.updInstall = async () => { throw new Error('Error invoking remote method: Error: disk on fire') }; document.querySelector('[data-u=inst]').click(); document.querySelector('#modal [data-d=ok]').click(); await new Promise(r => setTimeout(r, 200)); return $('#updbar').innerText; });
+  assert(/Update failed: disk on fire Nothing was changed: your checklists are safe\./.test(ufail.replace(/\s+/g, ' ')), 'failed update reassures: ' + ufail);
+  // after an update the helper had to roll back: a notice on the next start, with where the safety copy is
+  pg = await page({}, prof('a'.repeat(32)), ustub({ failed: { from: '0.5.0', to: '0.6.0', error: 'The new version closed before it finished starting', back: true, safe: 'D:\\Shop\\Saves\\Backups before updates\\2026-11-03 10-00 before 0.6.0' } }, { __seen: 0 }));
+  const fd = await pg.evaluate(async () => { let seen = 0, opened = ''; window.fsapi.updFailedSeen = async () => { seen++; return true }; window.fsapi.updSafeOpen = async p => { opened = p }; await updRefresh(false);
+    const t = $('#modal').innerText; $('#ufsafe').click(); document.querySelector('#modal [data-d=ok]').click(); return { t, seen, opened, closed: $('#modal').hidden }; });
+  assert(/could not be finished/.test(fd.t) && /put the previous version \(0\.5\.0\) back/.test(fd.t) && /Your checklists were not touched/.test(fd.t) && /before 0\.6\.0/.test(fd.t) && /closed before it finished starting/.test(fd.t), 'rollback notice: ' + fd.t);
+  assert(fd.seen === 1 && /before 0\.6\.0$/.test(fd.opened) && fd.closed, 'opens the safety copy; OK clears the notice: ' + JSON.stringify(fd));
   // no in-place install possible (e.g. a Mac): the button opens the download page
   pg = await page({}, prof('a'.repeat(32)), ustub({ found: relF, canInstall: false }));
   await pg.evaluate(() => updRefresh(false)); await pg.waitForTimeout(50);
