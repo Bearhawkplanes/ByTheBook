@@ -79,6 +79,11 @@ Offline Electron desktop app for shop build checklists: sections > cards > steps
 ## Placeholders (to fill in later)
 - **Tutorial**: the "Tutorial" button next to Profile on the main menu (`#hTut`, in `.hfoot`) only shows a "coming soon" toast. The owner asked for it as a reminder; ask them what it should contain before building it (for example a guided walkthrough of the demo checklist).
 
+## Future plan: folders on the main menu (owner's idea, NOT started; build only when asked)
+- The owner wants a better main menu where saved checklists can be sorted into folders, e.g. a "Bicycle" folder holding ten bicycle jobs, and folders inside folders ("Bicycle > Tires", "Bicycle > Handlebars"). Click a folder to see only what is in it.
+- Visual options shown to the owner (Nov 2026, an artifact page): (A) folder tree on the left replacing the flat Saved checklists list, (B) folder cards / tiles in the middle with a breadcrumb path, (C) one list grouped under foldable folder headings. Their choice is still open; ask before building.
+- Thoughts for when it is built: keep the folders as app data (e.g. a `folder` path per checklist in a small index in Data/ or Saves/), not as real subfolders, so storage.js, backups, stamps and E-4420 keep working unchanged; moving a checklist = drag or "Move to folder…"; search across all folders; the demo and new checklists land in the folder that is open.
+
 ## Future plan: host computer (owner's idea, NOT started; first a stable, tested release)
 Agreed with the owner, to build later, only when they ask:
 - One always-on **host computer** stores the shop's checklists. Each project has **one laptop** that everyone on that project uses; another project uses another laptop.
