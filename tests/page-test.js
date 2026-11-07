@@ -493,6 +493,12 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert.strictEqual(await pg.evaluate(() => document.querySelector('[data-u=inst]').textContent), 'Download');
   await pg.evaluate(() => document.querySelector('[data-u=inst]').click());
   assert.deepStrictEqual(await pg.evaluate(() => [window.__opened, window.__ucalls.filter(c => c[0] === 'download').length]), [[relF.url], 0], 'Download opens the page');
+  // main menu: the DELETE button sits above the update bar while it shows; the gear opens the app settings (themes, save location, updates)
+  const hb = await pg.evaluate(async () => { await openHome(); HS = LIB[0].id; renderHome(); window.__U.snooze = 0; window.__U.skip = ''; await updRefresh(false); await new Promise(r => setTimeout(r, 100));
+    const ub = $('#updbar').getBoundingClientRect(), del = $('#hdelb').getBoundingClientRect(), r = { bar: !$('#updbar').hidden, above: del.bottom <= ub.top };
+    $('#hSet').click(); r.dlg = ['Themes', 'Save file location', 'Updates', 'Keyboard shortcuts', 'Profile and PINs'].every(t => $('#modal').textContent.includes(t)) && !$('#modal').textContent.includes('This checklist') && !!$('#updauto');
+    document.querySelector('#modal [data-th=light]').click(); r.stays = !!$('#modal [data-th=light].on') && !$('#modal').textContent.includes('This checklist'); document.querySelector('#modal [data-th=default]').click(); closeDlg(); return r; });
+  assert(hb.bar && hb.above && hb.dlg && hb.stays, 'DELETE above the update bar; main menu gear opens the app settings: ' + JSON.stringify(hb));
   // Settings: version shown, automatic checks off by default, Check now
   pg = await page({ 'shop.bcl': shared }, prof('a'.repeat(32)), ustub({}));
   await open(pg, 'shop'); await pg.evaluate(() => { updRefresh(false); }); await pg.waitForTimeout(50); await pg.evaluate(() => openSettings());
@@ -939,6 +945,11 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(ms.shift === '2,3,4,5' && ms.ctrl2 === false && ms.esc === 0 && ms.range === 4, 'Shift+click picks a range, Ctrl+click removes one, Esc clears: ' + JSON.stringify(ms));
   assert(ms.on === 'pdfsel,pdfnone,del' && ms.set && !ms.out && ms.none[0] === 'q1' && ms.none[1] === '' && ms.none[2] === 'Waiting', 'Edit menu sets the PDF on selected lines and on lines without one: ' + JSON.stringify(ms));
 
+  // ---- the + Add step / + Add main item buttons go straight into typing the name (like Ctrl+M / Ctrl+N) ----
+  const plus = await pg.evaluate(async () => { S.sections[0].cards.forEach(c => c.open = true); renderL(); const r = {};
+    L.querySelector('.steps button[data-a=addstep]').click(); r.step = document.activeElement.classList.contains('tin') && ER === SEL; document.activeElement.blur();
+    L.querySelector('button[data-a=addcard]').click(); r.card = document.activeElement.classList.contains('tin') && ER === SEL; document.activeElement.blur(); urestore(false); urestore(false); return r; });
+  assert(plus.step && plus.card, 'the + buttons open the name box ready to type: ' + JSON.stringify(plus));
   // ---- deleting several selected lines: Delete key or Edit > Delete selected lines…, one question with the count, Enter confirms, Ctrl+Z undoes ----
   const mdl = await pg.evaluate(async () => { const ck = (el, o) => el.querySelector('.t').dispatchEvent(new MouseEvent('click', Object.assign({ bubbles: true }, o)));
     const sec = S.sections[0]; sec.cards.forEach(c => { c.open = true; c.done = false; c.sig = null; c.steps.forEach(x => x.done = false) }); renderL(); const before = JSON.stringify(S.sections.map(s => s.cards.map(c => [c.text, c.steps.length])));

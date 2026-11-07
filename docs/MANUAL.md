@@ -12,7 +12,7 @@ Windows may warn the first time because the app is not code-signed: click "More 
 To update by hand, replace the program with the new one; keep the `Saves/` and `Data/` folders.
 
 ## Updates
-- Settings > Updates shows the version you have. "Check for updates automatically" (off by default) asks GitHub about once a day, only when online; "Check now" asks straight away.
+- Settings > Updates (also from the ⚙ gear on the main menu) shows the version you have. "Check for updates automatically" (on by default; untick it to stop) asks GitHub about once a day, only when online; "Check now" asks straight away.
 - When a newer version is out, a bar appears along the bottom of the menu page: "Version 1.2.0 is available (you have 1.1.0)" with:
   - What's new?: opens the release page on GitHub with the list of changes.
   - Install: saves your work, makes a **safety copy** of every checklist and the settings (`Saves/Backups before updates/<date> before <version>`, the newest two kept; refuses with "Nothing was changed" if the drive is too full for it), downloads the new version (the bar shows progress), checks it is complete and undamaged, closes, swaps in the new program in the same folder and opens again. The update never touches Saves/ or Data/. The version you had is kept: "ByTheBook (previous).exe" next to the portable exe, or the hidden `.previous-version` folder inside the folder version.
@@ -64,6 +64,10 @@ Needs a profile with a main PIN. It does not apply when the app itself is locked
 - AI assistants that can work with files (like Claude) can also write a complete checklist file in the JSON format from the guide; open it with **Import**.
 - The full instructions for AI assistants are in `docs/AI-CHECKLIST-GUIDE.md` (also linked from `AGENTS.md`), for any AI you point at this project.
 - Everything comes in unticked: check each value against its page before relying on it. Pictures are added afterwards. Ref. pages are PDF page numbers and link to the PDF once you add it (Menu > Open PDF…).
+
+## Main menu settings (⚙)
+The small gear left of "Create new checklist" opens the settings that belong to the app rather than to one checklist: themes and selection colour, shrinking big photos, the save file location, updates, keyboard shortcuts, and a way to the Profile page. A checklist's own settings (master file, worker mode, wording, storage) stay in the ⚙ inside that checklist.
+The DELETE button for a selected checklist moves up above the update bar while that bar is showing.
 
 ## Folders (main menu)
 Sort checklists into folders, and folders inside folders: for example a "Bicycle" folder with "Tires", "Handlebars" and "Drivetrain" inside it.
@@ -208,7 +212,7 @@ For torque patterns, bolt numbering and the like.
   - Right side: **↓ / ↑** next / previous tab (Images, Description, PDF, Work Photos), stopping at the first and last.
   - Both sides: **→ / ←** next / previous picture (Images tab, Fit view) or page (PDF tab). Leaving the PDF tab or the row and coming back shows the row's own page again.
   - **Delete / Backspace** deletes the selected row (or a section you just added). It asks first, Enter confirms; a row or section that is still empty (just added, nothing typed or attached) goes without asking.
-  - **Building quickly** (default keys, all changeable): **R** rename the selected row, **Ctrl+B** new section after the current one (type its name, Enter), **Ctrl+N** new main item after the current one, **Ctrl+M** new step after the selected one. A new row or section starts in rename mode: type the name and press Enter.
+  - **Building quickly** (default keys, all changeable): **R** rename the selected row, **Ctrl+B** new section after the current one (type its name, Enter), **Ctrl+N** new main item after the current one, **Ctrl+M** new step after the selected one. A new row or section starts in rename mode: type the name and press Enter. The + Add section, + Add main item and + Add step buttons do the same.
   - **Ctrl+Z** undo, **Ctrl+Shift+Z** redo, for building the checklist: adding, deleting, moving and renaming sections, main items and steps, their fields, pictures added or removed and picture descriptions. Check-offs, initials, sign-offs and work photos are never undone (they are recorded evidence); doing one of them starts a fresh undo history. While typing in a box, Ctrl+Z undoes the typing in that box.
   - **Your shortcuts:** Menu > Shortcuts… lists actions (check / uncheck the selected row, open / close a main item, add pictures or work photos, go to a tab, open the viewers, Export, Activity log, go to section 1–10, delete the current section, …). Click a box and press the keys you want, any key or combination of up to three keys (like Shift+N or Ctrl+Alt+K), number keys included; Esc cancels, Delete clears. Keys set to start with: Save Ctrl+S, Save as Ctrl+Shift+S, Undo Ctrl+Z, Redo Ctrl+Shift+Z, Rename R, New section Ctrl+B, New main item Ctrl+N, New step Ctrl+M (New checklist has none; give it one if you like). Shortcuts are saved on this computer. Keys without Ctrl or Alt do nothing while you type in a box, and no shortcut works inside a pop-up.
 - On small screens a long checklist name is shortened with … (hover to see all of it), and an item's tags (quantity, page, pictures) move under its name when they don't fit beside it.

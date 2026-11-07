@@ -44,7 +44,9 @@ const kind = () => { if (!app.isPackaged) return null; if (process.env.PORTABLE_
     return inst ? { k: 'setup', asset: /^ByTheBook-Setup\.exe$/i } : { k: 'folder', file: exe, asset: /^ByTheBook-Folder\.zip$/i }; }
   return process.env.APPIMAGE ? { k: 'appimage', file: process.env.APPIMAGE, asset: /\.AppImage$/i } : null; };
 const writable = d => { try { fs.accessSync(d, fs.constants.W_OK); return true; } catch (e) { return false; } };
-const updCfg = () => Object.assign({ auto: false, last: 0, skip: '', snooze: 0, found: null }, cfg.upd || {});
+// automatic checks are on by default (owner's decision, 1.1.0); copies that stored the old default "off" are switched on once,
+// until the person ticks or unticks the box themselves (autoSet)
+const updCfg = () => { const c = Object.assign({ auto: true, last: 0, skip: '', snooze: 0, found: null }, cfg.upd || {}); if (!c.autoSet) c.auto = true; return c; };
 const UA = () => ({ 'User-Agent': 'ByTheBook/' + app.getVersion(), Accept: 'application/vnd.github+json' });
 let dl = null;   // the checked download, ready to install: {version, file}
 async function checkUpdate() {
@@ -328,7 +330,7 @@ const handlers = {
   appVersion: () => app.getVersion(),
   updGet: () => { const c = updCfg(), K = kind(), f = c.found && newer(c.found.version, app.getVersion()) ? c.found : null;
     return { auto: c.auto, skip: c.skip, snooze: c.snooze, last: c.last, found: f, version: app.getVersion(), failed: updFailed(), kind: K && K.k, canInstall: !!(K && f && f.asset && (K.k === 'setup' || writable(path.dirname(K.file)))) }; },
-  updSet: p => { const c = updCfg(); p = p || {}; if ('auto' in p) c.auto = !!p.auto; if ('skip' in p) c.skip = String(p.skip || ''); if ('snooze' in p) c.snooze = +p.snooze || 0; cfg.upd = c; saveCfg(); return true; },
+  updSet: p => { const c = updCfg(); p = p || {}; if ('auto' in p) { c.auto = !!p.auto; c.autoSet = true; } if ('skip' in p) c.skip = String(p.skip || ''); if ('snooze' in p) c.snooze = +p.snooze || 0; cfg.upd = c; saveCfg(); return true; },
   updCheck: force => { const c = updCfg(); return force || (c.auto && Date.now() - c.last > 20 * 3600000) ? checkUpdate() : null; },   // automatic checks at most about once a day
   updDownload: () => downloadUpdate(),
   updInstall: () => installUpdate(),

@@ -140,7 +140,7 @@ body.dragging{user-select:none;cursor:col-resize}
 .frow.sel .fbar{color:rgba(255,255,255,.85)}.frow.sel .fbar>span{background:rgba(255,255,255,.3)}.frow.sel .fbar i{background:#fff}.ftab .fempty{padding:18px 16px;border-top:1px solid var(--line)}
 #hmain{flex:1;display:flex;justify-content:center;overflow:auto;padding:48px 24px}.hcenter{width:min(640px,100%);text-align:center}
 .hcenter h1{font-size:34px;margin:0 0 24px;letter-spacing:-.02em}.hbtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:36px}
-.big{padding:14px 22px;font-size:16px;border-radius:10px}.big i{font-size:11px;opacity:.7;margin-left:6px}
+.big{padding:14px 22px;font-size:16px;border-radius:10px}.big.gearb{padding:0;width:46px;height:46px;align-self:center;display:inline-flex;align-items:center;justify-content:center;color:var(--mut)}.big.gearb:hover{color:var(--fg)}.big i{font-size:11px;opacity:.7;margin-left:6px}
 .hcenter h2{font-size:15px;text-align:left;margin:0 0 8px}
 .frow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;text-align:left}
 .frow:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}.frow.adopt{background:color-mix(in srgb,var(--warn) 14%,transparent)}
@@ -149,7 +149,7 @@ body.dragging{user-select:none;cursor:col-resize}
 .frow.sel .adq{color:#fff}.frow.sel .mut{color:rgba(255,255,255,.8)}
 .fn{flex:1;overflow-wrap:anywhere}
 .open{background:#2b7a3d;color:#fff;border-color:#2b7a3d;font-weight:700;padding:3px 14px}
-#hdel{position:fixed;right:22px;bottom:18px;text-align:center;z-index:31}
+#hdel{position:fixed;right:22px;bottom:calc(18px + var(--ub,0px));text-align:center;z-index:31}
 #hdel .delbtn{background:var(--warn);color:#fff;border-color:var(--warn);font-weight:700;padding:8px 22px}#hdel small{display:block;color:var(--warn);font-size:11px;margin-top:3px}
 #hleft{width:300px;max-width:40%;display:flex;flex-direction:column;border-right:1px solid var(--line)}
 #hside{flex:1;border-bottom:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;padding:18px 14px;overflow:auto}
@@ -310,7 +310,7 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </main>
 <div id="home"><div id="hleft"><aside id="hside"><div class="hh fhh"><span>Checklists</span><button id="fnew" title="Make a folder (inside the folder that is open)">+ New folder</button></div><nav id="flist" aria-label="Folders"></nav><p class="mut" style="margin-top:auto;padding-top:14px;font-size:12.5px">Drag a checklist onto a folder to move it. The files stay in the save folder; folders only sort them here.</p></aside><div class="hfoot"><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button><button id="hTut" class="prof" title="Tutorial (coming soon)"><span class="avatar" style="align-items:center"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg></span><span>Tutorial</span></button></div></div>
 <section id="hmain"><div class="hcenter" id="hcen"><h1>ByTheBook</h1>
-<div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button></div>
+<div class="hbtns"><button class="big gearb" id="hSet" title="Settings: themes, save location, updates" aria-label="Settings"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button></div>
 <button id="hBack" hidden style="margin-bottom:24px">Back to the open checklist</button>
 <h2>Open recent</h2><div id="rlist"></div></div>
 <div id="hfold" hidden></div><div id="hprof" class="hcenter" hidden></div>
@@ -477,7 +477,7 @@ L.addEventListener('click',e=>{
   if(a==='addcard'){umark();it=mk({open:true,steps:[]});S.sections[si].cards.push(it)}
   else if(a==='addstep'){umark();const c=S.sections[si].cards[+b.dataset.c];it=mk();c.steps.push(it);voidIfNeeded(c)}
   else return;
-  SEL=it;save();renderL();renderR();autoTab(it);L.querySelector('.row.sel .t')?.focus();return}
+  SEL=it;ER=it;save();renderL();renderR();autoTab(it);const tn=$('#L .tin');if(tn){tn.focus();tn.select()}return}   // straight into typing its name, like Ctrl+N / Ctrl+M
  if(!row)return;const{arr,idx,item,card}=loc(row);const a=b&&b.dataset.a;if((card.done||isLocked())&&(a==='del'||a==='up'||a==='dn'||a==='ren'))return;
  if(a==='del'){umark();arr.splice(idx,1);if(SEL&&!inTree(SEL))SEL=null;save();renderL();renderR()}
  else if(a==='up'&&idx>0){umark();[arr[idx-1],arr[idx]]=[arr[idx],arr[idx-1]];save();renderL()}
@@ -1228,12 +1228,19 @@ function applyTheme(){const r=document.documentElement;if(AS.theme==='light')r.s
 function uncheckAll(by){S.sections.forEach(s=>s.cards.forEach(c=>[c,...c.steps].forEach(x=>{x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft=''})));logEv('uncheck everything',{text:'all items'},by?by.name:'',by?by.uid:'');save();renderL();renderR()}
 function saveAs(){dlg(`<div class="dh"><b>Save as</b></div><label>File name<input id="sa" value="${esc(S.name||'unnamed')}"></label><p class="mut">Creates a copy and stays on this checklist.</p><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Save copy</button></div>`);
  DLGOK=async()=>{const nm=uniqueName($('#sa').value);DIRTY=true;await flush();await FS.write(nm+'.bcl',await pack(nm),CUR+'.bcl');LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});if(fdOf(CUR))fdPut(nm,fdOf(CUR));toast('Saved as '+nm)}}
-function openSettings(){
- dlg(`<div class="dh"><b>Settings</b><button data-d="x">✕</button></div>
- <div class="ds"><div class="dt">Themes <span class="mut">(saved in the app, not in the checklist)</span></div>
+// the app-wide settings, also on the main menu (gear left of Create new checklist): SETAPP = that window is the one open
+let SETAPP=false;const reSettings=()=>SETAPP?openAppSettings():openSettings();
+const themeHtml=()=>`<div class="ds"><div class="dt">Themes <span class="mut">(saved in the app, not in the checklist)</span></div>
  <div class="seg">${[['default','Default (dark)'],['light','Light']].map(([k,n])=>`<button data-th="${k}" class="${AS.theme===k?'on':''}">${n}</button>`).join('')}</div>
  <div class="dt" style="margin:12px 0 6px">Selection color</div><div class="tb"><input type="range" id="hue" min="0" max="360" value="${AS.hue}" style="flex:1"><span class="sw"></span><button data-th="reset">Reset</button></div>
- <label class="chk" style="margin-top:10px"><input type="checkbox" id="shrinkc" ${AS.shrink===false?'':'checked'}> Shrink big photos when adding them (to 2560 px; keeps checklists small and fast)</label></div>
+ <label class="chk" style="margin-top:10px"><input type="checkbox" id="shrinkc" ${AS.shrink===false?'':'checked'}> Shrink big photos when adding them (to 2560 px; keeps checklists small and fast)</label></div>`;
+function openAppSettings(){SETAPP=true;dlg(`<div class="dh"><b>Settings</b><button data-d="x">✕</button></div>${themeHtml()}${savedirHtml()}${updHtml()}
+ <div class="ds"><div class="dt">Keyboard shortcuts</div><button data-d="keys">Shortcuts…</button><p class="mut">See and change the keys for saving, undo, adding steps and more.</p></div>
+ <div class="ds"><div class="dt">Profile and PINs</div><button data-d="prof">Open Profile</button><p class="mut">The main profile, everyone's PINs and the recovery code.</p></div>
+ <div class="ds"><div class="dt">About</div><p class="mut" style="margin:0">ByTheBook ${esc(APPV||'')}. Settings for one checklist (master file, worker mode, wording, storage) are in its own Settings (⚙ at the top right inside the checklist).</p></div>`)}
+function openSettings(){SETAPP=false;
+ dlg(`<div class="dh"><b>Settings</b><button data-d="x">✕</button></div>
+ ${themeHtml()}
  <div class="ds"><div class="dt">This checklist</div>
  <label class="chk"><input type="checkbox" id="lockc" ${S.locked?'checked':''}> Master file: lock editing (checking, initials and sign-offs still work)</label>
  <label class="chk"><input type="checkbox" id="workc" ${S.worker?'checked':''} ${PR.hash?'':'disabled'}> Worker mode: lock the menu and Settings behind a Boss PIN</label><p class="mut" style="margin:2px 0 0 24px">${PR.hash?'Also locks editing like a master file. Whoever opens this checklist stays in it until the main profile or a Boss enters their PIN. Closing the app is still possible; opening this checklist again locks it again.':'Needs a profile with a main PIN first (main menu > Profile).'}</p>
@@ -1247,7 +1254,8 @@ async function stFill(){const u=await usage(),f=$('#stfill'),t=$('#sttxt');if(!f
 $('#cog').onclick=async()=>{WKW=null;if(wkGate()&&!(WKW=await wkAsk('Open Settings')))return;openSettings()};
 $('#modal').addEventListener('click',e=>{const d=e.target.dataset;if(d.d==='x'||e.target===$('#modal'))closeDlg();else if(d.d==='ok'){const f=DLGOK;closeDlg();f&&f()}
  else if(d.d==='log'){closeDlg();viewLogOf(CUR)}
- else if(d.th){if(d.th==='reset')AS.hue=20;else AS.theme=d.th;saveApp();applyTheme();openSettings()}});
+ else if(d.d==='keys'){closeDlg();keysDlg()}else if(d.d==='prof'){closeDlg();showProfile(true)}
+ else if(d.th){if(d.th==='reset')AS.hue=20;else AS.theme=d.th;saveApp();applyTheme();reSettings()}});
 $('#modal').addEventListener('input',e=>{if(e.target.id==='hue'){AS.hue=+e.target.value;saveApp();applyTheme()}});
 $('#modal').addEventListener('change',e=>{const t=e.target;if(t.id==='lockc'){if(!t.checked&&S.locked&&pinOn('edit')){t.checked=true;askPin({title:'Turn off the master file lock',note:'Main profile or Boss PIN.',boss:true}).then(w=>{if(!w)return;S.locked=false;logEv('master lock off',{text:S.name||''},w.name,w.uid);save();renderL();renderR();openSettings()});return}
   S.locked=t.checked;save();renderL();renderR();openSettings()}else if(t.id==='workc'){if(!PR.hash){t.checked=false;return}S.worker=t.checked;logEv(S.worker?'worker mode on':'worker mode off',{text:S.name||''},WKW&&WKW.name,WKW&&WKW.uid);save();renderL();renderR();openSettings()}
@@ -1586,7 +1594,7 @@ async function loadDemo(){const o=norm(demoData());o.pdf=await b2d(new Blob([dem
 $('#hDemo').onclick=loadDemo;
 // placeholder: the tutorial is still to be written (see CLAUDE.md)
 $('#hTut').onclick=()=>toast('The tutorial is coming soon');
-$('#hNew').onclick=()=>addEntry(norm(),'unnamed').then(openProject);$('#hImp').onclick=()=>importDlg();
+$('#hSet').onclick=()=>openAppSettings();$('#hNew').onclick=()=>addEntry(norm(),'unnamed').then(openProject);$('#hImp').onclick=()=>importDlg();
 $('#hBack').onclick=()=>{$('#home').hidden=true;refreshAll()};$('#hdelb').onclick=()=>HS&&askDelete(HS);
 document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.repeat||$('#home').hidden||!$('#modal').hidden||PV||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
  if(e.key==='Enter'&&HS)openProject(HS);else if((e.key==='Delete'||e.key==='Backspace')&&HS)askDelete(HS);
@@ -1791,7 +1799,9 @@ let UPD=null,APPV='';
 const verNewer=(a,b)=>{const p=v=>String(v||'').replace(/^v/i,'').split(/[-+]/)[0].split('.').map(n=>parseInt(n,10)||0),x=p(a),y=p(b);for(let i=0;i<3;i++)if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0);return false};
 async function updRefresh(force){if(!FS.updGet)return null;let r=null;try{UPD=await FS.updGet();if(UPD&&UPD.failed&&$('#modal').hidden)updFailDlg(UPD.failed)}catch(e){}try{r=await FS.updCheck(!!force)}catch(e){r={error:String(e.message||e)}}try{UPD=await FS.updGet()}catch(e){}updBar(force);return r}
 const nextDay=()=>{const d=new Date();d.setHours(24,0,0,0);return d.getTime()};
-function updBar(force,st){const b=$('#updbar'),f=UPD&&UPD.found,show=!!f&&(force||st||(f.version!==UPD.skip&&Date.now()>=UPD.snooze));b.hidden=!show;if(!show)return;
+// the DELETE button on the main menu sits above the update bar while it shows (its height changes as it wraps)
+const ubSet=()=>{const b=$('#updbar');$('#home').style.setProperty('--ub',b.hidden?'0px':b.offsetHeight+'px')};if(window.ResizeObserver)new ResizeObserver(ubSet).observe($('#updbar'));
+function updBar(force,st){const b=$('#updbar'),f=UPD&&UPD.found,show=!!f&&(force||st||(f.version!==UPD.skip&&Date.now()>=UPD.snooze));b.hidden=!show;ubSet();if(!show)return;
  b.innerHTML=`<span class="ubv">Version <b>${esc(f.version)}</b> is available <span class="mut">(you have ${esc(UPD.version)})</span></span><button data-u="new" title="Opens the release page on GitHub">What's new?</button>
  <span class="ubst${st&&st.err?' err':''}">${st?esc(st.t):''}</span><span style="flex:1"></span>
  <button class="pri" data-u="inst" ${st&&st.busy?'disabled':''} title="${UPD.canInstall?'Download it, then restart into the new version':'Open the download page'}">${UPD.canInstall?'Install':'Download'}</button><button data-u="later" title="Remind me again tomorrow">Dismiss</button><button data-u="skip" title="Don't remind me about this version">Skip this version</button>`}
@@ -1824,7 +1834,7 @@ $('#modal').addEventListener('click',async e=>{if(e.target.dataset.up!=='now')re
 applyTheme();renderL();renderR();setTab('desc');
 const savedirHtml=()=>`<div class="ds"><div class="dt">Save file location</div><div class="lg" style="word-break:break-all;margin-bottom:8px">${esc(SAVEDIR)}</div><div class="tb"><button data-sv="choose">Change…</button><button data-sv="open">Open folder</button><button data-sv="reset">Reset to default</button></div><p class="mut">Default: the Saves folder next to the app. Pick a folder on an external drive to keep saves there. Files already saved stay in the old folder.</p></div>`;
 $('#modal').addEventListener('click',async e=>{const s=e.target.dataset.sv;if(!s)return;
- const moved=async d=>{SAVEDIR=d;if(CUR){DIRTY=true;await flush()}await refreshLib();renderHome();openSettings();toast('Save location updated')};
+ const moved=async d=>{SAVEDIR=d;if(CUR){DIRTY=true;await flush()}await refreshLib();renderHome();reSettings();toast('Save location updated')};
  if(s==='choose'){const d=await FS.choose();if(d)await moved(d)}else if(s==='open')FS.openDir();else if(s==='reset')await moved(await FS.resetDir())});
 async function importPath(p){if(wkGate())return toast('Worker mode is on: open the menu with a Boss PIN to switch checklists');try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(e){toast('Could not open that file')}}
 // start-up; the loading window (splash.html) shows the steps, and the main window appears when the menu is ready
