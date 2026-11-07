@@ -29,7 +29,9 @@ module.exports = (getDir, trash) => {
   // pack() writes app, stamp, locked, worker first, so the master lock and worker mode are read from the head too
   const LOCKED = /^\{(?:"app":"[^"]*",)?(?:"stamp":\{(?:[^{}]|\{[^{}]*\})*\},)?"locked":true/, WORKER = /^\{(?:"app":"[^"]*",)?(?:"stamp":\{(?:[^{}]|\{[^{}]*\})*\},)?(?:"locked":(?:true|false),)?"worker":true/;
   const stampOf = async (f, mtime) => { const c = stamps.get(f); if (c && c.mtime === mtime) return c; const r = { mtime, pid: '', locked: false, worker: false };
-    try { if (await B.isContainer(f)) { const h = (await B.openIndex(f)).skel.toString('latin1', 0, 4096), m = /"stamp":\{"pid":"([0-9a-f]{32})"/.exec(h); r.pid = m ? m[1] : ''; r.locked = LOCKED.test(h); r.worker = WORKER.test(h); } else r.pid = await scanStamp(f); } catch (e) {}
+    try { if (await B.isContainer(f)) { const sk = (await B.openIndex(f)).skel, h = sk.toString('latin1', 0, 4096), m = /"stamp":\{"pid":"([0-9a-f]{32})"/.exec(h); r.pid = m ? m[1] : ''; r.locked = LOCKED.test(h); r.worker = WORKER.test(h);
+      try { const o = JSON.parse(sk.toString('utf8')); let d = 0, t = 0; for (const sec of o.sections || []) for (const c of sec.cards || []) { t++; if (c.done) d++; } r.done = d; r.total = t; } catch (e) {} }   // main items done, for the folder page
+      else r.pid = await scanStamp(f); } catch (e) {}
     stamps.set(f, r); return r; };
   const chains = new Map();
   const queue = (f, fn) => { const p = (chains.get(f) || Promise.resolve()).then(fn); chains.set(f, p.catch(() => {})); return p; };
@@ -37,9 +39,14 @@ module.exports = (getDir, trash) => {
     list: async () => {   // pid: the profile stamp, so the list can flag checklists from another profile
       let names; try { names = fs.readdirSync(getDir()).filter(f => /\.bcl$/i.test(f)); } catch (e) { return []; }
       const out = [];
-      for (const f of names) { try { const p = path.join(getDir(), f), mtime = fs.statSync(p).mtimeMs; const s = await stampOf(p, mtime); out.push({ name: f.replace(/\.bcl$/i, ''), mtime, pid: s.pid, locked: s.locked, worker: s.worker }); } catch (e) {} }   // one file at a time: they can be large
+      for (const f of names) { try { const p = path.join(getDir(), f), mtime = fs.statSync(p).mtimeMs; const s = await stampOf(p, mtime); out.push({ name: f.replace(/\.bcl$/i, ''), mtime, pid: s.pid, locked: s.locked, worker: s.worker, done: s.done, total: s.total }); } catch (e) {} }   // one file at a time: they can be large
       return out;
     },
+    // folders on the main menu: Saves/.folders.json {f:[{id,name,parent}], m:{checklist: folder id}}; only names, the files never move
+    folders: () => { try { const d = JSON.parse(fs.readFileSync(path.join(getDir(), '.folders.json'), 'utf8')); return d && Array.isArray(d.f) ? d : { f: [], m: {} }; } catch (e) { return { f: [], m: {} }; } },
+    foldersSet: d => { const str = v => String(v == null ? '' : v).slice(0, 200), f = (Array.isArray(d && d.f) ? d.f : []).slice(0, 5000).map(x => ({ id: str(x.id), name: str(x.name), parent: x.parent ? str(x.parent) : null })).filter(x => x.id && x.name);
+      const m = {}; for (const [k, v] of Object.entries((d && d.m) || {}).slice(0, 100000)) if (v) m[str(k)] = str(v);
+      const p = path.join(getDir(), '.folders.json'), t = p + '.tmp'; fs.writeFileSync(t, JSON.stringify({ v: 1, f, m })); fs.renameSync(t, p); return true; },
     read: async n => { await ready(file(n)); return B.read(file(n)); },   // the checklist itself; photos, PDFs and videos come one by one from media()
     media: async (n, key) => { await ready(file(n)); return B.readMedia(file(n), key); },
     info: async n => { await ready(file(n)); return B.info(file(n)); },

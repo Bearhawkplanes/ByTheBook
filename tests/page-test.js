@@ -24,6 +24,7 @@ const stub = (files, integ) => `(() => { const F = ${JSON.stringify(files)}, I =
   appVersion: () => ok(window.__appv || '0.5.0'),
   saveFile: (o, d) => { window.__saved = { o, d: typeof d === 'string' ? d : Array.from(d) }; return ok('/exports/' + o.name); },
   pdfMake: (d, o) => { (window.__pdfCalls = window.__pdfCalls || []).push({ d, o }); return ok({ pages: window.__pdfPages || 0, pdf: new Uint8Array(window.__pdfBytes || []) }); },
+  foldersGet: () => ok(JSON.parse(JSON.stringify(window.__FD || { f: [], m: {} }))), foldersSet: d => { window.__FD = JSON.parse(JSON.stringify(d)); return ok(true); },
   onFlush: () => {}, onOpen: () => {} }; })()`;
 const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps]));
 
@@ -174,15 +175,46 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   await pg.evaluate(async () => { document.querySelectorAll('.logov').forEach(x => x.remove()); await openHome(); HS = 'shop'; renderHome(); document.querySelector('button[data-a=logv]').click(); await new Promise(r => setTimeout(r, 80)); });
   assert(await pg.evaluate(() => !document.querySelector('.logov') && !!document.querySelector('.overlay input.pin')), 'main menu LOG button asks too');
 
+  // ---- folders on the main menu: tree on the left, folder page in the middle, Main menu row back; new / nested / create here / move / drag / rename / delete ----
+  pg = await page({ 'Wheel build.bcl': shared, 'Bar tape.bcl': shared, 'Pump service.bcl': shared }, prof('a'.repeat(32)));
+  const fo = await pg.evaluate(async () => { await openHome(); const r = {}, okd = () => document.querySelector('#modal [data-d=ok]').click(), wait = ms => new Promise(x => setTimeout(x, ms));
+    const nf = async (name, btn) => { (btn || $('#fnew')).click(); $('#fdn').value = name; okd(); await wait(30); };
+    r.start = [...document.querySelectorAll('#flist .trow')].map(x => x.textContent.trim()); r.mainShown = !$('#hcen').hidden && $('#hfold').hidden;
+    await nf('Bicycle'); r.inBike = FOLD && fdGet(FOLD).name === 'Bicycle' && !$('#hfold').hidden && $('#hcen').hidden && /Main menu › Bicycle/.test($('#hfold .fcrumb').textContent);
+    const bike = FOLD; await nf('Tires', document.querySelector('[data-fa=new]')); const tires = FOLD; r.nested = fdGet(tires).parent === bike && /Main menu › Bicycle › Tires/.test($('#hfold .fcrumb').textContent);
+    r.tree = [...document.querySelectorAll('#flist .trow')].map(x => x.textContent.trim());
+    document.querySelector('[data-fa=create]').click(); await wait(300); r.created = fdOf(CUR) === tires; await openHome(); r.backTo = FOLD === tires;
+    fdGo('none'); r.loose = [...document.querySelectorAll('#hfold .ftr[data-id]')].map(x => x.dataset.id).sort();
+    HS = 'Wheel build'; renderHome(); document.querySelector('#hfold [data-a=move]').click(); $('#fdm').value = tires; okd(); await wait(30); r.moved = fdOf('Wheel build') === tires && !document.querySelector('#hfold .ftr[data-id="Wheel build"]');
+    const row = document.querySelector('#hfold .ftr[data-id="Bar tape"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+    const tgt = document.querySelector(`#flist [data-f="${bike}"]`); tgt.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt })); r.dropMark = tgt.classList.contains('drop');
+    tgt.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt })); await wait(30); r.dragged = fdOf('Bar tape') === bike;
+    fdGo(bike); r.bikePage = { subs: [...document.querySelectorAll('#hfold .fsub')].map(x => x.textContent.trim()), rows: [...document.querySelectorAll('#hfold .ftr[data-id]')].map(x => x.dataset.id) };
+    r.counts = [...document.querySelectorAll('#flist .trow .tc')].map(x => x.textContent);
+    fdGo('all'); r.allFolderCol = document.querySelector('#hfold .ftr[data-id="Wheel build"]').textContent.includes('Bicycle › Tires');
+    fdGo(tires); document.querySelector('[data-fa=ren]').click(); $('#fdn').value = 'Tyres'; okd(); await wait(30); r.renamed = fdGet(tires).name === 'Tyres';
+    document.querySelector('[data-fa=del]').click(); r.delAsk = /moves to "Bicycle"\. No checklist is deleted/.test($('#modal').textContent); okd(); await wait(30);
+    r.afterDel = { gone: !fdGet(tires), wheel: fdOf('Wheel build') === bike, at: FOLD === bike, files: LIB.length };
+    document.querySelector('#flist [data-f=home]').click(); r.home = FOLD === null && !$('#hcen').hidden && $('#hfold').hidden && /Bicycle/.test($('#rlist').textContent);
+    r.saved = JSON.parse(JSON.stringify(window.__FD)); return r; });
+  assert(fo.mainShown && fo.start.join('|') === 'Main menu|All checklists3', 'starts on the main menu with the tree: ' + JSON.stringify(fo.start));
+  assert(fo.inBike && fo.nested && fo.tree.join('|') === 'Main menu|All checklists3|▾Bicycle0|Tires0|Not in a folder3', 'new folder and a folder inside it: ' + JSON.stringify(fo.tree));
+  assert(fo.created && fo.backTo, 'Create new checklist here puts it in that folder, and the main menu comes back to it: ' + JSON.stringify(fo));
+  assert.deepStrictEqual(fo.loose, ['Bar tape', 'Pump service', 'Wheel build'], 'Not in a folder lists the rest');
+  assert(fo.moved && fo.dropMark && fo.dragged, 'Move… and dragging onto a folder: ' + JSON.stringify(fo));
+  assert(fo.bikePage.subs.length === 1 && /^Tires\s*2 checklists$/.test(fo.bikePage.subs[0]) && fo.bikePage.rows.join() === 'Bar tape' && fo.counts.join() === '4,3,2,1' && fo.allFolderCol, 'folder page: subfolders, its checklists, counts include subfolders: ' + JSON.stringify(fo));
+  assert(fo.renamed && fo.delAsk && fo.afterDel.gone && fo.afterDel.wheel && fo.afterDel.at && fo.afterDel.files === 4, 'rename, and delete moves what was inside up without deleting checklists: ' + JSON.stringify(fo.afterDel));
+  assert(fo.home && fo.saved.f.length === 1 && fo.saved.m['Wheel build'] === fo.saved.f[0].id, 'Main menu row goes back; folders saved: ' + JSON.stringify(fo.saved));
+
   // adopt from the saved list: flagged row, explanation, Boss PIN, stamp + log written, images and PDFs kept
   pg = await page({ 'mine.bcl': used, 'theirs.bcl': used.replace(/"stamp":\{"pid":"a{32}"/, '"stamp":{"pid":"' + 'b'.repeat(32) + '"'), 'shared.bcl': shared }, prof('a'.repeat(32)));
-  await pg.evaluate(() => openHome()); await pg.waitForTimeout(200);
-  assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#flist .frow.adopt')].map(r => r.dataset.id)), ['theirs'], 'only the other profile\'s checklist is flagged');
-  await pg.evaluate(() => document.querySelector('#flist .frow.adopt .adq').click());
+  await pg.evaluate(() => openHome().then(() => fdGo('all'))); await pg.waitForTimeout(200);
+  assert.deepStrictEqual(await pg.evaluate(() => [...document.querySelectorAll('#hfold .frow.adopt')].map(r => r.dataset.id)), ['theirs'], 'only the other profile\'s checklist is flagged');
+  await pg.evaluate(() => document.querySelector('#hfold .frow.adopt .adq').click());
   assert(/different profile/.test(await pg.evaluate(() => $('#modal').textContent)), 'explanation shown');
   await pg.evaluate(() => document.querySelector('#modal [data-d=ok]').click()); await pg.waitForTimeout(50);
   await tryPin('24680'); await pg.waitForTimeout(200);
-  const ad = await pg.evaluate(async () => ({ list: [...document.querySelectorAll('#flist .frow.adopt')].length, file: await window.fsapi.read('theirs.bcl') }));
+  const ad = await pg.evaluate(async () => ({ list: [...document.querySelectorAll('#hfold .frow.adopt')].length, file: await window.fsapi.read('theirs.bcl') }));
   const ao = JSON.parse(ad.file);
   assert.strictEqual(ad.list, 0, 'flag gone after adopting');
   assert.strictEqual(ao.stamp.pid, 'a'.repeat(32)); assert(/adopted by "A"/.test(ao.log.at(-1).ev) && ao.log.at(-1).by === 'A', 'log records who adopted it');

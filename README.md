@@ -23,6 +23,7 @@ Building an engine, overhauling a gearbox, assembling a machine: jobs with hundr
 - **Video Player.** Add whole videos or link to files on the drive, mark a start and end, and attach just that part to a step, either copied into the checklist in the size you choose or played straight from the video.
 - **Work Photos.** Proof photos on each step, with who added them and when, and a gallery of the whole job.
 - **Quick to build.** Paste a checklist written by any AI chatbot (or typed by hand) and see it take shape as you go; select many steps at once to set their PDF or delete them.
+- **Folders.** Sort checklists into folders and folders inside folders (Bicycle › Tires, Bicycle › Handlebars), each showing how far along every job is.
 - **Ready for the next job.** Start a fresh copy for the next job, export a blank printable PDF checklist, and keep automatic backups.
 - **Safe updates.** Updates install themselves from Settings, make a safety copy of every checklist first, and put the previous version back if anything goes wrong.
 

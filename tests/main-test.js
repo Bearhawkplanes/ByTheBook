@@ -68,6 +68,13 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   assert.deepStrictEqual([fl('a'), fl('c'), fl('d')], [[false, false], [true, false], [false, true]], 'list reports master lock and worker mode');
   fs.writeFileSync(path.join(await call('dir'), 'big-old.bcl'), '{"name":"x","files":{"f":"' + 'A'.repeat((1 << 22) - 30) + '"},"stamp":{"pid":"' + pid + '","rv":{}}}');   // older layout: stamp after 4 MB of data, across a read boundary
   assert.strictEqual((await call('list')).find(x => x.name === 'big-old').pid, pid, 'stamp found in an older, big file without reading it whole');
+  // main items done for the folder page, and the folders file next to the checklists
+  await call('write', 'e.bcl', JSON.stringify({ name: 'e', sections: [{ title: 's', cards: [{ text: 'a', done: true, steps: [{ text: 'x', done: true }] }, { text: 'b', done: false, steps: [] }] }, { title: 't', cards: [{ text: 'c', done: false, steps: [] }] }] }));
+  const pe = (await call('list')).find(x => x.name === 'e'); assert(pe.done === 1 && pe.total === 3, 'list reports main items done / all: ' + JSON.stringify(pe));
+  assert.deepStrictEqual(await call('foldersGet'), { f: [], m: {} }, 'no folders yet');
+  await call('foldersSet', { f: [{ id: 'f1', name: 'Bicycle', parent: null }, { id: 'f2', name: 'Tires', parent: 'f1' }, { id: '', name: 'bad' }], m: { e: 'f2', a: '' } });
+  assert.deepStrictEqual(await call('foldersGet'), { v: 1, f: [{ id: 'f1', name: 'Bicycle', parent: null }, { id: 'f2', name: 'Tires', parent: 'f1' }], m: { e: 'f2' } }, 'folders saved in Saves/.folders.json, cleaned');
+  assert(fs.existsSync(path.join(await call('dir'), '.folders.json')) && !(await call('list')).some(x => /folders/.test(x.name)), 'the folders file is not a checklist');
 
   // video: linked paths, clips in three qualities with exact sizes, with and without a sound track
   const { execFileSync } = require('child_process'), ffbin = require('ffmpeg-static');
@@ -173,6 +180,7 @@ const call = (op, ...a) => handle({ sender: win.webContents }, op, ...a);
   const safeDir = path.join(saves, 'Backups before updates'), sc = fs.readdirSync(safeDir);
   assert(sc.length === 1 && / before 0\.10\.0$/.test(sc[0]), 'one safety copy, named for the update: ' + sc);
   assert.deepStrictEqual(fs.readFileSync(path.join(safeDir, sc[0], 'a.bcl')), fs.readFileSync(path.join(saves, 'a.bcl')), 'checklist copied exactly');
+  assert(fs.existsSync(path.join(safeDir, sc[0], '.folders.json')), 'the folders file is in the safety copy too');
   assert(fs.existsSync(path.join(safeDir, sc[0], 'Data', 'profile.json')) && fs.existsSync(path.join(safeDir, sc[0], 'READ ME.txt')), 'settings and a note copied too');
   // an update that the helper had to roll back leaves a note for the page; seen once, then gone
   fs.writeFileSync(path.join(dir, 'Data', 'update-failed.json'), '\ufeff' + JSON.stringify({ from: '0.5.0', to: '0.10.0', error: 'boom', back: true, safe: path.join(safeDir, sc[0]) }));

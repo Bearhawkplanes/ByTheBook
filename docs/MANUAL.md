@@ -65,6 +65,15 @@ Needs a profile with a main PIN. It does not apply when the app itself is locked
 - The full instructions for AI assistants are in `docs/AI-CHECKLIST-GUIDE.md` (also linked from `AGENTS.md`), for any AI you point at this project.
 - Everything comes in unticked: check each value against its page before relying on it. Pictures are added afterwards. Ref. pages are PDF page numbers and link to the PDF once you add it (Menu > Open PDF…).
 
+## Folders (main menu)
+Sort checklists into folders, and folders inside folders: for example a "Bicycle" folder with "Tires", "Handlebars" and "Drivetrain" inside it.
+- The left side of the main menu is a folder tree: **Main menu** (back to Create / Import / Open recent), **All checklists**, your folders (▸ / ▾ folds a folder open or shut; the number is how many checklists are in it, folders inside it included) and **Not in a folder**.
+- Click a folder to see what is in it: the path at the top (click any part to go back up, or "Main menu"), the folders inside it, and its checklists with how far along each one is (main items done) and when it was last opened. Click a checklist to select it (Move…, LOG, OPEN, and DELETE at the bottom right); double-click or Enter opens it.
+- **+ New folder** (top of the tree, or on a folder's page as "+ New folder here") makes a folder inside the one that is open. **Rename** and **Delete folder** are on the folder's page; deleting a folder never deletes checklists: what was in it moves up one level.
+- **Move a checklist**: drag it from a folder's page onto a folder in the tree (or onto "Not in a folder"), or select it and click **Move…**.
+- New checklists go into the folder that is open: "Create new checklist here", Import, View Demo. Save as and Start a new job put the copy in the same folder as the original.
+- Folders only sort the list: the checklist files all stay in the Saves folder as before. The folder list is the small file `Saves/.folders.json`, so it moves along with the Saves folder and is part of the safety copy made before updates.
+
 ## Starting a new job
 Menu (☰) > Start a new job from this checklist…: asks for a name (suggests "<name> - new job"), then makes a fresh copy inside the app with every section, step, image, PDF and video and nothing checked off, and opens it. Its activity log starts with "New job started, from the checklist …". The original keeps its progress. A master file lock carries over to the job.
 

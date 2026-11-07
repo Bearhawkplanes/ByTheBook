@@ -126,6 +126,18 @@ body.dragging{user-select:none;cursor:col-resize}
 #updbar{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 18px;background:var(--hbg);color:var(--hfg);border-top:2px solid var(--acc)}#updbar[hidden]{display:none}
 #updbar .ubv{font-size:14px}#updbar .ubst{font-size:13px;opacity:.85}#updbar .ubst.err{color:var(--warn);opacity:1}#updbar .pri{font-weight:700}#updbar button:disabled{opacity:.5}
 .hh{font-weight:600;font-size:15px;margin-bottom:10px}
+.fhh{display:flex;align-items:center;justify-content:space-between;gap:8px}.fhh button{font-size:12.5px;font-weight:400;padding:5px 10px}
+.trow{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:7px;cursor:pointer;user-select:none;color:var(--fg)}.trow:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.trow.on{background:color-mix(in srgb,var(--acc) 16%,transparent);box-shadow:inset 3px 0 0 var(--acc)}.trow.drop{outline:2px dashed var(--acc);outline-offset:-2px}
+.trow .tog{width:16px;flex:none;padding:0;border:0;background:none;color:var(--mut);font-size:11px;text-align:center}.trow .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.trow .tc{margin-left:auto;padding-left:6px;color:var(--mut);font-size:12px}.trow .fico{flex:none;color:var(--mut)}.trow.on .fico{color:var(--acc)}.tsep{height:1px;background:var(--line);margin:6px 4px}
+#hfold{width:min(1100px,100%);text-align:left;align-self:flex-start}.fcrumb{font-size:13px;color:var(--mut);margin-bottom:10px}.fcrumb a{cursor:pointer;color:var(--mut);text-decoration:none}.fcrumb a:hover{color:var(--acc)}.fcrumb b{color:var(--fg);font-weight:500}
+.fhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}.fhead h1{margin:0;font-size:26px;letter-spacing:-.01em;overflow-wrap:anywhere}.fhead .sp{flex:1}
+.ftab{border:1px solid var(--line);border-radius:10px;overflow:hidden}.ftab .ftr{display:grid;grid-template-columns:minmax(0,1fr) 190px 130px 236px;gap:14px;align-items:center;padding:11px 16px;border-top:1px solid var(--line);border-radius:0}
+.ftab .ftr.fall{grid-template-columns:minmax(0,1fr) minmax(0,170px) 190px 130px 236px}.ftab .ftr.fth{border-top:0;background:var(--panel);font-size:12px;color:var(--mut);cursor:default;padding:9px 16px}.ftab .ftr.fth:hover{background:var(--panel)}
+.fsub .fn{display:flex;align-items:center;gap:8px}.fsub .fico{color:var(--acc)}.fbtn{display:flex;gap:6px;justify-content:flex-end}
+.fbar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);white-space:nowrap}.fbar>span{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}.fbar i{display:block;height:100%;background:var(--acc)}.fbar.ok i{background:var(--ok)}
+.frow.sel .fbar{color:rgba(255,255,255,.85)}.frow.sel .fbar>span{background:rgba(255,255,255,.3)}.frow.sel .fbar i{background:#fff}.ftab .fempty{padding:18px 16px;border-top:1px solid var(--line)}
 #hmain{flex:1;display:flex;justify-content:center;overflow:auto;padding:48px 24px}.hcenter{width:min(640px,100%);text-align:center}
 .hcenter h1{font-size:34px;margin:0 0 24px;letter-spacing:-.02em}.hbtns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:36px}
 .big{padding:14px 22px;font-size:16px;border-radius:10px}.big i{font-size:11px;opacity:.7;margin-left:6px}
@@ -296,12 +308,12 @@ label.xpc:hover{border-color:var(--mut)}label.xpc:has(input:checked){border-colo
 </div>
 </section>
 </main>
-<div id="home"><div id="hleft"><aside id="hside"><div class="hh">Saved checklists</div><div id="flist"></div><p class="mut" style="margin-top:auto;padding-top:14px">Every checklist in this app's save folder shows up here.</p></aside><div class="hfoot"><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button><button id="hTut" class="prof" title="Tutorial (coming soon)"><span class="avatar" style="align-items:center"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg></span><span>Tutorial</span></button></div></div>
+<div id="home"><div id="hleft"><aside id="hside"><div class="hh fhh"><span>Checklists</span><button id="fnew" title="Make a folder (inside the folder that is open)">+ New folder</button></div><nav id="flist" aria-label="Folders"></nav><p class="mut" style="margin-top:auto;padding-top:14px;font-size:12.5px">Drag a checklist onto a folder to move it. The files stay in the save folder; folders only sort them here.</p></aside><div class="hfoot"><button id="hProf" class="prof" title="Profile"><span class="avatar"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="9" r="4.2"/><path d="M3.5 23c0-5.2 3.8-8.2 8.5-8.2s8.5 3 8.5 8.2z"/></svg></span><span>Profile</span></button><button id="hTut" class="prof" title="Tutorial (coming soon)"><span class="avatar" style="align-items:center"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".4" fill="currentColor"/></svg></span><span>Tutorial</span></button></div></div>
 <section id="hmain"><div class="hcenter" id="hcen"><h1>ByTheBook</h1>
 <div class="hbtns"><button class="big pri" id="hNew">Create new checklist</button><button class="big" id="hImp">Import</button><button class="big sm" id="hDemo" title="Adds the demo checklist again, as a new checklist">View Demo</button></div>
 <button id="hBack" hidden style="margin-bottom:24px">Back to the open checklist</button>
 <h2>Open recent</h2><div id="rlist"></div></div>
-<div id="hprof" class="hcenter" hidden></div>
+<div id="hfold" hidden></div><div id="hprof" class="hcenter" hidden></div>
 <div id="hdel" hidden><button class="delbtn" id="hdelb">DELETE</button><small>or DEL</small></div></section><div id="updbar" hidden></div></div>
 <div id="ld" hidden><div class="ldc"><div id="ldt"></div><div class="ldb"><i id="ldf"></i></div><div class="ldh">ESC to cancel</div></div></div>
 <div id="pv" hidden><div id="pvtop"><button id="pvBack">← Return</button><b id="pvt"></b></div><div id="pvbody"><aside id="pvside"><div class="hh pvsh"><span>PDFs in this checklist</span><button id="pvhide" title="Hide the PDFs list">◀</button></div><div id="pvlist"></div><button id="pvadd">+ Import PDF…</button><div class="hh" style="margin-top:16px">Search results <span class="mut" style="font-weight:400;font-size:13px">(all PDFs)</span></div><div id="pvres"></div></aside>
@@ -1195,7 +1207,7 @@ $('#pvgo').onclick=()=>{const n=+$('#pvpg').value;if(!n)return;pdf?show(n):openP
 $('#pvprev').onclick=()=>show(cur-1);$('#pvnext').onclick=()=>show(cur+1);
 $('#pvzi').onclick=$('#zi').onclick;$('#pvzo').onclick=$('#zo').onclick;
 async function restoreBackup(){if(!CUR)return;const b=await FS.backup(CUR+'.bcl');if(!b)return toast('No backup exists for this checklist yet');
- ask(`Restore the backup of "${esc(CUR)}" saved ${esc(fmt(b.mtime))}? It opens as a new checklist named "${esc(CUR)} (restored)". The current checklist is not changed.`,'Restore',async()=>{try{const n=await FS.restore(CUR+'.bcl');await refreshLib();openProject(n)}catch(e){toast('Could not restore the backup')}})}
+ ask(`Restore the backup of "${esc(CUR)}" saved ${esc(fmt(b.mtime))}? It opens as a new checklist named "${esc(CUR)} (restored)". The current checklist is not changed.`,'Restore',async()=>{try{const n=await FS.restore(CUR+'.bcl');await refreshLib();if(fdOf(CUR))fdPut(n,fdOf(CUR));openProject(n)}catch(e){toast('Could not restore the backup')}})}
 // ---------- title, menu, settings ----------
 let EP=false,DLGOK=null;
 function renderTitle(){const t=$('#ptitle');if(EP)t.innerHTML=`<input id="pti" value="${esc(S.name)}" placeholder="Unnamed">`;else{t.textContent=S.name||'Unnamed';t.title=S.name||''}$('#lockb').hidden=!S.locked;
@@ -1215,7 +1227,7 @@ $('#autos').value=AS.auto;$('#autos').onchange=e=>{AS.auto=e.target.value;saveAp
 function applyTheme(){const r=document.documentElement;if(AS.theme==='light')r.setAttribute('data-theme','light');else r.removeAttribute('data-theme');r.style.setProperty('--acc',`hsl(${AS.hue} 78% 48%)`)}
 function uncheckAll(by){S.sections.forEach(s=>s.cards.forEach(c=>[c,...c.steps].forEach(x=>{x.done=false;x.init='';x.doneAt='';x.sig=null;x.sigDraft=''})));logEv('uncheck everything',{text:'all items'},by?by.name:'',by?by.uid:'');save();renderL();renderR()}
 function saveAs(){dlg(`<div class="dh"><b>Save as</b></div><label>File name<input id="sa" value="${esc(S.name||'unnamed')}"></label><p class="mut">Creates a copy and stays on this checklist.</p><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Save copy</button></div>`);
- DLGOK=async()=>{const nm=uniqueName($('#sa').value);DIRTY=true;await flush();await FS.write(nm+'.bcl',await pack(nm),CUR+'.bcl');LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});toast('Saved as '+nm)}}
+ DLGOK=async()=>{const nm=uniqueName($('#sa').value);DIRTY=true;await flush();await FS.write(nm+'.bcl',await pack(nm),CUR+'.bcl');LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});if(fdOf(CUR))fdPut(nm,fdOf(CUR));toast('Saved as '+nm)}}
 function openSettings(){
  dlg(`<div class="dh"><b>Settings</b><button data-d="x">✕</button></div>
  <div class="ds"><div class="dt">Themes <span class="mut">(saved in the app, not in the checklist)</span></div>
@@ -1287,7 +1299,7 @@ menu.addEventListener('click',e=>{const b=e.target.closest('button[data-m]');if(
  else if(m==='uncheck')uclear(),ask('Uncheck everything? This clears every check mark, initial, time stamp and sign-off in this checklist.','Uncheck everything',async()=>{if(errNow())return showErr(errNow());if(pinOn('sign')){const w=await askPin({title:'Uncheck everything',note:'This clears every sign-off. Main profile or Boss PIN.',boss:true});if(w)uncheckAll(w)}else uncheckAll(null)},1)});
 // ---------- file library / main menu ----------
 function uniqueName(base,self){base=(base||'').trim().replace(/[\\/:*?"<>|]+/g,'_')||'unnamed';const used=new Set(LIB.filter(x=>x.id!==self).map(x=>x.name.toLowerCase()));let n=base,k=2;while(used.has(n.toLowerCase()))n=base+' '+k++;return n}
-async function refreshLib(){let rec={};try{rec=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}const l=await FS.list();LIB=l.map(f=>({id:f.name,name:f.name,saved:f.mtime,opened:rec[f.name]||0,pid:f.pid||'',locked:!!f.locked,worker:!!f.worker}))}
+async function refreshLib(){let rec={};try{rec=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}const l=await FS.list();LIB=l.map(f=>({id:f.name,name:f.name,saved:f.mtime,opened:rec[f.name]||0,pid:f.pid||'',locked:!!f.locked,worker:!!f.worker,done:f.done||0,total:f.total||0}));await fdLoad()}
 function markOpened(id,to){let r={};try{r=JSON.parse(localStorage.getItem('ewf-recent'))||{}}catch(e){}if(to){r[to]=r[id]||0;delete r[id]}else r[id]=Date.now();try{localStorage.setItem('ewf-recent',JSON.stringify(r))}catch(e){}}
 let FLP=Promise.resolve();   // saves run one at a time, in order
 function flush(){return FLP=FLP.then(flushNow,flushNow)}
@@ -1297,10 +1309,10 @@ async function flushNow(){if(!CUR||!DIRTY)return true;if(RO){DIRTY=false;return 
 // a small dark-green "Saved!" left of the title after each save, fading out
 // no room left of a long title (or a narrow window): it sits just under the title's start instead of over the header controls
 const savedFlash=()=>{const s=$('#savedi');s.classList.remove('on','dn');void s.offsetWidth;if(s.getBoundingClientRect().left<Math.max(...[...$('header .hl').children].filter(x=>x.offsetParent).map(x=>x.getBoundingClientRect().right))+8)s.classList.add('dn');s.classList.add('on')};
-async function addEntry(obj,name){const base=uniqueName(name);obj.name=obj.name||base;await FS.write(base+'.bcl',JSON.stringify(obj));LIB.push({id:base,name:base,saved:Date.now(),opened:0});return base}
+async function addEntry(obj,name){const base=uniqueName(name);obj.name=obj.name||base;await FS.write(base+'.bcl',JSON.stringify(obj));LIB.push({id:base,name:base,saved:Date.now(),opened:0});{const f=fdHere();if(f)fdPut(base,f)}return base}
 async function syncName(){const nn=uniqueName(S.name,CUR);if(nn===CUR)return;DIRTY=true;await flush();
  try{await FS.rename(CUR+'.bcl',nn+'.bcl')}catch(e){toast(e.message||'Could not rename the file');return}
- markOpened(CUR,nn);const e=LIB.find(x=>x.id===CUR);if(e){e.id=nn;e.name=nn}CUR=nn;if(S.name!==nn){S.name=nn;renderTitle();save()}}
+ markOpened(CUR,nn);if(FD.m[CUR]){FD.m[nn]=FD.m[CUR];delete FD.m[CUR];fdSave()}const e=LIB.find(x=>x.id===CUR);if(e){e.id=nn;e.name=nn}CUR=nn;if(S.name!==nn){S.name=nn;renderTitle();save()}}
 async function openProject(id){let r;
  try{r=await load('Opening '+id,async step=>{await step(.03,'Reading file…');const txt=await FS.read(id+'.bcl');await step(.4,'Reading checklist…');const raw=JSON.parse(txt);
   if(CUR&&DIRTY){await step(.6,'Saving the open checklist…');await flush()}await step(.8,'Preparing checklist…');const u=unpack(raw);await step(1);return u})}
@@ -1315,7 +1327,7 @@ async function openProject(id){let r;
  noPdf();markOpened(id);const e=LIB.find(x=>x.id===id);if(e)e.opened=Date.now();
  renderPdfUI();setTab('desc');renderL();renderR();updLock();$('#home').hidden=true;pvClose();wgClose();afterOpen()}
 async function deleteProject(id){clearTimeout(save.t);if(CUR===id)DIRTY=false;try{await FS.remove(id+'.bcl')}catch(e){toast('Could not delete the file');return}
- LIB=LIB.filter(x=>x.id!==id);if(CUR===id){CUR=null;S=norm();SEL=null;pdf=null}if(HS===id)HS=null;renderHome()}
+ if(FD.m[id]){delete FD.m[id];fdSave()}LIB=LIB.filter(x=>x.id!==id);if(CUR===id){CUR=null;S=norm();SEL=null;pdf=null}if(HS===id)HS=null;renderHome()}
 const askDelete=id=>{const e=LIB.find(x=>x.id===id);if(noDel(e))return toast('This is a master file. Turn off the master file lock in its Settings to delete it.');if(e)ask(`Delete "${esc(e.name)}"? This removes the checklist, its attached images and its PDF. This cannot be undone.`,'Delete',()=>deleteProject(id),1)};
 const b2d=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
 const d2b=d=>{const i=d.indexOf(','),bin=atob(d.slice(i+1)),u=new Uint8Array(bin.length);for(let k=0;k<bin.length;k++)u[k]=bin.charCodeAt(k);return new Blob([u],{type:d.slice(5,i).split(';')[0]||'application/octet-stream'})};
@@ -1343,7 +1355,7 @@ async function dlCopy(){if(CUR&&DIRTY)await flush();try{const f=await FS.saveFil
 function newJob(){if(!CUR)return;const from=S.name||CUR;dlg(`<div class="dh"><b>Start a new job</b></div><p>Makes a fresh copy of "${esc(from)}" with every section, step, image, PDF and video, and nothing checked off. This checklist stays as it is.</p><label>Name of the new checklist<input id="njn" value="${esc(uniqueName(from+' - new job'))}"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Start job</button></div>`);
  setTimeout(()=>{const i=$('#njn');if(i){i.focus();i.select()}},0);
  DLGOK=async()=>{const nm=uniqueName(($('#njn').value||'').trim()||from+' - new job');if(CUR&&DIRTY)await flush();toast('Preparing the new job…');
-  try{const cur=CUR+'.bcl';await FS.write(nm+'.bcl',await pack(nm,o=>{blankCopy(false)(o);o.log=[{at:now(),ev:'New job started',item:'From the checklist "'+from+'"',by:'',uid:''}]}),cur);LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});await openProject(nm);toast('New job: '+nm)}
+  try{const cur=CUR+'.bcl';await FS.write(nm+'.bcl',await pack(nm,o=>{blankCopy(false)(o);o.log=[{at:now(),ev:'New job started',item:'From the checklist "'+from+'"',by:'',uid:''}]}),cur);LIB.push({id:nm,name:nm,saved:Date.now(),opened:0});if(fdOf(CUR))fdPut(nm,fdOf(CUR));await openProject(nm);toast('New job: '+nm)}
   catch(e){toast('Could not start the new job')}}}
 const blankCopy=keepLog=>o=>{delete o.stamp;delete o.ids;
  if(keepLog)segOn(o,'recovery','Exported as a fresh copy','This file is a copy of "'+(S.name||'unnamed')+'" made '+fmt(now())+'. Entries above come from the original and record work done there, not in this copy.');
@@ -1389,15 +1401,70 @@ $('#xp').addEventListener('click',e=>{const t=e.target;if(t.closest('[data-xp=x]
 $('#xp').addEventListener('change',e=>{const t=e.target,o=PO();if(t.name==='xpp')o.paper=t.value;else if(t.dataset.po)o[t.dataset.po]=t.checked;else if(t.dataset.ps!=null){t.checked?XP.skip.delete(+t.dataset.ps):XP.skip.add(+t.dataset.ps)}else return;AS.pdf=o;saveApp();xpMake()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#xp').hidden&&$('#modal').hidden)xpClose()});
 $('#jfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const p=FS.pathOf&&FS.pathOf(f);
- if(p){try{const base=await FS.importPath(p);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}return}   // copied by main.js: works for any size
- try{const txt=await f.text(),raw=JSON.parse(txt);if(!raw.sections&&!raw.prep&&!raw.tasks)throw 0;const base=await FS.writeNew(f.name.replace(/\.[^.]+$/,''),txt);await refreshLib();openProject(base)}catch(x){toast('Not a valid checklist file')}};
+ if(p){try{const base=await FS.importPath(p);await refreshLib();if(fdHere())fdPut(base,fdHere());openProject(base)}catch(x){toast('Not a valid checklist file')}return}   // copied by main.js: works for any size
+ try{const txt=await f.text(),raw=JSON.parse(txt);if(!raw.sections&&!raw.prep&&!raw.tasks)throw 0;const base=await FS.writeNew(f.name.replace(/\.[^.]+$/,''),txt);await refreshLib();if(fdHere())fdPut(base,fdHere());openProject(base)}catch(x){toast('Not a valid checklist file')}};
 let HS=null;
+// ---------- folders on the main menu: Saves/.folders.json (main.js), FD.f = folders {id,name,parent}, FD.m = checklist name > folder id.
+// Only names: the .bcl files never move, so saving, backups, stamps and E-4420 work as before. FOLD = what the middle shows:
+// null = the main menu, 'all', 'none' (not in a folder) or a folder id.
+let FD={f:[],m:{}},FOLD=null;
+async function fdLoad(){try{const d=FS.foldersGet?await FS.foldersGet():null;FD={f:Array.isArray(d&&d.f)?d.f:[],m:(d&&d.m)||{}}}catch(e){FD={f:[],m:{}}}}
+function fdSave(){if(FS.foldersSet)Promise.resolve(FS.foldersSet(FD)).catch(()=>toast('Could not save the folders'))}
+const fdGet=id=>id?FD.f.find(x=>x.id===id):null,fdKids=p=>FD.f.filter(x=>(x.parent||null)===p).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+const fdOf=id=>{const f=FD.m[id];return f&&fdGet(f)?f:null};
+const fdPath=id=>{const o=[];for(let f=fdGet(id);f&&o.length<64;f=fdGet(f.parent))o.unshift(f);return o};
+const fdIn=(f,anc)=>!!f&&fdPath(f).some(x=>x.id===anc);
+const fdCount=id=>LIB.filter(e=>fdIn(fdOf(e.id),id)).length;
+const fdTxt=id=>fdPath(fdOf(id)).map(x=>x.name).join(' › ');
+// where a new checklist goes: the folder open on the main menu, or (made from inside a checklist) that checklist's folder
+const fdHere=()=>$('#home').hidden?(CUR?fdOf(CUR):null):fdGet(FOLD)?FOLD:null;
+function fdPut(id,f){if(f)FD.m[id]=f;else delete FD.m[id];fdSave()}
+const fdList=()=>FOLD==='all'?sortedLib():FOLD==='none'?sortedLib().filter(e=>!fdOf(e.id)):sortedLib().filter(e=>fdOf(e.id)===FOLD);
+const FICO='<svg class="fico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>';
+const HICO='<svg class="fico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7v8.5a.5.5 0 0 1-.5.5H15v-6H9v6H4.5a.5.5 0 0 1-.5-.5z"/></svg>';
+// a folder is unfolded in the tree when the person unfolded it, or while something inside it is open
+const fdOpenIn=id=>{const o=AS.fopen||{};return id in o?!!o[id]:fdIn(FOLD,id)&&FOLD!==id||FOLD===id&&fdKids(id).length>0};
+function treeHTML(){const node=(f,d)=>{const k=fdKids(f.id),ex=k.length&&fdOpenIn(f.id);
+  return `<div class="trow${FOLD===f.id?' on':''}" data-f="${esc(f.id)}" style="padding-left:${8+d*18}px">${k.length?`<button class="tog" data-tog="${esc(f.id)}" aria-label="${ex?'Fold':'Unfold'} ${esc(f.name)}">${ex?'▾':'▸'}</button>`:'<span class="tog"></span>'}${FICO}<span class="tn" title="${esc(f.name)}">${esc(f.name)}</span><span class="tc">${fdCount(f.id)}</span></div>`+(ex?k.map(x=>node(x,d+1)).join(''):'')};
+ const loose=LIB.filter(e=>!fdOf(e.id)).length;
+ return `<div class="trow${FOLD===null&&!PV?' on':''}" data-f="home">${HICO}<span class="tn">Main menu</span></div><div class="tsep"></div>
+ <div class="trow${FOLD==='all'?' on':''}" data-f="all"><span class="tog"></span><span class="tn">All checklists</span><span class="tc">${LIB.length}</span></div>${fdKids(null).map(f=>node(f,0)).join('')}
+ ${FD.f.length?`<div class="trow${FOLD==='none'?' on':''}" data-f="none"><span class="tog"></span><span class="tn mut">Not in a folder</span><span class="tc">${loose}</span></div>`:''}`}
+function foldHTML(){const f=fdGet(FOLD),all=FOLD==='all',title=f?f.name:all?'All checklists':'Not in a folder',list=fdList(),subs=f?fdKids(f.id):[],cols=all?' fall':'';
+ const crumb=`<a data-f="home">Main menu</a>`+(f?fdPath(f.id).map((x,i,a)=>' › '+(i<a.length-1?`<a data-f="${esc(x.id)}">${esc(x.name)}</a>`:`<b>${esc(x.name)}</b>`)).join(''):` › <b>${title}</b>`);
+ const bar=e=>!e.total?'<span class="mut">—</span>':`<div class="fbar${e.done===e.total?' ok':''}"><span><i style="width:${Math.round(e.done/e.total*100)}%"></i></span>${e.done===e.total?'Done':e.done?Math.round(e.done/e.total*100)+'%':'Not started'}</div>`;
+ const crow=e=>{const ad=needAdopt(e),sel=HS===e.id;return `<div class="frow ftr${cols}${sel?' sel':''}${ad?' adopt':''}" data-id="${esc(e.id)}" draggable="true"><span class="fn">${esc(e.name)}${ad?'<button class="adq" data-a="adopt" title="Saved under a different profile (E-4420)">adopt?</button>':''}</span>${all?`<span class="mut" style="overflow-wrap:anywhere">${esc(fdTxt(e.id))}</span>`:''}${bar(e)}<span class="mut">${e.opened?esc(rel(e.opened)):'Not opened yet'}</span><span class="fbtn">${sel?'<button data-a="move">Move…</button><button data-a="logv">LOG</button><button class="open" data-a="open">OPEN</button>':''}</span></div>`};
+ const srow=x=>{const n=fdCount(x.id);return `<div class="frow ftr fsub${cols}" data-f="${esc(x.id)}"><span class="fn">${FICO}${esc(x.name)}</span>${all?'<span></span>':''}<span class="mut">${n} checklist${n===1?'':'s'}</span><span></span><span></span></div>`};
+ return `<nav class="fcrumb" aria-label="Folder path">${crumb}</nav><div class="fhead"><h1>${esc(title)}</h1><span class="mut">${list.length} checklist${list.length===1?'':'s'}</span><span class="sp"></span>
+ ${f?'<button data-fa="ren">Rename</button><button data-fa="del">Delete folder</button>':''}<button data-fa="new">+ New folder${f?' here':''}</button><button data-fa="imp">Import</button><button class="pri" data-fa="create">Create new checklist${f?' here':''}</button></div>
+ <div class="ftab"><div class="frow ftr fth${cols}"><span>Name</span>${all?'<span>Folder</span>':''}<span>Progress (main items)</span><span>Last opened</span><span></span></div>${subs.map(srow).join('')}${list.map(crow).join('')}
+ ${subs.length||list.length?'':`<div class="fempty mut">Nothing here yet. Create a checklist here, or drag one onto this folder in the list on the left.</div>`}</div>`}
+function fdGo(f){FOLD=f==='home'?null:f;if(HS&&!homeList().some(e=>e.id===HS))HS=null;if(PV){showProfile(false);return}renderHome()}
+function fdName(title,val,fn){dlg(`<div class="dh"><b>${esc(title)}</b></div><label>Folder name<input id="fdn" value="${esc(val)}" maxlength="80"></label><div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">OK</button></div>`);
+ setTimeout(()=>{const i=$('#fdn');if(i){i.focus();i.select()}},0);DLGOK=()=>{const v=(($('#fdn')||{}).value||'').trim().slice(0,80);if(v)fn(v)}}
+function fdNew(parent){fdName('New folder','New folder',v=>{const id=uid();FD.f.push({id,name:v,parent:parent||null});if(parent){AS.fopen=AS.fopen||{};AS.fopen[parent]=true;saveApp()}fdSave();FOLD=id;HS=null;renderHome()})}
+function fdDel(f){const n=fdCount(f.id),k=FD.f.filter(x=>x.id!==f.id&&fdIn(x.id,f.id)).length,up=fdGet(f.parent);
+ const go=()=>{FD.f.forEach(x=>{if(x.parent===f.id)x.parent=f.parent||null});for(const c in FD.m)if(FD.m[c]===f.id){if(up)FD.m[c]=up.id;else delete FD.m[c]}FD.f=FD.f.filter(x=>x!==f);fdSave();FOLD=up?up.id:null;renderHome();toast('Folder deleted')};
+ if(!n&&!k)return go();ask(`Delete the folder "${esc(f.name)}"? What is in it (${n} checklist${n===1?'':'s'}${k?` and ${k} folder${k===1?'':'s'}`:''}) moves to ${up?`"${esc(up.name)}"`:'"Not in a folder"'}. No checklist is deleted.`,'Delete folder',go,1)}
+function fdMove(id){const opts=[],walk=(p,d)=>fdKids(p).forEach(f=>{opts.push([f.id,'\u00a0\u00a0\u00a0'.repeat(d)+f.name]);walk(f.id,d+1)});walk(null,0);const cur=fdOf(id)||'';
+ dlg(`<div class="dh"><b>Move "${esc(id)}"</b></div><label>To folder<select id="fdm"><option value="">Not in a folder</option>${opts.map(([v,t])=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(t)}</option>`).join('')}</select></label>${opts.length?'':'<p class="mut">There are no folders yet: make one with "+ New folder".</p>'}<div class="dbtn"><button data-d="x">Cancel</button><button data-d="ok" class="pri">Move</button></div>`);
+ DLGOK=()=>{const v=($('#fdm')||{}).value||null;fdPut(id,v);if(FOLD!==null&&FOLD!=='all'&&!fdList().some(e=>e.id===id))HS=null;renderHome();toast(v?'Moved to "'+fdGet(v).name+'"':'Moved out of its folder')}}
+function fdAct(a){const f=fdGet(FOLD);if(a==='new')fdNew(f?f.id:null);else if(a==='ren'&&f)fdName('Rename folder',f.name,v=>{f.name=v;fdSave();renderHome()});else if(a==='del'&&f)fdDel(f);else if(a==='imp')importDlg();else if(a==='create')addEntry(norm(),'unnamed').then(openProject)}
+$('#fnew').onclick=()=>fdNew(fdGet(FOLD)?FOLD:null);
+// drag a checklist (folder page) onto a folder in the tree, a subfolder row, or "Not in a folder"
+$('#home').addEventListener('dragstart',e=>{const r=e.target.closest&&e.target.closest('.ftr[data-id]');if(!r)return;e.dataTransfer.setData('text/x-bcl',r.dataset.id);e.dataTransfer.effectAllowed='move'});
+const fdDrop=e=>{const t=e.target.closest&&e.target.closest('[data-f]');return t&&(fdGet(t.dataset.f)||t.dataset.f==='none')&&[...e.dataTransfer.types].includes('text/x-bcl')?t:null};
+$('#home').addEventListener('dragover',e=>{const t=fdDrop(e);document.querySelectorAll('#home .drop').forEach(x=>x!==t&&x.classList.remove('drop'));if(!t)return;e.preventDefault();t.classList.add('drop')});
+$('#home').addEventListener('dragend',()=>document.querySelectorAll('#home .drop').forEach(x=>x.classList.remove('drop')));
+$('#home').addEventListener('drop',e=>{const t=fdDrop(e),id=e.dataTransfer.getData('text/x-bcl');document.querySelectorAll('#home .drop').forEach(x=>x.classList.remove('drop'));if(!t||!id)return;e.preventDefault();
+ const f=fdGet(t.dataset.f);fdPut(id,f?f.id:null);if(FOLD!=='all'&&HS===id)HS=null;renderHome();toast(f?'Moved to "'+f.name+'"':'Moved out of its folder')});
 const rel=t=>{const d=new Date(t);return d.toDateString()===new Date().toDateString()?'Today '+d.toLocaleTimeString([],{timeStyle:'short'}):d.toLocaleDateString([],{dateStyle:'medium'})};
 const sortedLib=()=>[...LIB].sort((a,b)=>a.name.localeCompare(b.name));
-function renderHome(){const rec=LIB.filter(x=>x.opened).sort((a,b)=>b.opened-a.opened).slice(0,8);
+const homeList=()=>FOLD!==null?fdList():LIB.filter(x=>x.opened).sort((a,b)=>b.opened-a.opened).slice(0,8);
+function renderHome(){if(FOLD&&FOLD!=='all'&&FOLD!=='none'&&!fdGet(FOLD))FOLD=null;const rec=LIB.filter(x=>x.opened).sort((a,b)=>b.opened-a.opened).slice(0,8),fv=FOLD!==null&&!PV;
  const row=(e,sub)=>{const ad=needAdopt(e);return `<div class="frow${HS===e.id?' sel':''}${ad?' adopt':''}" data-id="${e.id}"><span class="fn">${esc(e.name)}${ad?'<button class="adq" data-a="adopt" title="Saved under a different profile (E-4420)">adopt?</button>':''}</span>${sub?`<span class="mut">${esc(sub)}</span>`:''}${HS===e.id?'<button data-a="logv">LOG</button><button class="open" data-a="open">OPEN</button>':''}</div>`};
- $('#flist').innerHTML=sortedLib().map(e=>row(e,'')).join('')||'<div class="mut">Nothing saved yet.</div>';
- $('#rlist').innerHTML=rec.map(e=>row(e,rel(e.opened))).join('')||'<div class="mut" style="text-align:left">Nothing opened yet.</div>';
+ $('#flist').innerHTML=treeHTML();$('#hfold').hidden=!fv;$('#hcen').hidden=PV||fv;if(fv)$('#hfold').innerHTML=foldHTML();
+ $('#rlist').innerHTML=rec.map(e=>row(e,[fdTxt(e.id),rel(e.opened)].filter(Boolean).join(' · '))).join('')||'<div class="mut" style="text-align:left">Nothing opened yet.</div>';
  $('#hdel').hidden=!HS||PV;{const e=LIB.find(x=>x.id===HS),d=$('#hdelb'),nd=noDel(e);d.classList.toggle('dis',!!nd);d.title=!nd?'':(e.id===CUR&&S?S.worker:e.worker)?'Disabled: worker mode is on in this checklist':'Disabled: this is a master file (turn off the master file lock in its Settings to delete it)'}$('#hBack').hidden=!CUR}
 // a checklist stamped by another profile (E-4420) can be adopted straight from the list, with the main profile or a Boss PIN
 const needAdopt=e=>!TAMPER&&(e.id===CUR&&S?!!CLT:!!e.pid&&e.pid!==PR.pid);
@@ -1413,7 +1480,10 @@ async function openHome(){wgClose();if(CUR&&DIRTY)await flush();await refreshLib
 let lastClk={id:null,t:0};
 $('#home').addEventListener('click',e=>{const ab=e.target.closest('button[data-a=adopt]');if(ab){adoptAsk(ab.closest('[data-id]').dataset.id);return}
  if(e.target.closest('button[data-a=logv]')){viewLogOf(HS);return}
-  if(e.target.closest('button[data-a=open]')){openProject(HS);return}const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id,t=Date.now();
+  if(e.target.closest('button[data-a=open]')){openProject(HS);return}
+ const tg=e.target.closest('[data-tog]');if(tg){const id=tg.dataset.tog;AS.fopen=AS.fopen||{};AS.fopen[id]=!fdOpenIn(id);saveApp();renderHome();return}
+ const fa=e.target.closest('[data-fa]');if(fa){fdAct(fa.dataset.fa);return}if(e.target.closest('button[data-a=move]')){if(HS)fdMove(HS);return}
+ const fr=e.target.closest('[data-f]');if(fr){fdGo(fr.dataset.f);return}const r=e.target.closest('[data-id]');if(!r)return;const id=r.dataset.id,t=Date.now();
  if(lastClk.id===id&&t-lastClk.t<500){lastClk={id:null,t:0};openProject(id);return}lastClk={id,t};HS=id;renderHome()});
 // ---------- import from text / AI: an outline any chatbot can write (docs/AI-CHECKLIST-GUIDE.md); also the JSON format ----------
 // # Section [sign-off]   ## Main item | qty: 2 | size: M8 | spec: 25 Nm | p. 14   - Step | spec: … | p. 15   > description line
@@ -1520,7 +1590,7 @@ $('#hNew').onclick=()=>addEntry(norm(),'unnamed').then(openProject);$('#hImp').o
 $('#hBack').onclick=()=>{$('#home').hidden=true;refreshAll()};$('#hdelb').onclick=()=>HS&&askDelete(HS);
 document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.repeat||$('#home').hidden||!$('#modal').hidden||PV||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
  if(e.key==='Enter'&&HS)openProject(HS);else if((e.key==='Delete'||e.key==='Backspace')&&HS)askDelete(HS);
- else if(e.key==='ArrowDown'||e.key==='ArrowUp'){const l=sortedLib();if(!l.length)return;let i=l.findIndex(x=>x.id===HS);i=e.key==='ArrowDown'?Math.min(l.length-1,i+1):Math.max(0,i<0?0:i-1);HS=l[i].id;renderHome();e.preventDefault()}});
+ else if(e.key==='ArrowDown'||e.key==='ArrowUp'){const l=homeList();if(!l.length)return;let i=l.findIndex(x=>x.id===HS);i=e.key==='ArrowDown'?Math.min(l.length-1,i+1):Math.max(0,i<0?0:i-1);HS=l[i].id;renderHome();e.preventDefault()}});
 // ---------- profile and PINs ----------
 let PV=false,PU=false,FORGOT=false,NEWPIN=false,TAMPER=null,CLT=null,PRX=null,EDITOK=null,FAILS=0,LOCKUNTIL=0,RECUNTIL=0;
 const PR0=()=>({pid:'',user:'',salt:'',hash:'',rv:null,req:{names:false,sign:false,edit:false,log:false},people:[]});

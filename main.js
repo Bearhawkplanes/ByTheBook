@@ -73,7 +73,7 @@ const SAFE = () => path.join(savesDir(), 'Backups before updates');
 const mbs = n => (n / 1048576).toFixed(n < 1048576 * 10 ? 1 : 0) + ' MB';
 async function safetyCopy(v) {
   const sd = savesDir(), tell = f => { if (win) win.webContents.send('upd-progress', f); };
-  const files = fs.readdirSync(sd).filter(f => /\.bcl$/i.test(f) || f === '.profile-marker.json').map(f => path.join(sd, f)), data = fs.readdirSync(dataDir).filter(f => /\.json$/i.test(f)).map(f => path.join(dataDir, f));
+  const files = fs.readdirSync(sd).filter(f => /\.bcl$/i.test(f) || f === '.profile-marker.json' || f === '.folders.json').map(f => path.join(sd, f)), data = fs.readdirSync(dataDir).filter(f => /\.json$/i.test(f)).map(f => path.join(dataDir, f));
   let need = 0; for (const f of [...files, ...data]) need += fs.statSync(f).size;
   let free = Infinity; try { const s = fs.statfsSync(sd); free = s.bavail * s.bsize; } catch (e) {}
   if (free < need * 1.05 + 50 * 1048576) throw new Error(`There is not enough free space for the safety copy of your checklists (needs ${mbs(need)}, ${mbs(free)} free). Nothing was changed: free up some space on that drive and try again.`);
@@ -260,6 +260,7 @@ const handlers = {
   dir: () => savesDir(), list: () => st.list(), read: n => st.read(n), write: (n, t, from) => st.write(n, t, from), media: (n, k) => st.media(n, k), info: n => st.info(n), tidy: n => st.tidy(n),
   writeNew: (n, t) => st.writeNew(n, t), rename: (a, b) => st.rename(a, b), remove: n => st.remove(n),
   importPath: p => st.importPath(p), backup: n => st.backup(n), restore: n => st.restore(n),
+  foldersGet: () => st.folders(), foldersSet: d => st.foldersSet(d),
   choose: async () => { const r = await dialog.showOpenDialog(win, { title: 'Choose the save folder', properties: ['openDirectory', 'createDirectory'], defaultPath: savesDir() }); if (r.canceled || !r.filePaths[0]) return null; cfg.savesDir = r.filePaths[0]; saveCfg(); writeMarker(); return savesDir(); },
   resetDir: () => { delete cfg.savesDir; saveCfg(); writeMarker(); return savesDir(); },
   openDir: () => shell.openPath(savesDir()),
