@@ -1,6 +1,6 @@
 {
   "name": "bythebook",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ByTheBook: offline step-by-step shop checklists with a PDF manual viewer",
   "main": "main.js",
   "scripts": {
