@@ -134,6 +134,10 @@ One window: the kinds of export on the left, their settings on the right, and Ex
   - Options (remembered): paper size Letter or A4; Contents page (fill-in fields and where each section starts); Qty / size column; Values / Spec column; Item sign-off lines (in sections that use sign-off); Section sign-off box and notes lines; and which sections to print.
   - No images, videos, PDFs, descriptions or progress: it is always a blank copy.
 
+## Zoom
+- **The whole app:** Ctrl + makes everything bigger, Ctrl − smaller, Ctrl+0 back to normal (50% to 200%), like a screen with fewer pixels. Handy on high-resolution screens. It is remembered, and also in the main menu's ⚙ Settings ("Size of everything").
+- **A picture (Images tab, Fit view):** double-click it to see it twice as big, around the spot you clicked. Scroll with the mouse wheel (Shift + wheel sideways) or click and drag to move around. Double-click again or press Esc to go back.
+
 ## Picture descriptions (Images tab)
 Every picture or video on an item can have a description. **Fit** view: a box under the picture (above "+ Add image / video files"). **Stack** view: a box attached under each picture. **Grid** view: the first 10 words on a dark strip at the bottom of the picture (hover for all of it). Descriptions are part of the checklist's content: saved in it, kept in fresh copies and new jobs, and read-only in a master file, in worker mode or while editing needs a PIN.
 

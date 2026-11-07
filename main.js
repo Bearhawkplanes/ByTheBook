@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path'), fs = require('fs'), fsp = fs.promises, crypto = require('crypto');
 
 // Everything lives next to the app by default: <app folder>/Saves and <app folder>/Data. On a Mac "next to the program" is inside the
@@ -334,6 +334,7 @@ const handlers = {
   updCheck: force => { const c = updCfg(); return force || (c.auto && Date.now() - c.last > 20 * 3600000) ? checkUpdate() : null; },   // automatic checks at most about once a day
   updDownload: () => downloadUpdate(),
   updInstall: () => installUpdate(),
+  zoom: f => { f = Math.min(2, Math.max(0.5, +f || 1)); if (win) win.webContents.setZoomFactor(f); return f; },   // the page's Ctrl + / Ctrl - (AS.zoom)
   updFailedSeen: () => { fs.rmSync(UFAIL, { force: true }); return true; },
   updSafeOpen: p => { p = String(p || ''); if (p && path.resolve(p).startsWith(SAFE()) && fs.existsSync(p)) shell.openPath(p); else shell.openPath(SAFE()); return true; },
   // video
@@ -379,6 +380,8 @@ function showMain() {
 ipcMain.on('loading', (e, t, p) => { if (win && e.sender === win.webContents && splash && !splash.isDestroyed()) splash.webContents.executeJavaScript('step(' + JSON.stringify(String(t || '')) + ',' + (+p || 0) + ')').catch(() => {}); });
 ipcMain.on('ready', e => { if (win && e.sender === win.webContents) showMain(); });
 function createWindow() {
+  // no hidden default menu: its keys (Ctrl+R reload, Ctrl+W close, its zoom) fought the app's own. A Mac keeps Edit for copy / paste.
+  try { Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { label: 'Edit', submenu: [{ role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] }]) : null); } catch (e) {}
   try {
     splash = new BrowserWindow({ width: 460, height: 400, frame: false, resizable: false, maximizable: false, fullscreenable: false, center: true, show: true, backgroundColor: '#14171a', title: 'ByTheBook',
       webPreferences: { contextIsolation: true, nodeIntegration: false, devTools: false } });

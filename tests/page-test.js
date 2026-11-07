@@ -982,6 +982,20 @@ const items = o => o.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])
   assert(impd.btns.join() === 'From file,From text' && impd.note && impd.noOldBtn && impd.picked === 1 && impd.closed && impd.ai && impd.vid, 'Import offers From file and From text / AI; video types listed: ' + JSON.stringify(impd));
   await pg.evaluate(async () => { const demo = LIB.filter(x => /^Demo engine build/.test(x.id)).sort((a, b) => b.opened - a.opened)[0]; await openProject(demo.id); });
 
+  // ---- zoom: Ctrl + / Ctrl - / Ctrl 0 for the whole app (Electron's page zoom, remembered); double-click a picture in Fit view for 2x ----
+  const zm = await pg.evaluate(async () => { const calls = []; window.fsapi.zoom = f => { calls.push(f); return Promise.resolve(f); }; const k = (key, code, o) => window.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ key, code, ctrlKey: true, bubbles: true, cancelable: true }, o || {})));
+    k('=', 'Equal'); k('=', 'Equal'); const r = { up: AS.zoom }; k('-', 'Minus'); r.down = AS.zoom; k('0', 'Digit0'); r.reset = AS.zoom; r.calls = calls.join();
+    const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.some(m => !isVid(m))); select(it); setTab('img'); IM.mode = 'fit'; IM.i = it.media.findIndex(m => !isVid(m)); renderR(); await hydrate(); await new Promise(r => setTimeout(r, 300));
+    const img = $('#R .fit > img'), box = img.closest('.fit'), w0 = img.getBoundingClientRect().width, b = img.getBoundingClientRect();
+    img.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: b.left + b.width * .75, clientY: b.top + b.height * .5 })); r.zoomed = box.classList.contains('zoomed'); r.twice = Math.round(img.getBoundingClientRect().width / w0 * 10) / 10; r.scrolled = box.scrollLeft > 0;
+    const l0 = box.scrollLeft; img.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0, clientX: 300, clientY: 300 })); window.dispatchEvent(new MouseEvent('mousemove', { clientX: 340, clientY: 300 })); window.dispatchEvent(new MouseEvent('mouseup', {})); r.panned = box.scrollLeft - l0;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); r.esc = !box.classList.contains('zoomed') && !img.style.width;
+    img.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: b.left + 5, clientY: b.top + 5 })); img.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, clientX: b.left + 5, clientY: b.top + 5 })); r.dbl = !box.classList.contains('zoomed');
+    openAppSettings(); document.querySelector('#modal [data-zm="1"]').click(); r.setting = [AS.zoom, $('#zmv').textContent]; document.querySelector('#modal [data-zm="0"]').click(); closeDlg(); return r; });
+  assert(zm.up === 1.25 && zm.down === 1.1 && zm.reset === 1 && zm.calls === '1.1,1.25,1.1,1', 'Ctrl + / - / 0 zoom the app: ' + JSON.stringify(zm));
+  assert(zm.zoomed && zm.twice === 2 && zm.scrolled && zm.panned === -40 && zm.esc && zm.dbl, 'Fit view: double-click 2x, drag pans, Esc and double-click go back: ' + JSON.stringify(zm));
+  assert(zm.setting[0] === 1.1 && zm.setting[1] === '110%', 'zoom in the app settings: ' + JSON.stringify(zm.setting));
+
   // ---- right-click a picture: Download… (Save dialog, folder remembered) and Copy picture ----
   const rc = await pg.evaluate(async () => { const it = S.sections.flatMap(s => s.cards.flatMap(c => [c, ...c.steps])).find(x => x.media.length); select(it); setTab('img'); await hydrate(); await new Promise(r => setTimeout(r, 200));
     const img = document.querySelector('#p-img img'); img.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 300 })); const items = [...document.querySelectorAll('#cm button')].map(b => b.textContent);
